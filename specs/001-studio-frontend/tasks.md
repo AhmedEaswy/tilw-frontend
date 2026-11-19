@@ -93,10 +93,12 @@ where a frame exists).
 **Checkpoint US6** ✅ 2026-11-19 — studio verified in the browser on the dev server (1280 px and 390 px, ar, dark system theme). Setup layout matches 6:38 to the pixel (viewfinder 690×391 at 54,210; side panel 451 px). Real camera access is blocked inside the Claude browser pane, so the denied state (6:78, desktop per G12) was checked with the real API, and preview → countdown → capture → save was checked with a synthetic canvas + oscillator stream: a 12 s video take saved as WebM (VP9/Opus, 1.4 MB) in IndexedDB; an audio take cut off by ending the track saved as a 2.5 s partial (`endedBy: interrupted`) with its toast. Not checked with a real camera, in Safari (MP4 path), or the 10-minute and storage-full stops beyond unit tests. e2e spec `tests/e2e/recording.spec.ts` uses Chromium's fake devices (not run yet). After saving, the studio goes to `/app/recordings`, which is still the placeholder until T080.
 
 ## Phase 9: US7 Recordings (P2) ★
-- [ ] T080 [US7] `/app/recordings` [6:74, 6:103], first visit [6:77], quota banner (G8)
-- [ ] T081 [US7] `/app/recordings/[takeId]` video review [6:46, 6:47], audio review [6:58, 6:75, 6:59]
-- [ ] T082 [US7] Download original + confirmation states [6:48, 6:60, 6:76, 6:49, 6:61]
-- [ ] T083 [US7] Take actions: star / delete (G8, pending design)
+- [x] T080 [US7] `/app/recordings` [6:74, 6:103], first visit [6:77], quota banner (G8)
+- [x] T081 [US7] `/app/recordings/[takeId]` video review [6:46, 6:47], audio review [6:58, 6:75, 6:59]
+- [x] T082 [US7] Download original + confirmation states [6:48, 6:60, 6:76, 6:49, 6:61]
+- [x] T083 [US7] Take actions: star / delete (G8, pending design)
+
+**Checkpoint US7** ✅ 2026-11-19 — recordings verified in the browser on the dev server (1024 px desktop and 390 px phone, ar, dark system theme) with takes recorded in Phase 8: list grouped by script with the newest take as a card and older takes under it (6:74), phone feature card + list (6:103) with a first-frame poster made and cached, video review with play/pause and seeking (WebM duration fixed up), audio review with waveform and time, download of the original (file name "افتتاحية الحلقة - المحاولة 1.webm", captured in the test so nothing was saved), the "أُرسل طلب التنزيل" state (6:76), star as best take, and delete with confirmation moving to the remaining take. First visit (6:77) and the low-storage banner were not seen in the browser (they need an empty store / a full disk); e2e spec `tests/e2e/recordings.spec.ts` covers first visit and the full review flow (not run yet).
 
 ## Phase 10: US8 Settings (P2) ★
 - [ ] T090 [US8] `/app/settings` [6:65, 6:104]: language, theme, account, reading settings (same account-wide values rehearsal edits, G15), links, sign out

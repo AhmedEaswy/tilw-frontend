@@ -90,3 +90,20 @@ Severity: 🔴 blocks the cycle · 🟠 breaks a promise made in landing/legal c
 - **After "إيقاف وحفظ"** the studio opens "تسجيلاتي". The take review screen (6:46 / 6:58) comes in T081.
 - **"تغيير النص"** goes to the library; there is no in-studio script picker in Figma.
 
+## Found while building US7 (recordings, 2026-11-19)
+- **List layout**: desktop groups takes by script (6:74: newest take as the card, older takes as rows under
+  it); phone shows the newest take as a feature card and every other take in one list (6:103).
+- **Pictures**: video takes show their first frame, made the first time the list shows the take and kept in
+  the take's metadata. Audio takes show a waveform that is decorative and stable per take, not decoded from
+  the audio.
+- **File format card**: 6:46 says "MP4 · بلا صوت" (prototype data). Built as the real container and kind,
+  e.g. "WebM · فيديو".
+- **Seek bar on video** added to the 6:46 control strip; 6:58 (audio) already has one.
+- **Download confirmation**: 6:76 is a full page; built as the review's side panel switching to
+  "أُرسل طلب التنزيل" with "كل التسجيلات" and "رجوع", so the player stays on screen. 6:48's "افتح الملف…"
+  wording (iOS share sheet) is not used.
+- **Star and delete (G8)**: built without frames as two links under the actions — "تمييز كأفضل محاولة" /
+  "إلغاء التمييز" and "حذف المحاولة" with a confirm dialog that says it can't be undone. Starred takes show a
+  "الأفضل" badge in the list and the take selector.
+- **Takes that stopped on their own** (10 min, device lost, storage full) explain that in the review panel.
+

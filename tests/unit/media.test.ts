@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { freeBytes, levelFromSamples, levelSegments, mustStop, QUOTA_SAFETY, RECORD_LIMIT_MS, takeFileName } from '~/utils/media'
+import { freeBytes, levelFromSamples, levelSegments, mustStop, QUOTA_SAFETY, RECORD_LIMIT_MS, takeFileName, waveBars } from '~/utils/media'
 import { pickRecorderMime } from '~/utils/mime'
 import { createMemoryTakesRepo, type Take } from '~/services/takes'
 
@@ -92,5 +92,15 @@ describe('takes repository', () => {
     await repo.put(take('t1', '2026-11-19T10:00:00Z'))
     expect((await repo.update('t1', { starred: true })).starred).toBe(true)
     expect((await repo.list())[0]!.starred).toBe(true)
+  })
+})
+
+describe('take waveform picture', () => {
+  it('is stable per take and stays in range', () => {
+    const a = waveBars('t_one', 32)
+    expect(a).toHaveLength(32)
+    expect(waveBars('t_one', 32)).toEqual(a)
+    expect(waveBars('t_two', 32)).not.toEqual(a)
+    expect(a.every(h => h >= 0.2 && h <= 1)).toBe(true)
   })
 })

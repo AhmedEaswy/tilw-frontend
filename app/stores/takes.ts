@@ -65,7 +65,19 @@ export const useTakesStore = defineStore('takes', () => {
     list.value = list.value.map(t => (t.id === id ? meta : t))
   }
 
+  async function setPoster(id: string, poster: string) {
+    const meta = await useTakesRepo().update(id, { poster })
+    list.value = list.value.map(t => (t.id === id ? meta : t))
+  }
+
+  /** Takes grouped by script, newest script activity first; each group newest take first. */
+  const groups = computed(() => {
+    const by = new Map<string, TakeMeta[]>()
+    for (const t of list.value) (by.get(t.scriptId) ?? by.set(t.scriptId, []).get(t.scriptId)!).push(t)
+    return [...by.values()]
+  })
+
   const forScript = (scriptId: string) => list.value.filter(t => t.scriptId === scriptId)
 
-  return { list, loaded, estimate, free, lowStorage, load, refreshEstimate, save, remove, setStarred, forScript, nextNumber }
+  return { list, loaded, estimate, free, lowStorage, groups, load, refreshEstimate, save, remove, setStarred, setPoster, forScript, nextNumber }
 })

@@ -54,3 +54,17 @@ export function takeFileName(title: string, number: number, mime: string, word =
   const safe = title.replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim() || 'tilw'
   return `${safe} - ${word} ${number}.${extensionFor(mime)}`
 }
+
+/**
+ * Decorative waveform heights (0.2..1) for an audio take, stable per take id. The list and the review use it
+ * as the take's picture; it is not decoded from the audio (G8 note in gaps.md).
+ */
+export function waveBars(seed: string, n = 32): number[] {
+  let h = 2166136261
+  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619)
+  return Array.from({ length: n }, () => {
+    h = Math.imul(h ^ (h >>> 15), 2246822507) ^ Math.imul(h ^ (h >>> 13), 3266489909)
+    return 0.2 + (((h >>> 0) % 1000) / 1000) * 0.8
+  })
+}
+

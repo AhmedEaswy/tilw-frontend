@@ -22,6 +22,8 @@ export interface TakeMeta {
   starred: boolean
   /** Set when the take stopped on its own (10-minute cap, device lost, storage full). */
   endedBy?: 'limit' | 'interrupted' | 'quota'
+  /** Small JPEG data URL of the first frame (video takes), made the first time the list shows it. */
+  poster?: string
   createdAt: string
 }
 
@@ -33,7 +35,7 @@ export interface TakesRepo {
   list(): Promise<TakeMeta[]>
   get(id: string): Promise<Take | null>
   put(take: Take): Promise<void>
-  update(id: string, patch: Partial<Pick<TakeMeta, 'starred' | 'label'>>): Promise<TakeMeta>
+  update(id: string, patch: Partial<Pick<TakeMeta, 'starred' | 'label' | 'poster'>>): Promise<TakeMeta>
   remove(id: string): Promise<void>
   estimate(): Promise<{ quota?: number; usage?: number } | null>
 }
