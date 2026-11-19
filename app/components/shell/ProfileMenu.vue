@@ -1,6 +1,7 @@
 <script setup lang="ts">
 /**
- * Profile button in the studio header (6:18) with an account menu: profile, settings, dark mode, sign out.
+ * Profile button in the studio header (6:18) with an account menu: profile, settings, dark mode, back to the
+ * website, sign out.
  * Figma draws only the initial; the menu itself has no frame yet (logged in gaps.md) and is built from the
  * design-system surfaces, switch and glyphs.
  * Keyboard: Enter/Space/↓ opens and focuses the first item, ↑/↓ move, Home/End jump, Esc closes and
@@ -112,6 +113,9 @@ async function onSignOut() {
         <span class="track" :class="{ on: dark }" aria-hidden="true"><span class="thumb" /></span>
       </button>
       <hr>
+      <NuxtLink to="/" class="item" role="menuitem" tabindex="-1">
+        <UiGlyph name="back" :size="18" />{{ t('nav.backToSite') }}
+      </NuxtLink>
       <button type="button" class="item out" role="menuitem" tabindex="-1" :disabled="busy" @click="onSignOut">
         <UiGlyph name="arrow-back" :size="18" />{{ t('auth.signOut') }}
       </button>

@@ -69,7 +69,10 @@ const isCurrent = (to: string) => route.path === to || route.path.startsWith(`${
   align-items: center;
   gap: var(--tilw-space-32);
   block-size: 100%;
-  padding-inline: max(24px, env(safe-area-inset-left, 0px)) max(24px, env(safe-area-inset-right, 0px));
+  inline-size: 100%;
+  max-inline-size: calc(var(--tilw-content-max) + 116px);
+  margin-inline: auto;
+  padding-inline: max(58px, env(safe-area-inset-left, 0px)) max(58px, env(safe-area-inset-right, 0px));
 }
 .brand {
   display: flex;
@@ -119,6 +122,7 @@ const isCurrent = (to: string) => route.path === to || route.path.startsWith(`${
     block-size: 64px;
   }
   .in {
+    max-inline-size: none;
     padding-inline: max(20px, env(safe-area-inset-left, 0px)) max(20px, env(safe-area-inset-right, 0px));
   }
   .top-nav {

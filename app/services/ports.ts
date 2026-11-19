@@ -2,7 +2,7 @@
  * Service ports. The UI and stores depend only on these interfaces (constitution III).
  * Phase 1: services/mock. Later: services/http (Laravel). Contracts: specs/001-studio-frontend/contracts/ports.md
  */
-import type { ReadingPosition, ReadingSettings, Script, ScriptPatch, ScriptSummary, User } from './types'
+import type { LegacyScript, ReadingPosition, ReadingSettings, Script, ScriptPatch, ScriptSummary, User } from './types'
 
 export interface AuthPort {
   me(): Promise<User | null>
@@ -41,9 +41,18 @@ export interface AccountPort {
   deleteAccount(input: { password: string }): Promise<void>
 }
 
+/**
+ * Scripts an older version of the app left in this browser (6:68–6:71). Read only after the user agrees
+ * (they may belong to someone else on a shared computer). Adding one goes through ScriptsPort.create.
+ */
+export interface LegacyPort {
+  scan(): Promise<LegacyScript[]>
+}
+
 export interface Services {
   auth: AuthPort
   waitlist: WaitlistPort
   scripts: ScriptsPort
   account: AccountPort
+  legacy: LegacyPort
 }

@@ -86,7 +86,7 @@ const tag = computed(() => (props.to && !props.disabled ? resolveComponent('Nuxt
 .t-cue:not(:disabled):hover { background: #f7c9ac; }
 .t-ghost { background: transparent; color: var(--tilw-action-primary); }
 .t-ghost:not(:disabled):hover { background: var(--tilw-surface-quiet); }
-.t-danger { background: var(--tilw-status-error); color: #f7f2e9; }
+.t-danger { background: var(--tilw-status-error); color: var(--tilw-surface-paper); } /* paper text stays readable in both themes */
 
 .ui-btn:disabled {
   background: var(--tilw-surface-quiet);

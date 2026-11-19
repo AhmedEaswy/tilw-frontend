@@ -27,7 +27,7 @@ const cover = computed(() => {
 
 <template>
   <li class="row" :class="{ current }">
-    <NuxtLink :to="`/app/scripts/${script.id}`" class="main">
+    <NuxtLink :to="`/app/scripts/${script.id}`" class="row-link">
       <span class="cover" :style="{ background: cover.bg }" aria-hidden="true"><UiGlyph :name="cover.icon" :size="24" /></span>
       <span class="txt">
         <span class="title" dir="auto">{{ script.title }}</span>
@@ -63,7 +63,7 @@ const cover = computed(() => {
   border: 1px solid var(--tilw-border-subtle);
   background: var(--tilw-surface-white);
 }
-.main {
+.row-link {
   flex: 1;
   min-inline-size: 0;
   display: flex;
@@ -75,7 +75,9 @@ const cover = computed(() => {
   text-decoration: none;
   border-radius: inherit;
 }
-.main:hover .title {
+/* Only this row's own link: a bare `.main` here also matched the layout's <main> (all titles lit). */
+.row-link:hover .title,
+.row-link:focus-visible .title {
   color: var(--tilw-action-primary);
 }
 .cover {

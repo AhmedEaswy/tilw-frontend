@@ -13,6 +13,7 @@ import {
 } from '../types'
 import { countWords, firstLine, foldForSearch, isEmail, normalizeEmail, PASSWORD_MIN, splitParagraphs } from '../../utils/text'
 import { MockDb, type KV, type MockToken } from './db'
+import { LEGACY_SCRIPTS } from './seed'
 
 const RESET_TTL = 60 * 60_000
 const clone = <T>(v: T): T => (v === undefined ? v : JSON.parse(JSON.stringify(v)))
@@ -238,6 +239,14 @@ export function createMockServices(kv: KV, opts: { origin?: string; sleep?: (ms:
           delete s.scripts[u.id]
           s.sessionUserId = null
         })
+      }),
+    },
+
+    // Phase 1 stands in for the old app's browser keys with fixed sample scripts.
+    legacy: {
+      scan: () => call(() => {
+        currentUser()
+        return LEGACY_SCRIPTS.map(l => ({ ...l }))
       }),
     },
   }

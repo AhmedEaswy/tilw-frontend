@@ -151,6 +151,40 @@ describe('account', () => {
     expect(await code(m.services.auth.signIn({ email: 'layan@example.com', password: SEED_PASSWORD }))).toBe('invalid_credentials')
   })
 
+  it('changes the password only with the current one and a long enough new one (T095)', async () => {
+    const m = setup()
+    await m.services.auth.signIn({ email: 'layan@example.com', password: SEED_PASSWORD })
+    expect(await code(m.services.account.changePassword({ current: 'nope', next: 'newpassword1' }))).toBe('invalid_credentials')
+    expect(await code(m.services.account.changePassword({ current: SEED_PASSWORD, next: 'short' }))).toBe('validation')
+    await m.services.account.changePassword({ current: SEED_PASSWORD, next: 'newpassword1' })
+    await m.services.auth.signOut()
+    expect(await code(m.services.auth.signIn({ email: 'layan@example.com', password: SEED_PASSWORD }))).toBe('invalid_credentials')
+    expect((await m.services.auth.signIn({ email: 'layan@example.com', password: 'newpassword1' })).email).toBe('layan@example.com')
+  })
+
+  it('keeps the account when the delete password is wrong', async () => {
+    const m = setup()
+    await m.services.auth.signIn({ email: 'layan@example.com', password: SEED_PASSWORD })
+    expect(await code(m.services.account.deleteAccount({ password: 'nope' }))).toBe('invalid_credentials')
+    expect(await m.services.auth.me()).not.toBeNull()
+  })
+
+  it('saves name, theme and locale, and rejects an empty name', async () => {
+    const m = setup()
+    await m.services.auth.signIn({ email: 'layan@example.com', password: SEED_PASSWORD })
+    const u = await m.services.account.updatePrefs({ name: '  ليان  ', theme: 'dark', locale: 'en' })
+    expect([u.name, u.theme, u.locale]).toEqual(['ليان', 'dark', 'en'])
+    expect(await code(m.services.account.updatePrefs({ name: '   ' }))).toBe('validation')
+  })
+
+  it('lists legacy browser scripts only for a signed-in user', async () => {
+    const m = setup()
+    expect(await code(m.services.legacy.scan())).toBe('unauthenticated')
+    await m.services.auth.signIn({ email: 'layan@example.com', password: SEED_PASSWORD })
+    const found = await m.services.legacy.scan()
+    expect(found.map(f => f.title)).toEqual(['الافتتاحية الأولى', 'كواليس التصوير'])
+  })
+
   it('fails calls with a network error when offline', async () => {
     const m = setup()
     m.db.setKnobs({ offline: true })

@@ -101,12 +101,14 @@ where a frame exists).
 **Checkpoint US7** ✅ 2026-11-19 — recordings verified in the browser on the dev server (1024 px desktop and 390 px phone, ar, dark system theme) with takes recorded in Phase 8: list grouped by script with the newest take as a card and older takes under it (6:74), phone feature card + list (6:103) with a first-frame poster made and cached, video review with play/pause and seeking (WebM duration fixed up), audio review with waveform and time, download of the original (file name "افتتاحية الحلقة - المحاولة 1.webm", captured in the test so nothing was saved), the "أُرسل طلب التنزيل" state (6:76), star as best take, and delete with confirmation moving to the remaining take. First visit (6:77) and the low-storage banner were not seen in the browser (they need an empty store / a full disk); e2e spec `tests/e2e/recordings.spec.ts` covers first visit and the full review flow (not run yet).
 
 ## Phase 10: US8 Settings (P2) ★
-- [ ] T090 [US8] `/app/settings` [6:65, 6:104]: language, theme, account, reading settings (same account-wide values rehearsal edits, G15), links, sign out
-- [ ] T091 [US8] Export: confirm password [6:66] → handoff [6:67]
-- [ ] T092 [US8] Legacy recovery: consent [6:68] → choose [6:69] → confirm [6:70, 6:71]
-- [ ] T093 [US8] `/app/settings/account`: edit name, change password (current + new + confirm) — **G5, approved: AuthFrame fields inside settings layout [6:65 / 6:104]**; email shown read-only until backend
-- [ ] T094 [US8] Delete account: danger zone row in settings → `/app/settings/delete` confirm password + explain what is removed (account, scripts) and what stays (browser recordings) → done screen → signed out to landing — **G4, approved; follows export pattern [6:66 → 6:67]**
-- [ ] T095 [US8] Mock: `changePassword`, `deleteAccount`; e2e for both flows
+- [x] T090 [US8] `/app/settings` [6:65, 6:104]: language, theme, account, reading settings (same account-wide values rehearsal edits, G15), links, sign out
+- [x] T091 [US8] Export: confirm password [6:66] → handoff [6:67]
+- [x] T092 [US8] Legacy recovery: consent [6:68] → choose [6:69] → confirm [6:70, 6:71]
+- [x] T093 [US8] `/app/settings/account`: edit name, change password (current + new + confirm) — **G5, approved: AuthFrame fields inside settings layout [6:65 / 6:104]**; email shown read-only until backend
+- [x] T094 [US8] Delete account: danger zone row in settings → `/app/settings/delete` confirm password + explain what is removed (account, scripts) and what stays (browser recordings) → done screen → signed out to landing — **G4, approved; follows export pattern [6:66 → 6:67]**
+- [x] T095 [US8] Mock: `changePassword`, `deleteAccount`; e2e for both flows
+
+**Checkpoint US8** ✅ 2026-11-19 — settings verified in the browser on the dev server (1120 px and 390 px, ar, dark system theme): preferences page matches 6:65 / 6:104 (account card at the start side, language and appearance beside it, 81-px rows); theme choice applies at once and saves to the account; reading settings open the rehearsal panel as a drawer without the per-script direction; export rejects a wrong password and starts `tilw-account-v1.json` (6:66 → 6:67, download captured in the test); legacy recovery consent → list → confirm adds a copy to the account (6:68 → 6:71); account page saves the name and rejects a wrong current password and a short / mismatched new one; delete account shows what goes and what stays and rejects a wrong password. Not run in the browser: a real password change and a real account delete (would change the seeded account) — covered by mock unit tests and `tests/e2e/settings.spec.ts` (not run yet).
 
 ## Phase 11: US9 Public & polish (P3)
 - [ ] T100 [P] `/demo` reader demo [6:6–6:17] reusing reader engine

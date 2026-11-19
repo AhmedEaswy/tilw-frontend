@@ -107,3 +107,16 @@ Severity: 🔴 blocks the cycle · 🟠 breaks a promise made in landing/legal c
   "الأفضل" badge in the list and the take selector.
 - **Takes that stopped on their own** (10 min, device lost, storage full) explain that in the review panel.
 
+## Found while building US8 (settings, 2026-11-19)
+- **Sign out** is not on the desktop frame (6:65); it's in the account menu and at the bottom of settings,
+  next to the privacy and terms links (as on the phone frame 6:104).
+- **Account card** links to the new account page ("تعديل الاسم وكلمة المرور", G5).
+- **Reading settings** opens the same panel as rehearsal, as a side drawer (bottom sheet on phones). The
+  per-script text direction is hidden there because it isn't an account setting (G15).
+- **Language** saves to the account as well as the `tilw-locale` cookie.
+- **Delete account (G4)** is a danger-zone box at the end of settings and a page built on the task card:
+  what is deleted, what stays (browser recordings), password, then a done screen and sign-out.
+- **Legacy recovery**: Phase 1 shows the two sample scripts in `seed.ts`; the real scan of the old app's
+  browser keys needs their format. An added script shows "أُضيف" in the list; the original is not removed.
+- **Danger button** text now uses the paper colour so it stays readable in the dark theme.
+

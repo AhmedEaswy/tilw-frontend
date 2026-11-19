@@ -53,6 +53,7 @@ export default defineNuxtPlugin((nuxtApp) => {
     waitlist: mock.services.waitlist,
     scripts: guard(mock.services.scripts),
     account: guard(mock.services.account),
+    legacy: guard(mock.services.legacy),
   }
 
   return {

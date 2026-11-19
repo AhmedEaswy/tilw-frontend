@@ -52,7 +52,7 @@ Pin / archive / rename are `update` patches (`pinned`, `archivedAt`, `title`).
 | `deleteAccount({password})` *(G4)* | `void` | invalid_credentials | `DELETE /api/user` |
 
 ## Device-only (no port)
-- `LegacyStore.scan()` → `LegacyScript[]` — reads old keys only after consent; adding one calls `ScriptsPort.create`.
+- `LegacyPort.scan()` → `LegacyScript[]` — reads old keys only after consent; adding one calls `ScriptsPort.create`. Phase 1's mock returns the two sample scripts in `seed.ts` (`LEGACY_SCRIPTS`).
 - `TakesRepo` (IndexedDB): `list()`, `get(id)`, `put(take)`, `remove(id)`, `estimate()`.
 
 ## Mock behaviour knobs (`/__mock`, dev only)

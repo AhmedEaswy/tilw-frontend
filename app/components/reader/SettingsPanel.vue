@@ -7,7 +7,10 @@
 import type { ReadingSettings, TextDirection } from '~/services/types'
 import { FONT_PX, FONT_STEPS, LINE_PX, LINE_STEPS } from '~/utils/reader'
 
-const props = defineProps<{ settings: ReadingSettings; direction: TextDirection; uiDirection: 'rtl' | 'ltr' }>()
+const props = withDefaults(
+  defineProps<{ settings: ReadingSettings; direction?: TextDirection; uiDirection: 'rtl' | 'ltr'; showDirection?: boolean }>(),
+  { direction: 'auto', showDirection: true },
+)
 const emit = defineEmits<{ update: [patch: Partial<ReadingSettings>]; direction: [d: TextDirection]; close: [] }>()
 const view = defineModel<'main' | 'more'>('view', { default: 'main' })
 
@@ -113,8 +116,10 @@ defineExpose({ focus: () => doneBtn.value?.$el.focus() })
           <UiStepper v-model="lineIdx" :min="0" :max="LINE_STEPS.length - 1" :label="t('reader.settings.lineWidth')" :format="i => String(LINE_PX[LINE_STEPS[i]!])" />
         </div>
         <hr>
-        <h3>{{ t('reader.settings.direction') }}</h3>
-        <UiSegmented v-model="dir" class="seg" :options="dirOptions" :label="t('reader.settings.direction')" />
+        <template v-if="showDirection">
+          <h3>{{ t('reader.settings.direction') }}</h3>
+          <UiSegmented v-model="dir" class="seg" :options="dirOptions" :label="t('reader.settings.direction')" />
+        </template>
         <h3>{{ t('reader.settings.countdown') }}</h3>
         <UiSegmented v-model="countdown" class="seg" :options="countdownOptions" :label="t('reader.settings.countdown')" />
         <hr>
