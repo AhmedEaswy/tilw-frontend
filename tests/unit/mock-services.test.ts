@@ -114,6 +114,21 @@ describe('scripts', () => {
     expect(await code(m.services.scripts.create({ title: '   ' }))).toBe('validation')
   })
 
+  it('searches titles and bodies, ignoring diacritics', async () => {
+    expect(await m.services.scripts.search('الكواليس')).toEqual(['s_backstage'])
+    expect(await m.services.scripts.search('المستمع')).toEqual(['s_letter'])
+    // body text, typed without the teh marbuta
+    expect(await m.services.scripts.search('الحلقه')).toContain('s_opening')
+    expect(await m.services.scripts.search('   ')).toEqual([])
+  })
+
+  it('pin and archive do not change the edited date', async () => {
+    const s = await m.services.scripts.get('s_letter')
+    const saved = await m.services.scripts.update(s.id, { pinned: true, archivedAt: new Date().toISOString() }, s.version)
+    expect(saved.updatedAt).toBe(s.updatedAt)
+    expect(saved.pinned).toBe(true)
+  })
+
   it('returns copies, not live references', async () => {
     const a = await m.services.scripts.get('s_opening')
     a.title = 'mutated'

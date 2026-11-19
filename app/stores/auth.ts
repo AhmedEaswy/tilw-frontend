@@ -8,6 +8,8 @@ export const useAuthStore = defineStore('auth', () => {
   let pending: Promise<void> | null = null
 
   function setUser(u: User | null) {
+    // Another account (or none): drop the previous account's cached scripts.
+    if (u?.id !== user.value?.id) useScriptsStore().reset()
     user.value = u
     status.value = u ? 'authed' : 'guest'
   }

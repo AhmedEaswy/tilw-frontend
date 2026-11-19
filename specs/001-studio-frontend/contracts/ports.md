@@ -32,6 +32,7 @@ interface PortError { code: PortErrorCode; fields?: Record<string, string>; curr
 | Method | Returns | Errors | HTTP (later) |
 |---|---|---|---|
 | `list()` | `Script[]` (without body) | — | `GET /api/scripts` |
+| `search(query)` | `string[]` (ids; title + body, Arabic-normalised) | — | `GET /api/scripts/search?q=` |
 | `get(id)` | `Script` | not_found | `GET /api/scripts/{id}` |
 | `create({title, body?})` | `Script` | validation | `POST /api/scripts` |
 | `update(id, patch, baseVersion)` | `Script` | conflict (`current` = server copy), validation | `PATCH /api/scripts/{id}` with `If-Match` |

@@ -8,7 +8,7 @@ const { toasts, dismiss } = useToast()
     <TransitionGroup name="toast">
       <div v-for="t in toasts" :key="t.id" class="toast" :class="`t-${t.tone}`" role="status">
         <UiGlyph :name="t.tone === 'error' ? 'close' : 'check'" :size="18" />
-        <span>{{ t.text }}</span>
+        <span class="txt">{{ t.text }}</span>
         <button type="button" class="x" :aria-label="$t('common.close')" @click="dismiss(t.id)">
           <UiGlyph name="close" :size="16" />
         </button>
@@ -45,7 +45,7 @@ const { toasts, dismiss } = useToast()
   font: var(--tilw-type-meta);
   box-shadow: var(--tilw-shadow-pop);
 }
-.toast span {
+.toast .txt {
   flex: 1;
 }
 .t-success :deep(.ui-glyph) { color: #7fd3a6; }

@@ -48,32 +48,38 @@ where a frame exists).
 - [x] T033 [US2] e2e (in tests/e2e/auth.spec.ts; not run yet): invite from `/__mock` → accept → empty library; expired invite
 
 ## Phase 5: US3 Library (P1) ★
-- [ ] T040 [US3] `scripts` store: list/filter/sort/search, optimistic pin/archive
-- [ ] T041 [US3] `/app/scripts` [6:18, 6:20, 6:83]: last-opened card, search, filter tabs, list
-- [ ] T042 [P] [US3] Empty library [6:22]
-- [ ] T043 [P] [US3] New script dialog [6:23, 6:84]
-- [ ] T044 [P] [US3] Import dialog [6:24, 6:85] incl. errors (G11)
-- [ ] T045 [P] [US3] Sort dialog [6:25]
-- [ ] T046 [US3] Actions sheet [6:108], rename [6:109], download TXT [6:110], duplicate; pinned [6:112], archived [6:111]
-- [ ] T047 [US3] e2e library flows
+- [x] T040 [US3] `scripts` store: list/filter/sort/search, optimistic pin/archive
+- [x] T041 [US3] `/app/scripts` [6:18, 6:20, 6:83]: last-opened card, search, filter tabs, list
+- [x] T042 [P] [US3] Empty library [6:22]
+- [x] T043 [P] [US3] New script dialog [6:23, 6:84]
+- [x] T044 [P] [US3] Import dialog [6:24, 6:85] incl. errors (G11)
+- [x] T045 [P] [US3] Sort dialog [6:25]
+- [x] T046 [US3] Actions sheet [6:108], rename [6:109], download TXT [6:110], duplicate; pinned [6:112], archived [6:111]
+- [x] T047 [US3] e2e library flows (tests/e2e/library.spec.ts; not run yet)
+
+**Checkpoint US3** ✅ 2026-11-19 — library verified on the static build at 1280 px and 375 px (ar, light): last-opened card, search (title + body, Arabic-normalised), filters, sort dialog, actions sheet (rename, duplicate, TXT download, pin, archive / restore), new and import dialogs, empty library. Decisions taken while building: row cover style is picked from the script id (scripts have no "subject" field yet); the actions sheet (6:108) is also used on desktop as a dialog; archived scripts get "إعادة من الأرشيف" (restore). Permanent delete (G9) is not built.
 
 ## Phase 6: US4 Editor (P1) ★
-- [ ] T050 [US4] `editor` store: working copy, debounced autosave, version, local draft, undo/redo
-- [ ] T051 [US4] `/app/scripts/[id]` [6:19, 6:21, 6:86]: title, body, live counts, duration, save status
-- [ ] T052 [US4] Writing tools: search in text, undo/redo, download
-- [ ] T053 [US4] Delivery marks (emphasis/pause/note) — **visual per G7, interim from landing style**
-- [ ] T054 [US4] Conflict compare [6:72] + confirm replacement [6:73]
-- [ ] T055 [US4] e2e: edit → saved; forced conflict → choose account copy
+- [x] T050 [US4] `editor` store: working copy, debounced autosave, version, local draft, undo/redo
+- [x] T051 [US4] `/app/scripts/[id]` [6:19, 6:21, 6:86]: title, body, live counts, duration, save status
+- [x] T052 [US4] Writing tools: search in text, undo/redo, download
+- [x] T053 [US4] Delivery marks (emphasis/pause/note) — **visual per G7, interim from landing style**
+- [x] T054 [US4] Conflict compare [6:72] + confirm replacement [6:73]
+- [x] T055 [US4] e2e: edit → saved; forced conflict → choose account copy (tests/e2e/editor.spec.ts; not run yet)
+
+**Checkpoint US4** ✅ 2026-11-19 — editor verified on the static build (desktop + 375 px): typing autosaves ("حُفظ في حسابك"), current-paragraph highlight, word/paragraph count and reading time, delivery marks (emphasis, pause chip, note), search with match count, undo/redo, TXT download, local draft recovery, and both conflict paths (6:72 → use account copy via 6:73, or save my edits as a new script). Delivery-marks panel is an interim design (G7): emphasis = apricot highlight, pause = dashed "/ 2 ث" chip above the text, note = dotted underline with tooltip.
 
 ## Phase 7: US5 Rehearsal (P1) ★
-- [ ] T060 [US5] `useReaderEngine` (WPM scroll on rAF, manual stepping, measurement, position save)
-- [ ] T061 [US5] `/app/scripts/[id]/rehearse` paused/playing [6:26, 6:27, 6:31, 6:32, 6:87–6:90]
-- [ ] T062 [US5] Reading settings panel [6:28, 6:29] + phone sheet [6:33, 6:34] + tablet/landscape/320 [6:36, 6:37, 6:105, 6:106]
-- [ ] T063 [US5] More controls [6:30, 6:35, 6:107]: line width, countdown, shortcuts (save to account); text direction saves to the script (G15)
-- [ ] T064 [US5] `useShortcuts` Space / Esc / arrows
-- [ ] T065 [US5] Recovery [6:79] + choose paragraph [6:80]
-- [ ] T066 [US5] End-of-script state (G12)
-- [ ] T067 [US5] Unit tests for engine timing; e2e play/pause/settings persistence
+- [x] T060 [US5] `useReaderEngine` (WPM scroll on rAF, manual stepping, measurement, position save)
+- [x] T061 [US5] `/app/scripts/[id]/rehearse` paused/playing [6:26, 6:27, 6:31, 6:32, 6:87–6:90]
+- [x] T062 [US5] Reading settings panel [6:28, 6:29] + phone sheet [6:33, 6:34] + tablet/landscape/320 [6:36, 6:37, 6:105, 6:106]
+- [x] T063 [US5] More controls [6:30, 6:35, 6:107]: line width, countdown, shortcuts (save to account); text direction saves to the script (G15)
+- [x] T064 [US5] `useShortcuts` Space / Esc / arrows
+- [x] T065 [US5] Recovery [6:79] + choose paragraph [6:80]
+- [x] T066 [US5] End-of-script state (G12)
+- [x] T067 [US5] Unit tests for engine timing; e2e play/pause/settings persistence (tests/unit/reader.test.ts; tests/e2e/rehearsal.spec.ts written, not run yet)
+
+**Checkpoint US5** ✅ 2026-11-19 — rehearsal verified in the browser on the dev server (1280 px, 390 px, 320 px; ar, dark system theme): constant mode measured at 120.1 WPM in the page (target 120 ±5%), 3-2-1 countdown, Space play/pause, arrows step paragraphs (follow script direction), docked settings panel (6:28) and phone sheet (6:33), more controls (6:30), reading settings and direction persist after reload, position saved and restored, recovery (6:79 → 6:80) via the `/__mock` "Reading position saves fail" knob, end state (G12). Deviations logged in gaps.md. Not checked: tablet / landscape frames (6:36, 6:37) beyond the responsive CSS, English frames (6:87–6:99), light theme.
 
 ## Phase 8: US6 Recording (P2) ★
 - [ ] T070 [US6] Composables `useMediaDevices`, `useLevelMeter`, `useRecorder` (mime pick, 10-min cap, quota, interruption)

@@ -40,13 +40,10 @@ const file = computed(() => {
   if (rtl.value && props.name === 'prev') return 'next'
   return props.name
 })
-// back/arr are directional arrows: mirror them in RTL so "back" always points toward the start.
-// arrow-action is drawn pointing left (forward in Arabic), so it mirrors in LTR instead.
-const mirror = computed(() =>
-  props.name === 'arrow-action' || props.name === 'arrow-back' || props.name === 'play-small'
-    ? !rtl.value
-    : rtl.value && (props.name === 'back' || props.name === 'arr'),
-)
+// The directional glyphs are drawn for Arabic: `arr`/`arrow-action` point left (forward in RTL),
+// `back`/`arrow-back` point right (back in RTL). They mirror in English.
+const RTL_NATIVE = new Set<GlyphName>(['arr', 'back', 'arrow-action', 'arrow-back', 'play-small'])
+const mirror = computed(() => !rtl.value && RTL_NATIVE.has(props.name))
 </script>
 
 <template>

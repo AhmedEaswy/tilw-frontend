@@ -43,3 +43,32 @@ Severity: 🔴 blocks the cycle · 🟠 breaks a promise made in landing/legal c
 
 ### Still open
 - None. All owner decisions for Phase 1 are made; implementation can start at Phase 1 Setup.
+
+## Found while building US5 (rehearsal, 2026-11-19)
+- **Cue line size**: Figma draws the current line larger than its neighbours (56 vs 40 px). Built with one
+  size for all lines and the current paragraph lit, so nothing reflows while the text scrolls (constitution V).
+- **Font size and line width as steps**: the steppers show px (48, 640) but the data model stores
+  `S|M|L|XL` and `narrow|medium|wide`. Mapped S/M/L/XL → 40/48/56/64 px and narrow/medium/wide → 520/640/760 px;
+  phones scale the font to 62.5 % (48 → 30, as in 6:31).
+- **Manual mode transport**: 6:29 still shows "تشغيل". In manual mode it is disabled and the WPM chip is
+  hidden; Space and the arrows step paragraphs.
+- **Rewind glyph** (6:26): goes back to the start of the current paragraph (or the previous one when already
+  at its start). Figma doesn't say.
+- **Shortcuts list** (6:30) shows Space and Esc only; the arrows (next/previous paragraph, Up/Down pace) are
+  added as a third line.
+- **Choose paragraph (6:80)** is drawn inside the app navigation; the reader has no navigation, so the card
+  sits on the paper surface alone. "إغلاق" on 6:79 returns to the editor.
+- **End of script (G12)**: built as proposed — "انتهى النص" over the glass with "من البداية" and
+  "إعداد التسجيل".
+- **Digits**: the reader uses Western digits in both languages, as the frames do ("الفقرة 2 من 3").
+- **Dark theme**: the settings panel and recovery screens follow the app theme (paper tokens); Figma only
+  has light versions.
+- **Rehearsal countdown** uses the recording countdown frame (6:42 / 6:43) across the whole stage, under the
+  reader's own header (no studio masthead or logo). The label reads "يبدأ التدريب بعد" instead of
+  "يبدأ التسجيل بعد", because nothing is recorded. "إلغاء" and Esc cancel it.
+
+## Found while building the shell (2026-11-19)
+- **Account menu**: the profile initial in the header (6:18) now opens a menu with the name and email,
+  "الملف الشخصي" (→ `/app/settings/account`, placeholder until T093), "الإعدادات", a "الوضع الداكن" switch,
+  and "تسجيل الخروج". Figma has no frame for it; built from the design-system surfaces, switch and glyphs.
+  The switch saves an explicit light or dark choice; going back to "system" stays in settings (T090).

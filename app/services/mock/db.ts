@@ -45,6 +45,8 @@ export interface MockKnobs {
   offline: boolean
   forceConflictOnNextSave: boolean
   expireTokens: boolean
+  /** Reading-position saves fail (reader recovery, 6:79). */
+  failPositionSave: boolean
 }
 
 export const DEFAULT_KNOBS: MockKnobs = {
@@ -53,6 +55,7 @@ export const DEFAULT_KNOBS: MockKnobs = {
   offline: false,
   forceConflictOnNextSave: false,
   expireTokens: false,
+  failPositionSave: false,
 }
 
 const STATE_KEY = 'tilw:mock:v1'

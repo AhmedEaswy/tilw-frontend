@@ -11,7 +11,7 @@ import {
   type ScriptSummary,
   type User,
 } from '../types'
-import { countWords, firstLine, isEmail, normalizeEmail, PASSWORD_MIN, splitParagraphs } from '../../utils/text'
+import { countWords, firstLine, foldForSearch, isEmail, normalizeEmail, PASSWORD_MIN, splitParagraphs } from '../../utils/text'
 import { MockDb, type KV, type MockToken } from './db'
 
 const RESET_TTL = 60 * 60_000
@@ -142,6 +142,13 @@ export function createMockServices(kv: KV, opts: { origin?: string; sleep?: (ms:
 
     scripts: {
       list: () => call(() => userScripts(currentUser().id).map(summarize)),
+      search: query => call(() => {
+        const q = foldForSearch(query.trim())
+        if (!q) return []
+        return userScripts(currentUser().id)
+          .filter(s => foldForSearch(`${s.title}\n${s.body}`).includes(q))
+          .map(s => s.id)
+      }),
       get: id => call(() => findScript(id)),
       create: ({ title, body = '' }) => call(() => {
         const t = title.trim()
@@ -199,7 +206,10 @@ export function createMockServices(kv: KV, opts: { origin?: string; sleep?: (ms:
         if (i < 0) throw new PortError('not_found')
         db.write(() => list.splice(i, 1))
       }),
-      savePosition: (id, position) => call(() => void db.write(() => (findScript(id).lastPosition = position))),
+      savePosition: (id, position) => call(() => {
+        if (db.knobs.failPositionSave) throw new PortError('network')
+        db.write(() => (findScript(id).lastPosition = position))
+      }),
     },
 
     account: {

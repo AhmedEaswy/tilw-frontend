@@ -82,6 +82,7 @@ const fmt = (n: number) => new Date(n).toLocaleString()
         <label class="ck"><input v-model="knobs.offline" type="checkbox"> Offline</label>
         <label class="ck"><input v-model="knobs.forceConflictOnNextSave" type="checkbox"> Conflict on next script save</label>
         <label class="ck"><input v-model="knobs.expireTokens" type="checkbox"> Treat reset/invite links as expired</label>
+        <label class="ck"><input v-model="knobs.failPositionSave" type="checkbox"> Reading position saves fail</label>
       </div>
     </section>
 

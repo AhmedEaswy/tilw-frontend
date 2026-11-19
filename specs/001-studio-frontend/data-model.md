@@ -19,10 +19,10 @@ interface User {
 interface ReadingSettings {
   mode: 'constant' | 'manual'  // بسرعة ثابتة | يدوي
   wpm: number                  // 60..220, default 120
-  fontSize: 'S' | 'M' | 'L' | 'XL'
+  fontSize: 'S' | 'M' | 'L' | 'XL'      // 40 / 48 / 56 / 64 px on desktop (utils/reader.ts)
   mirror: boolean
-  lineWidth: 'narrow' | 'medium' | 'wide'
-  countdownSec: 0 | 3 | 5
+  lineWidth: 'narrow' | 'medium' | 'wide' // 520 / 640 / 760 px
+  countdownSec: 0 | 3 | 5 | 10          // 6:30 offers بدون / 3 / 5 / 10 ث
   // text direction is NOT here: it is per script (Script.direction), G15
 }
 

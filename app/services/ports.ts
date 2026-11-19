@@ -22,6 +22,8 @@ export interface WaitlistPort {
 
 export interface ScriptsPort {
   list(): Promise<ScriptSummary[]>
+  /** Ids of scripts whose title or body contains the query (case- and diacritic-insensitive). */
+  search(query: string): Promise<string[]>
   get(id: string): Promise<Script>
   create(input: { title: string; body?: string }): Promise<Script>
   /** Rejects with `conflict` (and the server copy) when `baseVersion` is stale. */

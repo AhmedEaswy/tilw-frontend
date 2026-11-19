@@ -6,6 +6,10 @@ export default defineNuxtConfig({
 
   modules: ['@pinia/nuxt', '@nuxtjs/i18n', '@vueuse/nuxt'],
 
+  // Components register by file name only (components/scripts/ScriptRow.vue → <ScriptRow>).
+  // Folders organise files; they don't prefix names.
+  components: [{ path: '~/components', pathPrefix: false }],
+
   // Landing styles are imported by pages/index.vue only, so they never leak into the app.
   css: ['~/assets/css/tokens.css', '~/assets/css/base.css'],
 

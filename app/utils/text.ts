@@ -35,6 +35,21 @@ export function titleFromFileName(name: string): string {
   return name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim() || name
 }
 
+/**
+ * Normalise text for search: lower-case, strip Arabic diacritics and tatweel, unify alef/yeh/teh-marbuta
+ * forms, so "الحلقه" finds "الحلقة" and "اول" finds "أوّل".
+ */
+export function foldForSearch(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[ً-ٰٟـ̀-ͯ]/g, '')
+    .replace(/[إأآٱ]/g, 'ا')
+    .replace(/ى/g, 'ي')
+    .replace(/ة/g, 'ه')
+    .replace(/\s+/g, ' ')
+}
+
 export const normalizeEmail = (e: string) => e.trim().toLowerCase()
 export const isEmail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e.trim())
 export const PASSWORD_MIN = 8

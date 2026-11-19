@@ -2,13 +2,12 @@
 /**
  * Studio shell (Figma 6:18 desktop, 6:20 phone): 76px header with signature, section nav
  * (نصوصي · تسجيلاتي · الإعدادات) with a copper underline on the current section, and the profile
- * initial. On phones the nav moves to a bottom tab bar with glyphs.
+ * initial, which opens the account menu (ProfileMenu). On phones the nav moves to a bottom tab bar with glyphs.
  */
 import type { GlyphName } from '~/components/ui/UiGlyph.vue'
 
 const { t } = useI18n()
 const route = useRoute()
-const auth = useAuthStore()
 
 const sections: { to: string; key: string; icon: GlyphName }[] = [
   { to: '/app/scripts', key: 'nav.scripts', icon: 'file' },
@@ -16,11 +15,10 @@ const sections: { to: string; key: string; icon: GlyphName }[] = [
   { to: '/app/settings', key: 'nav.settings', icon: 'settings' },
 ]
 const isCurrent = (to: string) => route.path === to || route.path.startsWith(`${to}/`)
-const initial = computed(() => auth.user?.name?.trim().charAt(0) ?? '·')
 </script>
 
 <template>
-  <div class="shell">
+  <div class="shell" :class="{ 'phone-minimal': route.meta.phoneMinimal }">
     <header class="hdr">
       <div class="in">
         <NuxtLink to="/app/scripts" class="brand" :aria-label="t('nav.scripts')"><BrandSignature :width="143" /></NuxtLink>
@@ -32,7 +30,7 @@ const initial = computed(() => auth.user?.name?.trim().charAt(0) ?? '·')
             :aria-current="isCurrent(s.to) ? 'page' : undefined"
           >{{ t(s.key) }}</NuxtLink>
         </nav>
-        <NuxtLink to="/app/settings" class="avatar" :aria-label="t('nav.account', { name: auth.user?.name ?? '' })">{{ initial }}</NuxtLink>
+        <ProfileMenu />
       </div>
     </header>
 
@@ -106,18 +104,6 @@ const initial = computed(() => auth.user?.name?.trim().charAt(0) ?? '·')
   border-radius: 2px;
   background: var(--tilw-action-primary);
 }
-.avatar {
-  display: grid;
-  place-items: center;
-  inline-size: 38px;
-  block-size: 38px;
-  margin-inline-start: auto;
-  border-radius: 50%;
-  background: var(--tilw-surface-quiet);
-  color: var(--tilw-text-ink);
-  font: 500 20px/1 var(--tilw-font-ar);
-  text-decoration: none;
-}
 .main {
   inline-size: 100%;
   max-inline-size: calc(var(--tilw-content-max) + 116px);
@@ -172,6 +158,13 @@ const initial = computed(() => auth.user?.name?.trim().charAt(0) ?? '·')
   }
   .tabs a[aria-current='page'] {
     color: var(--tilw-action-primary);
+  }
+  .phone-minimal .hdr,
+  .phone-minimal .tabs {
+    display: none;
+  }
+  .phone-minimal .main {
+    padding-block-end: 0;
   }
 }
 </style>

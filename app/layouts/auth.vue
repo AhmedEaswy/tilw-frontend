@@ -10,7 +10,7 @@
  */
 const { t } = useI18n()
 const route = useRoute()
-const photo = computed(() => (route.meta.authPhoto === 'glass' ? '/media/glass.png' : '/assets/portrait.png'))
+const photo = computed(() => (route.meta.authPhoto === 'glass' ? '/media/glass.jpg' : '/media/portrait.jpg'))
 const back = computed(() => route.meta.authBack as string | undefined)
 </script>
 

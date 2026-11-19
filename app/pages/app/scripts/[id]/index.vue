@@ -1,0 +1,337 @@
+<script setup lang="ts">
+/**
+ * Script editor (6:19 desktop, 6:21 phone, 6:86 en) with conflict flow (6:72 → 6:73). T050–T055.
+ */
+import type { DeliveryMark } from '~/services/types'
+
+definePageMeta({ layout: 'app', phoneMinimal: true })
+const { t } = useI18n()
+const route = useRoute()
+const editor = useEditorStore()
+const auth = useAuthStore()
+const errorText = useErrorText()
+const { show } = useToast()
+
+const id = computed(() => String(route.params.id))
+useHead({ title: () => `${editor.title || t('library.editor')} · tilwprompter` })
+
+onMounted(() => editor.load(id.value))
+watch(id, v => editor.load(v))
+
+// Save before leaving; the local draft covers anything still pending.
+onBeforeRouteLeave(() => {
+  if (editor.dirty && editor.saveState !== 'conflict') void editor.save()
+})
+function beforeUnload(e: BeforeUnloadEvent) {
+  if (editor.saveState === 'saving' || editor.saveState === 'unsaved') {
+    void editor.save()
+    e.preventDefault()
+  }
+}
+onMounted(() => window.addEventListener('beforeunload', beforeUnload))
+onBeforeUnmount(() => {
+  window.removeEventListener('beforeunload', beforeUnload)
+  editor.reset()
+})
+
+const canvas = ref<{ select: (s: number, e: number) => void; focus: () => void }>()
+const tools = ref<{ openSearch: () => void }>()
+const selection = ref({ start: 0, end: 0 })
+
+const direction = computed<'rtl' | 'ltr'>(() => {
+  const d = editor.script?.direction ?? 'auto'
+  return d === 'auto' ? detectDirection(editor.body || editor.title || 'ا') : d
+})
+const minutes = computed(() => estimateMinutes(editor.words, auth.user?.reading.wpm ?? 120))
+
+// ----- search -----
+const query = ref('')
+const active = ref(0)
+const matches = computed(() => findAll(editor.body, query.value))
+watch(query, () => (active.value = 0))
+function go(step: 1 | -1) {
+  const n = matches.value.length
+  if (!n) return
+  active.value = (active.value + step + n) % n
+  const m = matches.value[active.value]!
+  canvas.value?.select(m.start, m.end)
+}
+
+// ----- keyboard -----
+function onKeys(e: KeyboardEvent) {
+  const mod = e.ctrlKey || e.metaKey
+  if (!mod) return
+  const k = e.key.toLowerCase()
+  if (k === 'z' && !e.shiftKey) {
+    e.preventDefault()
+    editor.undo()
+  } else if ((k === 'z' && e.shiftKey) || k === 'y') {
+    e.preventDefault()
+    editor.redo()
+  } else if (k === 's') {
+    e.preventDefault()
+    void editor.save()
+  } else if (k === 'f') {
+    e.preventDefault()
+    tools.value?.openSearch()
+  }
+}
+
+// ----- marks -----
+const marksOpen = ref(false)
+function addMark(m: Omit<DeliveryMark, 'id'>) {
+  editor.addMark(m)
+  show(t('editor.marks.added'))
+}
+function jumpTo(m: DeliveryMark) {
+  marksOpen.value = false
+  nextTick(() => canvas.value?.select(m.start, Math.max(m.end, m.start)))
+}
+
+function download() {
+  downloadText(editor.title || t('library.editor'), editor.body)
+  show(t('library.downloaded'))
+}
+
+// ----- conflict -----
+const resolving = ref(false)
+const inConflictView = computed(() => editor.saveState === 'conflict' && !!editor.serverCopy && !editor.reviewing)
+async function saveMine() {
+  resolving.value = true
+  try {
+    const created = await editor.saveMineAsNew(t('editor.conflict.copyTitle', { title: editor.title.trim() || editor.serverCopy!.title }))
+    if (created) show(t('editor.conflict.savedAsNew', { title: created.title }))
+  } catch (e) {
+    show(errorText(e), 'error')
+  } finally {
+    resolving.value = false
+  }
+}
+function useTheirs() {
+  editor.acceptServerCopy()
+  show(t('editor.conflict.usedTheirs'))
+}
+
+const statusLabel = computed(() => t(`editor.status.${editor.saveState}`))
+</script>
+
+<template>
+  <div class="ed">
+    <!-- loading / missing / error -->
+    <div v-if="editor.status === 'idle' || editor.status === 'loading'" class="loading" aria-busy="true">
+      <UiSkeleton h="24px" w="180px" />
+      <div class="grid">
+        <UiSkeleton h="635px" r="12px" />
+        <UiSkeleton class="side-skel" h="635px" r="12px" />
+      </div>
+    </div>
+    <UiEmptyState v-else-if="editor.status === 'missing'" icon="file" :title="t('editor.missingTitle')" :text="t('editor.missingText')">
+      <UiButton to="/app/scripts">{{ t('library.backToScripts') }}</UiButton>
+    </UiEmptyState>
+    <UiBanner v-else-if="editor.status === 'error'" tone="error" class="err">
+      {{ errorText(editor.loadError) }}
+      <template #action><UiButton size="sm" tone="secondary" @click="editor.load(id)">{{ t('common.retry') }}</UiButton></template>
+    </UiBanner>
+
+    <!-- 6:72 / 6:73 -->
+    <ConflictCompare
+      v-else-if="inConflictView"
+      v-model:busy="resolving"
+      :mine="{ title: editor.title, body: editor.body }"
+      :theirs="{ title: editor.serverCopy!.title, body: editor.serverCopy!.body }"
+      @save-mine="saveMine"
+      @use-theirs="useTheirs"
+      @back="editor.reviewing = true"
+    />
+
+    <!-- 6:19 / 6:21 -->
+    <template v-else>
+      <div class="bar">
+        <NuxtLink to="/app/scripts" class="back">
+          <UiGlyph class="back-ic" name="back" :size="22" />
+          <span class="lbl">{{ t('library.backToScripts') }}</span>
+        </NuxtLink>
+        <button
+          v-if="editor.saveState === 'conflict'"
+          type="button"
+          class="chip warn"
+          @click="editor.reviewing = false"
+        >{{ statusLabel }}</button>
+        <span v-else class="chip" :class="editor.saveState" role="status">{{ statusLabel }}</span>
+      </div>
+
+      <UiBanner v-if="editor.restoredDraft && editor.saveState !== 'conflict'" tone="info" class="restored">{{ t('editor.restored') }}</UiBanner>
+
+      <div class="grid">
+        <EditorCanvas
+          ref="canvas"
+          :title="editor.title"
+          :body="editor.body"
+          :marks="editor.marks"
+          :direction="direction"
+          :matches="matches"
+          :active-match="active"
+          :words="editor.words"
+          :paragraphs="editor.paragraphs"
+          @update:title="v => editor.setContent({ title: v })"
+          @update:body="v => editor.setContent({ body: v })"
+          @selection="r => (selection = r)"
+          @keys="onKeys"
+        />
+        <WritingTools
+          ref="tools"
+          v-model:query="query"
+          :script-id="id"
+          :minutes="minutes"
+          :can-undo="editor.canUndo"
+          :can-redo="editor.canRedo"
+          :match-count="matches.length"
+          :active-match="active"
+          @marks="marksOpen = true"
+          @undo="editor.undo()"
+          @redo="editor.redo()"
+          @download="download"
+          @next="go(1)"
+          @prev="go(-1)"
+        />
+      </div>
+
+      <!-- Phone action bar (6:21) -->
+      <div class="phone-acts">
+        <UiButton :to="`/app/scripts/${id}/rehearse`">{{ t('library.rehearse') }}</UiButton>
+        <UiButton tone="secondary" :to="`/app/scripts/${id}/record`">{{ t('library.setupRecording') }}</UiButton>
+      </div>
+
+      <MarksDialog
+        v-model:open="marksOpen"
+        :body="editor.body"
+        :marks="editor.marks"
+        :selection="selection"
+        @add="addMark"
+        @remove="editor.removeMark"
+        @jump="jumpTo"
+      />
+    </template>
+  </div>
+</template>
+
+<style scoped>
+.ed {
+  padding-block: 26px 40px;
+}
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-block-end: 26px;
+}
+.back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--tilw-action-primary);
+  font: 500 16px/1.36 var(--tilw-font-ar);
+  text-decoration: none;
+}
+.back:hover .lbl {
+  text-decoration: underline;
+}
+.back-ic {
+  display: none;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 29px;
+  padding-inline: 18px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--tilw-surface-selected);
+  color: var(--tilw-action-primary);
+  font: 500 13px/1.36 var(--tilw-font-ar);
+}
+.chip.saving,
+.chip.unsaved {
+  background: var(--tilw-surface-quiet);
+  color: var(--tilw-text-muted);
+}
+.chip.offline,
+.chip.error,
+.chip.warn {
+  background: color-mix(in srgb, var(--tilw-status-error) 14%, transparent);
+  color: var(--tilw-status-error);
+}
+.chip.warn {
+  cursor: pointer;
+}
+.restored {
+  margin-block-end: 16px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 831fr) minmax(260px, 298fr);
+  gap: 33px;
+  align-items: start;
+}
+.loading {
+  display: grid;
+  gap: 26px;
+}
+.err {
+  margin-block-start: 32px;
+}
+.phone-acts {
+  display: none;
+}
+
+@media (max-width: 1000px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .side-skel {
+    display: none;
+  }
+}
+/* Phone (6:21): back arrow only, no side panel chrome, actions pinned to the bottom. */
+@media (max-width: 760px) {
+  .ed {
+    padding-block: 12px 110px;
+  }
+  .bar {
+    margin-block-end: 12px;
+  }
+  .back .lbl {
+    display: none;
+  }
+  .back-ic {
+    display: inline-block;
+    color: var(--tilw-text-ink);
+  }
+  .back {
+    inline-size: var(--tilw-hit);
+    block-size: var(--tilw-hit);
+    justify-content: center;
+  }
+  .grid {
+    gap: 16px;
+  }
+  .grid :deep(.tools .session),
+  .grid :deep(.tools .acts),
+  .grid :deep(.tools hr) {
+    display: none;
+  }
+  .phone-acts {
+    position: fixed;
+    inset-inline: 0;
+    inset-block-end: 0;
+    z-index: 15;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    padding: 18px max(16px, env(safe-area-inset-left, 0px)) calc(18px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-right, 0px));
+    border-block-start: 1px solid var(--tilw-border-subtle);
+    background: var(--tilw-surface-quiet);
+  }
+}
+</style>

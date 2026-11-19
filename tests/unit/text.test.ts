@@ -39,3 +39,12 @@ describe('text utils', () => {
     expect(formatDuration(136_000)).toBe('02:16')
   })
 })
+
+describe('foldForSearch', () => {
+  it('ignores diacritics, hamza forms, teh marbuta and case', async () => {
+    const { foldForSearch } = await import('~/utils/text')
+    expect(foldForSearch('افتتاحيّة الحلقة')).toBe(foldForSearch('افتتاحيه الحلقه'))
+    expect(foldForSearch('أوّل')).toBe('اول')
+    expect(foldForSearch('Episode ONE')).toBe('episode one')
+  })
+})
