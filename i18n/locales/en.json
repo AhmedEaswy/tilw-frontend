@@ -1,0 +1,115 @@
+{
+  "app": {
+    "name": "Tilw"
+  },
+  "common": {
+    "close": "Close",
+    "cancel": "Cancel",
+    "save": "Save",
+    "back": "Back",
+    "continue": "Continue",
+    "show": "Show",
+    "hide": "Hide",
+    "increase": "Increase {label}",
+    "decrease": "Decrease {label}",
+    "retry": "Try again",
+    "loading": "Loading…",
+    "comingSoon": "This screen is being built"
+  },
+  "nav": {
+    "home": "Home",
+    "main": "Main navigation",
+    "legal": "Documents",
+    "scripts": "My scripts",
+    "recordings": "Recordings",
+    "settings": "Settings",
+    "account": "{name}'s account"
+  },
+  "legal": {
+    "privacy": "Privacy policy",
+    "terms": "Terms of use",
+    "docs": "Tilw documents",
+    "updated": "Last updated",
+    "contact": "Contact us",
+    "arabicOnly": "This document is currently available in Arabic."
+  },
+  "auth": {
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "signedOut": "You're signed out.",
+    "email": "Email",
+    "password": "Password",
+    "signInLede": "Get to your scripts and recordings.",
+    "forgot": "Forgot your password?",
+    "noAccount": "Don't have an account?",
+    "joinWaitlist": "Join the waitlist",
+    "badCredentials": "That email or password isn't right. Check both and try again.",
+    "emailRequired": "Enter your email.",
+    "emailInvalid": "Enter a valid email, like name{'@'}example.com",
+    "passwordRequired": "Enter your password.",
+    "passwordMin": "Use at least {min} characters.",
+    "passwordMismatch": "The passwords don't match. Type it again.",
+    "nameRequired": "Enter your name as you'd like it to appear.",
+    "welcomeBack": "Welcome back, {name}.",
+    "recovery": {
+      "title": "Reset your password",
+      "lede": "Enter your account email and we'll send you a reset link.",
+      "submit": "Send reset link",
+      "sentTitle": "Check your email",
+      "sentLede": "If this email belongs to an account, you'll get a message with a link to reset your password.",
+      "backToSignIn": "Back to sign in",
+      "mockHint": "This preview sends no real email. Open the mock panel to find the link."
+    },
+    "reset": {
+      "title": "New password",
+      "lede": "Choose a new password for {email}.",
+      "new": "New password",
+      "confirm": "Confirm password",
+      "submit": "Save and sign in",
+      "done": "Your new password is saved.",
+      "checking": "Checking the link…",
+      "expiredTitle": "This link has expired",
+      "expiredLede": "Reset links work once, for one hour. Request a new one.",
+      "invalidTitle": "This link doesn't work",
+      "invalidLede": "It may have been used already or copied incompletely. Request a new one.",
+      "requestNew": "Request a new link"
+    },
+    "invite": {
+      "title": "Create your account",
+      "lede": "Your invitation is ready. Choose your name and password to start.",
+      "name": "Name",
+      "namePlaceholder": "As you'd like it to appear",
+      "agree": "I agree to the {terms} and the {privacy}.",
+      "agreeRequired": "Agree to the terms and privacy policy to continue.",
+      "submit": "Create account",
+      "welcome": "Welcome to Tilw, {name}.",
+      "expiredTitle": "This invitation has expired",
+      "expiredLede": "Invitations work for seven days. Join the waitlist and we'll send you a new one.",
+      "invalidTitle": "This invitation doesn't work",
+      "invalidLede": "It may already have been used to create an account. If that account is yours, sign in.",
+      "haveAccount": "Have an account? Sign in"
+    }
+  },
+  "waitlist": {
+    "title": "Join the waitlist",
+    "lede": "We open sign-ups in batches. We'll email you when your invitation is ready.",
+    "submit": "Join the list",
+    "haveAccount": "Have an account? Sign in",
+    "doneTitle": "You're on the list",
+    "doneLede": "We'll send your invitation to this email when sign-ups open.",
+    "tryPrompter": "Try the prompter"
+  },
+  "errors": {
+    "network": "Couldn't connect. Check your internet and try again.",
+    "rateLimited": "Too many attempts in a row. Wait a minute and try again.",
+    "tokenExpired": "This link has expired. Request a new one.",
+    "tokenInvalid": "This link doesn't work. Request a new one.",
+    "sessionEnded": "Your session ended. Sign in to continue.",
+    "unknown": "Something went wrong. Try again.",
+    "notFound": "We couldn't find this page."
+  },
+  "placeholder": {
+    "title": "{screen}",
+    "text": "This screen comes in the next phase of the plan."
+  }
+}

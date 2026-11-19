@@ -1,0 +1,82 @@
+/* Base for the studio and auth pages. Uses logical properties only (RTL/LTR). */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--tilw-surface-paper);
+  color: var(--tilw-text-ink);
+  font: var(--tilw-type-label);
+  -webkit-font-smoothing: antialiased;
+}
+
+:lang(en) body,
+body:lang(en) {
+  font-family: var(--tilw-font-lat);
+}
+
+h1, h2, h3, h4, p {
+  margin: 0;
+}
+
+h1, h2, h3 {
+  text-wrap: balance;
+}
+
+button, input, select, textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+}
+
+img, svg, video {
+  max-width: 100%;
+}
+
+:focus-visible {
+  outline: 2px solid var(--tilw-focus-ring);
+  outline-offset: 3px;
+}
+
+/* Keep emails, timecodes and numbers left-to-right inside Arabic text. */
+.ltr {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.num {
+  font-family: var(--tilw-font-lat);
+  font-variant-numeric: tabular-nums;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,133 @@
+/*
+ * Tilw design tokens — from Figma "01 · Design system" (variables on node 6:18 and Foundations 6:117).
+ * Names mirror the Figma variables (--tilw-*). Light values are the source of truth; the dark theme is
+ * derived from the landing page's dark palette because Figma has no dark app frames yet.
+ * Stage tokens (reader / recording surfaces) are the same in both themes.
+ */
+:root {
+  /* surfaces */
+  --tilw-surface-paper: #f2eee7;
+  --tilw-surface-quiet: #e9e4db;
+  --tilw-surface-white: #f7f2e9;
+  --tilw-surface-selected: #f0decf;
+  --tilw-surface-sage: #c8c3b6;
+  --tilw-surface-sand: #e1cfb9;
+  --tilw-surface-forest: #293d49;
+
+  /* text */
+  --tilw-text-ink: #243943;
+  --tilw-text-muted: #53636b;
+  --tilw-text-on-solid: #f7f2e9;
+  --tilw-text-on-stage: #f7f2e9;
+
+  /* borders & focus */
+  --tilw-border-subtle: #ccc7bf;
+  --tilw-border-strong: #77858a;
+  --tilw-focus-ring: #955239;
+
+  /* actions & status */
+  --tilw-action-primary: #955239;
+  --tilw-action-solid: #955239;
+  --tilw-status-error: #9d3339;
+  --tilw-status-success: #3d6b55;
+  --tilw-brand-mark: #955239;
+  --tilw-brand-wordmark: #243943;
+
+  /* stage (reader, recording) — theme-independent */
+  --tilw-stage-background: #293d49;
+  --tilw-stage-surface: #1c2c35;
+  --tilw-stage-secondary: #cad4d5;
+  --tilw-stage-cue: #f2b28b;
+  --tilw-stage-text: #f7f2e9;
+  --tilw-stage-rec: #9d3339;
+
+  /* type */
+  --tilw-font-ar: "IBM Plex Sans Arabic", "Segoe UI", Tahoma, system-ui, sans-serif;
+  --tilw-font-lat: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --tilw-font-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+  --tilw-type-display: 700 72px/1.18 var(--tilw-font-ar);
+  --tilw-type-page: 700 52px/1.36 var(--tilw-font-ar);
+  --tilw-type-title: 700 44px/1.25 var(--tilw-font-ar);
+  --tilw-type-heading: 700 28px/1.36 var(--tilw-font-ar);
+  --tilw-type-body: 400 18px/1.6 var(--tilw-font-ar);
+  --tilw-type-control: 500 17px/1.34 var(--tilw-font-ar);
+  --tilw-type-label: 500 16px/1.36 var(--tilw-font-ar);
+  --tilw-type-meta: 500 14px/1.43 var(--tilw-font-ar);
+  --tilw-type-caption: 500 12px/1.4 var(--tilw-font-ar);
+  --tilw-type-cue: 400 48px/1.4 var(--tilw-font-ar);
+
+  /* spacing (layout rhythm 4–48) */
+  --tilw-space-4: 4px;
+  --tilw-space-8: 8px;
+  --tilw-space-12: 12px;
+  --tilw-space-16: 16px;
+  --tilw-space-24: 24px;
+  --tilw-space-32: 32px;
+  --tilw-space-48: 48px;
+
+  /* radius */
+  --tilw-radius-field: 10px;
+  --tilw-radius-control: 12px;
+  --tilw-radius-row: 9px;
+  --tilw-radius-card: 18px;
+  --tilw-radius-pill: 999px;
+
+  /* sizes */
+  --tilw-control-h: 48px;
+  --tilw-field-h: 52px;
+  --tilw-hit: 44px;
+  --tilw-header-h: 76px;
+  --tilw-content-max: 1164px;
+
+  --tilw-shadow-pop: 0 20px 50px rgba(20, 32, 38, 0.18);
+  --tilw-scrim: rgba(20, 32, 38, 0.45);
+
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --tilw-surface-paper: #122329;
+    --tilw-surface-quiet: #182e36;
+    --tilw-surface-white: #1c3640;
+    --tilw-surface-selected: #3a2d27;
+    --tilw-surface-sage: #3a4a50;
+    --tilw-surface-sand: #4a3d30;
+    --tilw-surface-forest: #0e1c21;
+    --tilw-text-ink: #f3eee9;
+    --tilw-text-muted: #a9bbc0;
+    --tilw-border-subtle: #24383f;
+    --tilw-border-strong: #5f7379;
+    --tilw-focus-ring: #f2b28b;
+    --tilw-action-primary: #f2b28b;
+    --tilw-action-solid: #b5603a;
+    --tilw-status-error: #f08a80;
+    --tilw-status-success: #7fd3a6;
+    --tilw-brand-wordmark: #f7f2e9;
+    --tilw-shadow-pop: 0 20px 50px rgba(0, 0, 0, 0.45);
+    --tilw-scrim: rgba(0, 0, 0, 0.55);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --tilw-surface-paper: #122329;
+  --tilw-surface-quiet: #182e36;
+  --tilw-surface-white: #1c3640;
+  --tilw-surface-selected: #3a2d27;
+  --tilw-surface-sage: #3a4a50;
+  --tilw-surface-sand: #4a3d30;
+  --tilw-surface-forest: #0e1c21;
+  --tilw-text-ink: #f3eee9;
+  --tilw-text-muted: #a9bbc0;
+  --tilw-border-subtle: #24383f;
+  --tilw-border-strong: #5f7379;
+  --tilw-focus-ring: #f2b28b;
+  --tilw-action-primary: #f2b28b;
+  --tilw-action-solid: #b5603a;
+  --tilw-status-error: #f08a80;
+  --tilw-status-success: #7fd3a6;
+  --tilw-brand-wordmark: #f7f2e9;
+  --tilw-shadow-pop: 0 20px 50px rgba(0, 0, 0, 0.45);
+  --tilw-scrim: rgba(0, 0, 0, 0.55);
+  color-scheme: dark;
+}

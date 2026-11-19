@@ -1,0 +1,221 @@
+<title>Tilw Studio Flow</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column; each flow is a numbered chapter (the order is the user's journey), gaps as a severity-striped register, decisions last. */
+:root{
+  --bg:#F2EEE7; --surface:#FBF8F3; --fg:#243943; --muted:#53636B; --line:#D6D0C7;
+  --accent:#955239; --cue:#F2B28B; --stage:#293D49;
+  --red:#B23A30; --amber:#B7791F; --yellow:#8A7A1E; --chip:rgba(36,57,67,.06);
+  --diagram:#FFFFFF;
+  --f-body:"IBM Plex Sans","IBM Plex Sans Arabic","Segoe UI",system-ui,sans-serif;
+  --f-ar:"IBM Plex Sans Arabic","Segoe UI",Tahoma,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#122329;--surface:#182E36;--fg:#F3EEE9;--muted:#A9BBC0;--line:#24383F;--accent:#F2B28B;--chip:rgba(255,255,255,.05);--red:#F08A80;--amber:#E8B45A;--yellow:#D9C76A;--diagram:#F7F4EE;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#122329;--surface:#182E36;--fg:#F3EEE9;--muted:#A9BBC0;--line:#24383F;--accent:#F2B28B;--chip:rgba(255,255,255,.05);--red:#F08A80;--amber:#E8B45A;--yellow:#D9C76A;--diagram:#F7F4EE;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.65 var(--f-body);-webkit-font-smoothing:antialiased}
+.wrap{max-width:1080px;margin-inline:auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:48px 72px;display:grid;gap:56px}
+h1,h2,h3{margin:0;text-wrap:balance;line-height:1.2}
+h1{font-size:clamp(30px,4.4vw,46px);font-weight:700}
+h2{font-size:clamp(22px,2.6vw,28px);font-weight:600}
+p{margin:0}
+.ar{font-family:var(--f-ar)}
+.eyebrow{font:500 12px/1 var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+header{display:grid;gap:16px;max-width:68ch}
+header p{color:var(--muted)}
+.loop{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-weight:600}
+.loop span{background:var(--stage);color:#F7F2E9;border-radius:999px;padding:4px 14px;font-size:14px}
+.loop i{font-style:normal;color:var(--muted)}
+.loop span.open{background:transparent;color:var(--red);border:1.5px dashed var(--red)}
+.verdict{border-inline-start:3px solid var(--accent);padding-inline-start:16px;max-width:72ch}
+section{display:grid;gap:18px}
+.sec-head{display:grid;gap:6px}
+.sec-head .n{font:500 13px var(--f-mono);color:var(--accent)}
+.sec-head p{color:var(--muted);max-width:70ch}
+.diagram{background:var(--diagram);border:1px solid var(--line);border-radius:14px;padding:20px;overflow-x:auto}
+.diagram pre{margin:0;min-width:640px;color:#243943}
+.legend{display:flex;flex-wrap:wrap;gap:18px;font-size:13px;color:var(--muted)}
+.legend b{display:inline-block;width:28px;height:0;border-top:2px dashed var(--red);vertical-align:middle;margin-inline-end:6px}
+.legend em{font-style:normal;font-family:var(--f-mono);background:var(--chip);border-radius:4px;padding:0 6px;margin-inline-end:6px}
+table{width:100%;border-collapse:collapse;font-size:14.5px}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+th,td{text-align:start;padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:500 12px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+tr:last-child td{border-bottom:0}
+td.id{font:600 13px var(--f-mono);white-space:nowrap}
+td.what{font-weight:600;min-width:200px}
+td.fix{color:var(--muted);min-width:260px}
+.sev{display:inline-block;font:600 11px var(--f-mono);letter-spacing:.06em;border-radius:999px;padding:2px 9px;white-space:nowrap}
+.sev.block{color:var(--red);background:color-mix(in srgb,var(--red) 12%,transparent)}
+.sev.promise{color:var(--amber);background:color-mix(in srgb,var(--amber) 14%,transparent)}
+.sev.state{color:var(--yellow);background:color-mix(in srgb,var(--yellow) 14%,transparent)}
+.sev.sched{color:#2F6B4F;background:rgba(61,155,111,.14)}
+:root[data-theme="dark"] .sev.sched{color:#8FD3AE}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .sev.sched{color:#8FD3AE}}
+.sev.deferred{color:var(--muted);background:var(--chip);border:1px dashed var(--line)}
+.done-note{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:grid;gap:4px}
+.done-note b{color:var(--accent)}
+tr.r-block td:first-child{box-shadow:inset 3px 0 0 var(--red)}
+tr.r-promise td:first-child{box-shadow:inset 3px 0 0 var(--amber)}
+tr.r-state td:first-child{box-shadow:inset 3px 0 0 var(--yellow)}
+[dir=rtl] tr td:first-child{box-shadow:none}
+.decisions{display:grid;gap:12px;counter-reset:d;padding:0;margin:0;list-style:none}
+.decisions li{counter-increment:d;display:grid;grid-template-columns:36px 1fr;gap:12px;align-items:start;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.decisions li::before{content:counter(d);width:28px;height:28px;border-radius:50%;background:var(--cue);color:#1A2E35;display:grid;place-items:center;font:600 13px var(--f-mono)}
+.decisions b{display:block}
+.decisions span{color:var(--muted);font-size:14.5px}
+.files{font-family:var(--f-mono);font-size:13.5px;color:var(--muted);display:grid;gap:4px}
+.stats{display:flex;flex-wrap:wrap;gap:28px}
+.stats div{display:grid}
+.stats b{font:600 28px var(--f-body);font-variant-numeric:tabular-nums}
+.stats small{color:var(--muted);font-size:13px}
+@media (max-width:600px){.wrap{gap:44px}}
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Spec 001 · studio frontend · for review</span>
+    <h1>Tilw Prompter studio: app flow and gaps</h1>
+    <p>Every screen in the Figma file's <b>02 · Prototype</b> page, mapped into one journey. Numbers in brackets are Figma node ids (<code>6:xx</code>). Dashed red boxes are steps with no screen yet.</p>
+    <div class="loop" aria-label="Product cycle">
+      <span class="open">get access</span><i>→</i><span>write</span><i>→</i><span>rehearse</span><i>→</i><span>record</span><i>→</i><span>keep the original</span><i>→</i><span class="open" title="Deferred">control from phone · later</span>
+    </div>
+    <div class="stats">
+      <div><b>95</b><small>prototype frames</small></div>
+      <div><b>~30</b><small>routes and states</small></div>
+      <div><b>16</b><small>gaps found</small></div>
+      <div><b>0</b><small>unscheduled blockers</small></div>
+      <div><b>2</b><small>deferred</small></div>
+    </div>
+  </header>
+
+  <p class="verdict">The core loop (write, rehearse, record, review, download) is well covered, including states most designs skip: edit conflicts, lost reading position, legacy script recovery, denied camera access and download handoff. The cycle is open at both ends. An invitation can't become an account, a password reset can't be finished, and the headline promise, controlling the prompter from your phone, has no app screens.</p>
+
+  <section>
+    <div class="sec-head"><span class="n">1 · Access</span><h2>Getting in</h2><p>Registration is invitation-only. The waitlist confirms, then the path stops. Reset stops after "check your email".</p></div>
+    <div class="diagram"><pre class="mermaid">
+flowchart TD
+  L["Landing /"] -->|دخول| SI["Sign in [6:62]"]
+  L -->|اطلب دعوة| WL["Waitlist [6:63]"]
+  L -->|جرّب الملقّن| DEMO["Reader demo [6:6–6:17]"]
+  WL --> WLC["On the list [6:64]"]
+  WLC -.email invite.-> INV["Accept invite: name + password · G1"]:::gap
+  INV --> LIB["Script library"]
+  SI -->|success| LIB
+  SI -->|نسيت كلمة المرور| FP["Request reset [6:101]"]
+  FP --> FPS["Check your email [6:102]"]
+  FPS -.email link.-> RP["Set new password · G2"]:::gap
+  RP -->|valid| LIB
+  RP -->|expired| RPX["Link expired · G2"]:::gap
+  RPX --> FP
+  SI --> LEGAL["Privacy [6:81] · Terms [6:82]"]
+  classDef gap fill:#fff,stroke:#B23A30,stroke-dasharray:5 4,color:#B23A30
+</pre></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="n">2 · Core loop</span><h2>Write, rehearse, record, keep</h2><p>From the library to a downloaded original file. The studio has two modes (audio, video and audio) that share countdown and recording.</p></div>
+    <div class="diagram"><pre class="mermaid">
+flowchart LR
+  subgraph Library["/app/scripts"]
+    E0["Empty library [6:22]"] --> NEW["New script [6:23]"]
+    E0 --> IMP["Import TXT [6:24]"]
+    LIB["Library [6:18] · pinned [6:112] · archived [6:111]"] --> SORT["Sort [6:25]"]
+    LIB --> ACT["Actions [6:108]: rename · TXT · pin · archive · duplicate"]
+    ACT -.-> DEL["Restore / delete forever · G9"]:::gap
+  end
+  NEW --> ED
+  IMP --> ED
+  LIB --> ED["Editor [6:19]"]
+  ED -.-> MARKS["Delivery marks panel · G7"]:::gap
+  ED -.-> PLUS["Tilw Plus line breaks · G6"]:::gap
+  ED -->|version mismatch| CF["Compare copies [6:72]"] --> CFR["Confirm replace [6:73]"] --> ED
+  ED -->|تدريب| RH["Rehearsal [6:26 / 6:27]"]
+  RH --> RS["Reading settings [6:28]"] --> RM["More controls [6:30]"]
+  RH -->|position lost| RR["Recovery [6:79]"] --> RPP["Choose paragraph [6:80]"] --> RH
+  RH -.-> REM["Phone remote: pair + control · G3"]:::gap
+  RH -->|إعداد التسجيل| ST
+  subgraph Studio["/app/scripts/:id/record"]
+    ST{"Mode"} -->|فيديو وصوت| CB["Camera, before permission [6:38]"]
+    ST -->|صوت| AB["Audio, before permission [6:50]"]
+    CB --> CP["Preview + devices [6:39]"]
+    AB --> AS["Sound check [6:51]"]
+    CB &amp; AB -->|denied| DN["Access denied [6:78]"]
+    CP &amp; AS --> CD["Countdown [6:42 / 6:54]"] --> REC["Recording [6:44 / 6:56]"]
+    REC -.-> RECX["10-min stop · storage full · interrupted · G8"]:::gap
+  end
+  DN -->|تدرب دون تسجيل| RH
+  REC -->|إيقاف وحفظ| TR["Take review [6:46 / 6:58]"]
+  TR --> DL["Download requested [6:48 / 6:60]"]
+  TR -.-> TA["Star / delete take · G8"]:::gap
+  classDef gap fill:#fff,stroke:#B23A30,stroke-dasharray:5 4,color:#B23A30
+</pre></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="n">3 · Around the loop</span><h2>Recordings and settings</h2><p>Takes live only in this browser. Settings carry export and legacy recovery, but no account editing or deletion, which the privacy policy promises.</p></div>
+    <div class="diagram"><pre class="mermaid">
+flowchart TD
+  NAV(("App nav")) --> RL["Recordings [6:74] · first visit [6:77]"]
+  RL --> RV["Review audio [6:75] / video [6:46]"] --> RD["Download request [6:76]"]
+  NAV --> SET["Preferences [6:65]"]
+  SET --> EX1["Export: confirm password [6:66]"] --> EX2["Browser handoff [6:67]"]
+  SET --> LG1["Legacy: consent [6:68]"] --> LG2["Choose script [6:69]"] --> LG3["Confirm add [6:70 / 6:71]"] --> LIB2["Library"]
+  SET --> OUT["Sign out"] --> SIGNIN["Sign in"]
+  SET -.-> ACC["Edit name / change password · G5"]:::gap
+  SET -.-> DELA["Delete account · G4"]:::gap
+  classDef gap fill:#fff,stroke:#B23A30,stroke-dasharray:5 4,color:#B23A30
+</pre></div>
+    <div class="legend"><span><b></b>Gap: no Figma screen</span><span><em>[6:xx]</em>Figma node on 02 · Prototype</span></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="n">4 · Register</span><h2>Gaps, by severity</h2><p>Red blocks the cycle. Amber breaks something the landing page or legal copy promises. Yellow is a missing state.</p></div>
+    <div class="tbl"><table>
+      <thead><tr><th>#</th><th>Severity</th><th>Missing</th><th>Proposed fix</th></tr></thead>
+      <tbody>
+        <tr class="r-block"><td class="id">G1</td><td><span class="sev sched">Scheduled · T030–T033</span></td><td class="what">Accept invitation, create account</td><td class="fix"><code>/invite/:token</code>: name, password, terms → signed in → empty library. Expired or used state. Built from the sign-in frame.</td></tr>
+        <tr class="r-block"><td class="id">G2</td><td><span class="sev sched">Scheduled · T022</span></td><td class="what">Set new password from reset link</td><td class="fix"><code>/reset-password</code>: new + confirm, success, expired link with "request again". Built from the sign-in frame.</td></tr>
+        <tr class="r-block"><td class="id">G3</td><td><span class="sev deferred">Deferred</span></td><td class="what">Phone remote: pairing, controls, reconnect</td><td class="fix">Deferred past phase 1 (decided 19 Nov). Needs design and a realtime backend.</td></tr>
+        <tr class="r-promise"><td class="id">G4</td><td><span class="sev sched">Scheduled · T094</span></td><td class="what">Delete account</td><td class="fix">Danger zone in settings → confirm password → done screen. Follows the export flow (6:66 → 6:67).</td></tr>
+        <tr class="r-promise"><td class="id">G5</td><td><span class="sev sched">Scheduled · T093</span></td><td class="what">Change name or password</td><td class="fix">Account sub-page in settings. Email change waits for backend.</td></tr>
+        <tr class="r-promise"><td class="id">G6</td><td><span class="sev deferred">Deferred</span></td><td class="what">Tilw Plus: AI line breaks, credits, upgrade</td><td class="fix">Deferred past phase 1 (decided 19 Nov). No in-app entry points.</td></tr>
+        <tr class="r-promise"><td class="id">G7</td><td><span class="sev promise">Promise</span></td><td class="what">Delivery marks UI</td><td class="fix">Marks popover plus how emphasis, pause and note render in editor, reader and recording.</td></tr>
+        <tr class="r-promise"><td class="id">G8</td><td><span class="sev promise">Promise</span></td><td class="what">Star / delete take, 10-min stop, storage full, interrupted</td><td class="fix">Take actions menu, auto-stop toast, quota banner, partial-take state.</td></tr>
+        <tr class="r-state"><td class="id">G9</td><td><span class="sev state">State</span></td><td class="what">Unarchive, delete script forever</td><td class="fix">Actions on archived items with confirm.</td></tr>
+        <tr class="r-state"><td class="id">G10</td><td><span class="sev state">State</span></td><td class="what">Offline, save failed, session expired, 404</td><td class="fix">One status banner and one full-page error built from tokens.</td></tr>
+        <tr class="r-state"><td class="id">G11</td><td><span class="sev state">State</span></td><td class="what">Import errors</td><td class="fix">Inline error for wrong type, empty, over 1 MB.</td></tr>
+        <tr class="r-state"><td class="id">G12</td><td><span class="sev state">State</span></td><td class="what">End of script; desktop permission denied</td><td class="fix">"انتهى النص" with restart or record; desktop denied reuses 6:38 layout.</td></tr>
+        <tr class="r-state"><td class="id">G13</td><td><span class="sev state">State</span></td><td class="what">English frames for auth, studio, settings</td><td class="fix">Build from locale files and review in the browser.</td></tr>
+        <tr class="r-state"><td class="id">G14</td><td><span class="sev state">State</span></td><td class="what">First sign-in onboarding</td><td class="fix">Optional seeded sample script so rehearsal works right away.</td></tr>
+        <tr class="r-state"><td class="id">G15</td><td><span class="sev sched">Decided</span></td><td class="what">Reading settings: account or per script?</td><td class="fix">Account-wide. Only text direction is saved per script.</td></tr>
+        <tr class="r-state"><td class="id">G16</td><td><span class="sev sched">Placeholder</span></td><td class="what">Contact destination</td><td class="fix">Placeholder address from one config value. Replace before launch.</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="n">5 · Before building</span><h2>Decisions</h2></div>
+    <div class="done-note"><b>Decided 19 Nov</b><span>Phone remote (G3) and Tilw Plus (G6) are deferred. Phase 1 is a static build with no backend: data lives in the browser through the mock layer. Invite, set new password, account edit and delete account (G1, G2, G4, G5) are built from the existing sign-in and settings frames, scheduled in tasks.md. Reading settings are account-wide; text direction is per script (G15).</span></div>
+    <p>All phase 1 decisions are made. The public contact address is a placeholder until you have the real one (G16). Implementation starts with Setup and Foundation in tasks.md.</p>
+  </section>
+
+  <section>
+    <div class="sec-head"><span class="n">6 · In the repo</span><h2>Spec Kit files</h2><p>Under <code>frontend/</code>, ready for <code>/speckit-clarify</code> and <code>/speckit-implement</code>.</p></div>
+    <div class="files">
+      <span>.specify/memory/constitution.md</span>
+      <span>specs/001-studio-frontend/spec.md</span>
+      <span>specs/001-studio-frontend/screens.md</span>
+      <span>specs/001-studio-frontend/flow.md</span>
+      <span>specs/001-studio-frontend/gaps.md</span>
+      <span>specs/001-studio-frontend/plan.md</span>
+      <span>specs/001-studio-frontend/data-model.md</span>
+      <span>specs/001-studio-frontend/contracts/ports.md</span>
+      <span>specs/001-studio-frontend/tasks.md</span>
+    </div>
+  </section>
+</div>

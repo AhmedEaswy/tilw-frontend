@@ -1,0 +1,45 @@
+# Gap Analysis — does the design close the cycle?
+
+**Product cycle**: discover → get access → write → rehearse → record → keep the original → come back.
+**Verdict**: The core loop (write → rehearse → record → review → download) is well designed, including
+the rarely-drawn states (conflict, position recovery, legacy recovery, permission denied, download handoff).
+The cycle is **open at both ends**: there is no way to turn an invitation into an account, no way to finish
+a password reset, and the product's headline promise ("هاتفك يتحكم") has no app screens at all.
+
+Severity: 🔴 blocks the cycle · 🟠 breaks a promise made in landing/legal copy · 🟡 robustness/state gap.
+
+| # | Gap | Severity | Evidence | Proposed resolution |
+|---|---|---|---|---|
+| G1 | **Invitation acceptance / account creation** — ✅ BUILT (T030–T033) | 🔴 | Waitlist (6:63/6:64) is the only entry; "Sign in" assumes an account | `/invite/:token`: name, password, terms checkbox → signed in → empty library. Expired/used invite state. Reuse the 6:62 auth frame. |
+| G2 | **Set new password** after reset link, plus success and expired-link states — ✅ BUILT (T022) | 🔴 | Only request (6:101) and "check email" (6:102) exist | `/reset-password?token=`: new + confirm password; expired state with "request a new link". |
+| G3 | **Phone remote control** — ⏸ DEFERRED — pairing (QR / short code), remote UI, connection lost/reconnect, which device is "reader" | 🔴 for the brand promise | Landing hero, remote card, plans list it as free; no app frame; page 06 node 149:382 says "تصور للميزة" (a visualisation of the feature) | Decide: (a) Phase 1 ships same-account remote via realtime backend later; frontend builds `/app/remote` + "connect phone" panel in rehearsal against a mock channel (BroadcastChannel between tabs); or (b) remove from marketing until built. Needs design. |
+| G4 | **Delete account** — ✅ SCHEDULED T094 | 🟠 | Privacy & terms say "يمكنك حذف حسابك في أي وقت من الإعدادات" | Danger zone in `/app/settings` → confirm password → confirmation screen. |
+| G5 | **Change password / name / email** — ✅ SCHEDULED T093 | 🟠 | Settings shows identity read-only | "Account" sub-page with edit name, change password (current + new). Email change can wait for backend. |
+| G6 | **Tilw Plus** — ⏸ DEFERRED — AI line-break suggestion in editor, credit balance, upgrade, billing state | 🟠 | Landing plans + "تعرف على بلس داخل التطبيق" CTA points into the app | Decide scope. If in: editor "اقتراح توزيع الأسطر" panel (preview / apply / discard), credits chip, upgrade sheet. Payment is backend. |
+| G7 | **Delivery-marks UI** (emphasis / pause / note) — panel, how marks look in editor, reader and recording | 🟠 | Editor has "علامات الإلقاء" button; landing shows highlighted words and "/ وقفة" chips | Draw the marks popover + rendered states; spec reuses landing visual language meanwhile. |
+| G8 | **Take management & recording limits** — delete take, star best take, 10-min auto-stop, storage almost full / full, interrupted recording | 🟠/🟡 | Landing: "علّم الأفضل"; studio: "الحد الأقصى 10 دقائق"; privacy warns about clearing site data | Add take actions menu (download / star / delete with confirm), auto-stop toast, quota banner in recordings list, "recording interrupted — partial take saved" state. |
+| G9 | **Script lifecycle end** — unarchive, permanent delete | 🟡 | Only "نقل إلى الأرشيف" drawn | Archived item actions: restore, delete permanently (confirm). |
+| G10 | **System states** — offline, save failed, session expired, 404, generic error, loading skeletons | 🟡 | None drawn | Reusable status banner + full-page error component built from design-system tokens. |
+| G11 | **Import errors & formats** — wrong type, empty, too large, encoding | 🟡 | 6:24 shows the happy path only | Inline error inside the import dialog. TXT only for Phase 1 (docx/srt later?). |
+| G12 | **Reader end-of-script & desktop permission-denied** | 🟡 | Rehearsal stops where? Denied only drawn for phone (6:78) | End state: "انتهى النص" with restart / record. Desktop denied reuses 6:38 layout with message. |
+| G13 | **English coverage for auth, recording, settings** | 🟡 | English frames exist only for library/editor/rehearsal | Build from locale files; review in browser rather than wait for frames. |
+| G14 | **Onboarding after first sign-in** | 🟡 | Empty library is the first screen | Optional: one sample script ("افتتاحية الحلقة") seeded on account creation so rehearsal can be tried immediately. |
+| G15 | **Account-level reading defaults vs per-script settings** — ✅ DECIDED | 🟡 | Settings links to "إعدادات القراءة"; rehearsal also edits them | Reading settings are account-wide: changes in rehearsal or settings save to the account. Only text direction is stored per script. |
+| G16 | **Contact form** destination and anti-spam — ✅ PLACEHOLDER | 🟡 | 6:5 exists; footer email is a personal address | One config value `runtimeConfig.public.contactEmail` (placeholder `contact@example.com`) used everywhere. Replace before launch. |
+
+## Decisions
+- **Decided 2026-11-19**: G3 phone remote — **deferred**. G6 Tilw Plus — **deferred**. Phase 1 is a
+  **static build** (no backend), data via the in-browser mock.
+
+- **Decided 2026-11-19**: G1, G2, G4, G5 — **approved to build from the existing auth frame** (6:62 / 6:100)
+  and settings frames (6:65, 6:66 → 6:67) without new Figma. Scheduled: G2 → T022 (US1), G1 → T030–T033 (US2),
+  G5 → T093, G4 → T094 (US8).
+
+- **Decided 2026-11-19**: G15 — reading settings (mode, WPM, font size, mirror, line width, countdown) are
+  **account-wide**; **text direction is per script**. Applies in T061–T063 and T090.
+
+- **Decided 2026-11-19**: G16 — use a **placeholder** contact address (`contact@example.com`) from a single
+  config value; the personal address in Figma is not used. Replacing it is a pre-launch checklist item.
+
+### Still open
+- None. All owner decisions for Phase 1 are made; implementation can start at Phase 1 Setup.
