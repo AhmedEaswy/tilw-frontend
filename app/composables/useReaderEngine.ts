@@ -55,11 +55,14 @@ export function useReaderEngine(opts: ReaderEngineOptions) {
     countdown.value = 0
   }
 
-  /** Start playing (constant mode). Runs the countdown first when one is set. */
-  function play() {
+  /**
+   * Start playing (constant mode). Runs the countdown first when one is set, unless `countdown: false`
+   * (the recording studio runs its own countdown before the take).
+   */
+  function play(o: { countdown?: boolean } = {}) {
     if (opts.settings.value.mode !== 'constant' || playing.value || countdown.value) return
     if (ended.value || progress.value >= timeline.value.total) restart()
-    const sec = opts.settings.value.countdownSec
+    const sec = o.countdown === false ? 0 : opts.settings.value.countdownSec
     if (!sec) return startLoop()
     countdown.value = sec
     countdownTimer = setInterval(() => {

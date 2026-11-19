@@ -82,13 +82,15 @@ where a frame exists).
 **Checkpoint US5** ✅ 2026-11-19 — rehearsal verified in the browser on the dev server (1280 px, 390 px, 320 px; ar, dark system theme): constant mode measured at 120.1 WPM in the page (target 120 ±5%), 3-2-1 countdown, Space play/pause, arrows step paragraphs (follow script direction), docked settings panel (6:28) and phone sheet (6:33), more controls (6:30), reading settings and direction persist after reload, position saved and restored, recovery (6:79 → 6:80) via the `/__mock` "Reading position saves fail" knob, end state (G12). Deviations logged in gaps.md. Not checked: tablet / landscape frames (6:36, 6:37) beyond the responsive CSS, English frames (6:87–6:99), light theme.
 
 ## Phase 8: US6 Recording (P2) ★
-- [ ] T070 [US6] Composables `useMediaDevices`, `useLevelMeter`, `useRecorder` (mime pick, 10-min cap, quota, interruption)
-- [ ] T071 [US6] Studio shell + mode switch; camera before permission [6:38, 6:40], audio before permission [6:50, 6:52]
-- [ ] T072 [US6] Camera preview + devices [6:39, 6:41]; audio sound check [6:51, 6:53]
-- [ ] T073 [US6] Permission denied [6:78] (+ desktop variant, G12)
-- [ ] T074 [US6] Countdown [6:42, 6:54, 6:43, 6:55]
-- [ ] T075 [US6] Recording with prompter overlay [6:44, 6:56, 6:45, 6:57]; auto-stop/partial states (G8)
-- [ ] T076 [US6] `takes` store on IndexedDB
+- [x] T070 [US6] Composables `useMediaDevices`, `useLevelMeter`, `useRecorder` (mime pick, 10-min cap, quota, interruption)
+- [x] T071 [US6] Studio shell + mode switch; camera before permission [6:38, 6:40], audio before permission [6:50, 6:52]
+- [x] T072 [US6] Camera preview + devices [6:39, 6:41]; audio sound check [6:51, 6:53]
+- [x] T073 [US6] Permission denied [6:78] (+ desktop variant, G12)
+- [x] T074 [US6] Countdown [6:42, 6:54, 6:43, 6:55]
+- [x] T075 [US6] Recording with prompter overlay [6:44, 6:56, 6:45, 6:57]; auto-stop/partial states (G8)
+- [x] T076 [US6] `takes` store on IndexedDB
+
+**Checkpoint US6** ✅ 2026-11-19 — studio verified in the browser on the dev server (1280 px and 390 px, ar, dark system theme). Setup layout matches 6:38 to the pixel (viewfinder 690×391 at 54,210; side panel 451 px). Real camera access is blocked inside the Claude browser pane, so the denied state (6:78, desktop per G12) was checked with the real API, and preview → countdown → capture → save was checked with a synthetic canvas + oscillator stream: a 12 s video take saved as WebM (VP9/Opus, 1.4 MB) in IndexedDB; an audio take cut off by ending the track saved as a 2.5 s partial (`endedBy: interrupted`) with its toast. Not checked with a real camera, in Safari (MP4 path), or the 10-minute and storage-full stops beyond unit tests. e2e spec `tests/e2e/recording.spec.ts` uses Chromium's fake devices (not run yet). After saving, the studio goes to `/app/recordings`, which is still the placeholder until T080.
 
 ## Phase 9: US7 Recordings (P2) ★
 - [ ] T080 [US7] `/app/recordings` [6:74, 6:103], first visit [6:77], quota banner (G8)

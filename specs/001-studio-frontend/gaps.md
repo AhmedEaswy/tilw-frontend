@@ -72,3 +72,21 @@ Severity: 🔴 blocks the cycle · 🟠 breaks a promise made in landing/legal c
   "الملف الشخصي" (→ `/app/settings/account`, placeholder until T093), "الإعدادات", a "الوضع الداكن" switch,
   and "تسجيل الخروج". Figma has no frame for it; built from the design-system surfaces, switch and glyphs.
   The switch saves an explicit light or dark choice; going back to "system" stays in settings (T090).
+
+## Found while building US6 (recording studio, 2026-11-19)
+- **Badge and indicator copy**: the frames say "معاينة تجريبية" and "تسجيل تجريبي" (prototype wording). Built as
+  "معاينة مباشرة" (live preview) and "جارٍ التسجيل" (recording) so a real take isn't labelled a trial.
+- **Audio sound check (6:51)** shows a decorative waveform captioned "عينة توضيحية". Built as a live waveform
+  from the microphone with "صوتك الآن".
+- **Camera preview is mirrored** like a mirror; the recorded file is not. Figma doesn't say.
+- **Desktop denied (G12)**: built as proposed — the 6:38 layout with the denied heading, "إعادة المحاولة",
+  "متابعة التدريب" and the permissions help in the side panel. The help itself (steps dialog) has no frame.
+- **G8 states built without frames**: a take stops and is saved on its own at 10:00, when the tab is hidden or
+  the device disconnects, and when browser storage would run out; each shows a toast. The last minute shows
+  "متبقٍ 00:59" in place of "الحد الأقصى 10 دقائق". If saving to the browser fails, a dialog offers to download
+  the file at once. A low-storage banner shows in setup under 200 MB free.
+- **Countdown before a take** uses the account-wide countdown setting (6:30 "Set the delay before starting a
+  take"); "بدون" starts recording at once.
+- **After "إيقاف وحفظ"** the studio opens "تسجيلاتي". The take review screen (6:46 / 6:58) comes in T081.
+- **"تغيير النص"** goes to the library; there is no in-studio script picker in Figma.
+

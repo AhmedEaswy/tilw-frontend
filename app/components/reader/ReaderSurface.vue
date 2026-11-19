@@ -19,6 +19,8 @@ const props = defineProps<{
   settings: ReadingSettings
   /** Step between paragraphs with a short ease (manual mode, not when reduced motion is on). */
   smooth: boolean
+  /** Prompter inside the recording monitor (6:44): no housing or glass of its own, label only. */
+  bare?: boolean
 }>()
 
 const { t } = useI18n()
@@ -70,10 +72,10 @@ defineExpose({ measure })
 </script>
 
 <template>
-  <section class="monitor" :aria-label="t('reader.position')">
+  <section class="monitor" :class="{ bare }" :aria-label="t('reader.position')">
     <div class="row">
       <p class="where" aria-live="polite">{{ t('library.paragraphOf', { n: nf.format(paragraph + 1), total: nf.format(paragraphs.length) }) }}</p>
-      <div class="bars" aria-hidden="true"><i v-for="(b, i) in bars" :key="i" :class="b" /></div>
+      <div v-if="!bare" class="bars" aria-hidden="true"><i v-for="(b, i) in bars" :key="i" :class="b" /></div>
     </div>
     <div ref="glass" class="glass" :style="{ '--fs': `${fontPx}`, '--lw': `${linePx}px` }">
       <div class="band" aria-hidden="true" />
@@ -188,6 +190,32 @@ defineExpose({ measure })
 }
 .column[dir='ltr'] {
   font-family: var(--tilw-font-lat);
+}
+
+/* Recording prompter (6:44): the capture monitor provides the glass. */
+.monitor.bare {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+.bare .row {
+  block-size: 64px;
+  padding-inline: 38px 24px;
+}
+.bare .glass {
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+.bare .band {
+  inset-inline: 0 22px;
+}
+.bare .column {
+  inline-size: calc(100% - 60px);
+  margin-inline: 16px auto;
 }
 
 @media (prefers-reduced-motion: reduce) {
