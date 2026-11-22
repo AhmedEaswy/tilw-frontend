@@ -6,8 +6,9 @@
  * the glass edges. A gap between blocks is a stop; a pause mark from the editor shows as a chip and the
  * reader holds on it (see useReaderEngine).
  *
- * Deviation (logged in gaps.md): the cue band of the Figma frames is gone, because it covered the lines next
- * to the one being read. Every block keeps one size so nothing reflows while reading.
+ * The cue band of the Figma frames is back, but it is sized to the block being read (with a little padding
+ * that always fits inside the gap between blocks), so it never reaches the text above or below. Every block
+ * keeps one size so nothing reflows while reading.
  */
 import type { ReadingSettings } from '~/services/types'
 import type { ReaderLayout, Timeline } from '~/utils/reader'
@@ -79,6 +80,12 @@ const y = computed(() => progressToY(phraseTl.value, layout.value, props.progres
 /** The block being read starts a little above the middle of the glass, so what comes next stays in view. */
 const readingTop = computed(() => Math.round(glassH.value * 0.3))
 const shift = computed(() => readingTop.value - y.value)
+/** Padding of the band around the block: a fifth of a line, less than the gap between blocks. */
+const bandPad = computed(() => Math.round(layout.value.lineH * 0.2))
+const bandStyle = computed(() => ({
+  insetBlockStart: `${readingTop.value - bandPad.value}px`,
+  blockSize: `${(layout.value.heights[current.value] ?? layout.value.lineH) + bandPad.value * 2}px`,
+}))
 
 const fontPx = computed(() => FONT_PX[props.settings.fontSize])
 const linePx = computed(() => LINE_PX[props.settings.lineWidth])
@@ -103,6 +110,7 @@ defineExpose({ measure })
       <div v-if="!bare" class="bars" aria-hidden="true"><i v-for="(b, i) in bars" :key="i" :class="b" /></div>
     </div>
     <div ref="glass" class="glass" :style="{ '--fs': `${fontPx}`, '--lw': `${linePx}px` }">
+      <div class="band" :class="{ smooth: smooth && ready }" :style="bandStyle" aria-hidden="true" />
       <div class="mirror" :class="{ on: settings.mirror }">
         <div
           ref="column"
@@ -178,6 +186,20 @@ defineExpose({ measure })
   background: linear-gradient(to bottom, #202f38, #273945);
   box-shadow: inset 0 3px 12px rgba(0, 0, 0, 0.3);
 }
+.band {
+  position: absolute;
+  inset-inline: 30px;
+  border: 1px solid rgba(247, 242, 233, 0.12);
+  border-radius: 20px;
+  background: linear-gradient(to right, #21333d, #454545);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.21);
+}
+:dir(ltr) .band {
+  background: linear-gradient(to left, #21333d, #454545);
+}
+.band.smooth {
+  transition: inset-block-start 0.35s cubic-bezier(0.2, 0.7, 0.2, 1), block-size 0.35s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
 .mirror {
   position: absolute;
   inset: 0;
@@ -198,13 +220,13 @@ defineExpose({ measure })
   transition: transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 .column .ph {
-  margin: 0 0 0.5em;
+  margin: 0 0 0.6em;
   text-align: start;
   transition: color 0.25s, opacity 0.25s;
 }
 /* A sentence break is a stop: the gap after it is wider than the line gap inside a block. */
 .column .ph.end {
-  margin-block-end: 1em;
+  margin-block-end: 1.1em;
 }
 .column .ph.now {
   color: var(--tilw-stage-text);
@@ -221,7 +243,7 @@ defineExpose({ measure })
   align-items: center;
   gap: 6px;
   inline-size: fit-content;
-  margin: 0 0 0.9em;
+  margin: 0 0 28px; /* clears the band around the block that follows */
   padding: 3px 12px;
   border: 1px solid var(--tilw-stage-secondary);
   border-radius: 14px;
@@ -254,6 +276,9 @@ defineExpose({ measure })
   background: none;
   box-shadow: none;
 }
+.bare .band {
+  inset-inline: 0 22px;
+}
 .bare .column {
   inline-size: calc(100% - 60px);
   margin-inline: 16px auto;
@@ -261,6 +286,7 @@ defineExpose({ measure })
 
 @media (prefers-reduced-motion: reduce) {
   .column.smooth,
+  .band.smooth,
   .column .ph {
     transition: none;
   }
@@ -288,6 +314,10 @@ defineExpose({ measure })
   }
   .glass {
     border-radius: 20px;
+  }
+  .band {
+    inset-inline: 8px;
+    border-radius: 15px;
   }
   .column {
     inline-size: calc(100% - 50px);

@@ -128,7 +128,7 @@ Severity: 🔴 blocks the cycle · 🟠 breaks a promise made in landing/legal c
   frames; tokens were derived).
 - **Landing "تعرف على بلس داخل التطبيق"** still points nowhere: Tilw Plus is deferred (G6). The landing's
   "English" links also stay, as the landing page is Arabic-only.
-- **Reader redesign (2026-11-22)**: the cue band of 6:26 / 6:31 is gone because it covered the next line. The text
+- **Reader redesign (2026-11-22)**: the cue band of 6:26 / 6:31 stays but is now sized to the block being read, so it never covers the next line. The text
   is shown as phrase blocks (a stop after each sentence, typed line break or pause mark); the block being read is
   bright and the rest dimmed. Pause marks from the editor now show as a chip in the reader and the reader holds on
   them for their seconds (the seed script has one 2 s pause for checking). Figma has no frame for this yet.
