@@ -10,6 +10,8 @@ export interface ReaderEngineOptions {
   /** Word count per paragraph. */
   words: Ref<number[]>
   settings: Ref<ReadingSettings>
+  /** Pause marks: where to hold still, as a word position and seconds. */
+  pauses?: Ref<{ at: number, sec: number }[]>
   /** Called when playback reaches the end of the script. */
   onEnd?: () => void
 }
@@ -21,12 +23,15 @@ export function useReaderEngine(opts: ReaderEngineOptions) {
   /** Seconds left in the pre-roll countdown, or 0. */
   const countdown = ref(0)
   const ended = ref(false)
+  /** Word position of the pause being held, or null. */
+  const holdAt = ref<number | null>(null)
 
   const paragraph = computed(() => paragraphOfProgress(timeline.value, progress.value))
   const total = computed(() => timeline.value.words.length)
 
   let raf = 0
   let last = 0
+  let holdUntil = 0
   let countdownTimer: ReturnType<typeof setInterval> | undefined
 
   function frame(now: number) {
@@ -34,7 +39,17 @@ export function useReaderEngine(opts: ReaderEngineOptions) {
     // Keep real time on slow or throttled devices; a hidden tab restarts the clock instead (see below).
     const dt = last ? Math.min(now - last, 1000) : 0
     last = now
-    progress.value = advance(timeline.value, progress.value, dt, opts.settings.value.wpm)
+    if (holdAt.value !== null) {
+      if (now < holdUntil) return void (raf = requestAnimationFrame(frame))
+      holdAt.value = null
+    }
+    // Crossing a pause mark: stop on it for its seconds, then carry on.
+    const step = stepWithPauses(timeline.value, progress.value, dt, opts.settings.value.wpm, opts.pauses?.value)
+    progress.value = step.progress
+    if (step.hold) {
+      holdAt.value = step.hold.at
+      holdUntil = now + step.hold.sec * 1000
+    }
     if (progress.value >= timeline.value.total) {
       stop()
       ended.value = true
@@ -76,6 +91,7 @@ export function useReaderEngine(opts: ReaderEngineOptions) {
   }
 
   function stop() {
+    holdAt.value = null
     playing.value = false
     cancelAnimationFrame(raf)
     clearCountdown()
@@ -87,6 +103,7 @@ export function useReaderEngine(opts: ReaderEngineOptions) {
   }
 
   function goTo(i: number) {
+    holdAt.value = null
     ended.value = false
     progress.value = paragraphStart(timeline.value, i)
   }
@@ -108,10 +125,12 @@ export function useReaderEngine(opts: ReaderEngineOptions) {
     goTo(progress.value - start < 1 && !ended.value ? paragraph.value - 1 : paragraph.value)
   }
   function restart() {
+    holdAt.value = null
     ended.value = false
     progress.value = 0
   }
   function seek(p: number) {
+    holdAt.value = null
     ended.value = false
     progress.value = Math.min(Math.max(0, p), Math.max(0, timeline.value.total - 1))
   }
@@ -134,7 +153,7 @@ export function useReaderEngine(opts: ReaderEngineOptions) {
     stop()
   })
 
-  return { timeline, progress, playing, countdown, ended, paragraph, total, play, stop, toggle, next, prev, rewind, restart, goTo, seek }
+  return { timeline, progress, playing, countdown, ended, holdAt, paragraph, total, play, stop, toggle, next, prev, rewind, restart, goTo, seek }
 }
 
 export type ReaderEngine = ReturnType<typeof useReaderEngine>

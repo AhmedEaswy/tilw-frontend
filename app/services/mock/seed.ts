@@ -49,7 +49,11 @@ export function seedScripts(now: number): Script[] {
       ].join('\n\n'),
       2 * 3_600_000,
       now,
-      { lastOpenedAt: new Date(now - 3_600_000).toISOString(), lastPosition: { paragraph: 0, offset: 0 } },
+      {
+        lastOpenedAt: new Date(now - 3_600_000).toISOString(),
+        lastPosition: { paragraph: 0, offset: 0 },
+        marks: [{ id: 'm_seed_pause', type: 'pause', start: 'كل حكاية تبدأ بسؤال صغير.'.length, end: 'كل حكاية تبدأ بسؤال صغير.'.length, pauseSec: 2 }],
+      },
     ),
     script(
       's_backstage',

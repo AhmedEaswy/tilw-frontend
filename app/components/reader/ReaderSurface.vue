@@ -1,17 +1,23 @@
 <script setup lang="ts">
 /**
- * Reading monitor from "Rehearsal" (6:26 desktop, 6:31 phone): housing with the paragraph position row,
- * inset glass, and the "current cue" band the reader looks at. The script scrolls under the band with
- * `transform` only (no layout shift); the paragraph under the band is lit, the others stay dimmed.
+ * Reading monitor from "Rehearsal" (6:26 desktop, 6:31 phone): housing with the paragraph position row and
+ * an inset glass. The script is shown as phrase blocks (one per stop, see utils/phrases.ts) that move under
+ * a fixed reading point with `transform` only: the block being read is lit, the rest are dimmed and fade at
+ * the glass edges. A gap between blocks is a stop; a pause mark from the editor shows as a chip and the
+ * reader holds on it (see useReaderEngine).
  *
- * Deviation (logged in gaps.md): Figma draws the cue line larger than its neighbours. Here every line
- * keeps the same size so nothing reflows while reading; the current paragraph is lit instead.
+ * Deviation (logged in gaps.md): the cue band of the Figma frames is gone, because it covered the lines next
+ * to the one being read. Every block keeps one size so nothing reflows while reading.
  */
 import type { ReadingSettings } from '~/services/types'
 import type { ReaderLayout, Timeline } from '~/utils/reader'
 
 const props = defineProps<{
   paragraphs: string[]
+  /** Phrase blocks per paragraph; derived from `paragraphs` (without pauses) when not given. */
+  units?: Phrase[][]
+  /** Word position of the pause being held, or null. */
+  holdAt?: number | null
   timeline: Timeline
   progress: number
   paragraph: number
@@ -27,6 +33,18 @@ const { t } = useI18n()
 const column = ref<HTMLElement>()
 const glass = ref<HTMLElement>()
 const layout = ref<ReaderLayout>({ tops: [], heights: [], lineH: 0 })
+const blocks = computed(() => props.units ?? props.paragraphs.map(p => splitPhrases(p)))
+/** Every phrase in reading order with its paragraph, its place in the script and the pause that follows. */
+const flat = computed(() => {
+  let at = 0
+  return blocks.value.flatMap((u, pi) => u.map((p, i) => {
+    at += p.words
+    return { ...p, pi, last: i === u.length - 1, end: at }
+  }))
+})
+/** Timeline of the phrases, so the view steps from one block to the next. */
+const phraseTl = computed(() => buildTimeline(flat.value.map(p => p.words)))
+const current = computed(() => paragraphOfProgress(phraseTl.value, props.progress))
 const glassH = ref(0)
 /** Ease between positions only after the web font is in, so the first layout doesn't visibly slide. */
 const ready = ref(false)
@@ -34,7 +52,7 @@ const ready = ref(false)
 function measure() {
   const col = column.value
   if (!col) return
-  const ps = [...col.querySelectorAll<HTMLElement>('p')]
+  const ps = [...col.querySelectorAll<HTMLElement>('.ph')]
   const lh = Number.parseFloat(getComputedStyle(col).lineHeight) || 0
   layout.value = { tops: ps.map(p => p.offsetTop), heights: ps.map(p => p.offsetHeight), lineH: lh }
   glassH.value = glass.value?.clientHeight ?? 0
@@ -55,12 +73,12 @@ onMounted(() => {
   else settle()
 })
 onBeforeUnmount(() => ro?.disconnect())
-watch(() => [props.paragraphs, props.settings.fontSize, props.settings.lineWidth], () => nextTick(measure), { deep: true })
+watch(() => [props.paragraphs, props.units, props.settings.fontSize, props.settings.lineWidth], () => nextTick(measure), { deep: true })
 
-const y = computed(() => progressToY(props.timeline, layout.value, props.progress))
-/** The band sits a little above the middle of the glass, as in the frames. */
-const bandCenter = computed(() => Math.round(glassH.value * 0.47))
-const shift = computed(() => bandCenter.value - y.value)
+const y = computed(() => progressToY(phraseTl.value, layout.value, props.progress))
+/** The block being read starts a little above the middle of the glass, so what comes next stays in view. */
+const readingTop = computed(() => Math.round(glassH.value * 0.3))
+const shift = computed(() => readingTop.value - y.value)
 
 const fontPx = computed(() => FONT_PX[props.settings.fontSize])
 const linePx = computed(() => LINE_PX[props.settings.lineWidth])
@@ -85,7 +103,6 @@ defineExpose({ measure })
       <div v-if="!bare" class="bars" aria-hidden="true"><i v-for="(b, i) in bars" :key="i" :class="b" /></div>
     </div>
     <div ref="glass" class="glass" :style="{ '--fs': `${fontPx}`, '--lw': `${linePx}px` }">
-      <div class="band" aria-hidden="true" />
       <div class="mirror" :class="{ on: settings.mirror }">
         <div
           ref="column"
@@ -94,7 +111,12 @@ defineExpose({ measure })
           :dir="direction"
           :style="{ transform: `translate3d(0, ${shift}px, 0)` }"
         >
-          <p v-for="(text, i) in paragraphs" :key="i" :class="{ now: i === paragraph }" :aria-current="i === paragraph ? 'true' : undefined">{{ text }}</p>
+          <template v-for="(p, i) in flat" :key="i">
+            <p class="ph" :class="{ now: i === current, past: i < current, end: p.last }" :aria-current="i === current ? 'true' : undefined">{{ p.text }}</p>
+            <p v-if="p.pause" class="pz" :class="{ hold: holdAt === p.end }" aria-hidden="true">
+              <UiGlyph name="pause" :size="14" />{{ t('reader.pauseMark', { s: nf.format(p.pause) }) }}
+            </p>
+          </template>
         </div>
       </div>
       <slot />
@@ -156,23 +178,11 @@ defineExpose({ measure })
   background: linear-gradient(to bottom, #202f38, #273945);
   box-shadow: inset 0 3px 12px rgba(0, 0, 0, 0.3);
 }
-.band {
-  position: absolute;
-  inset-inline: 30px;
-  inset-block-start: 47%;
-  block-size: calc(var(--fs) * 1.43px + 40px);
-  translate: 0 -50%;
-  border: 1px solid rgba(247, 242, 233, 0.12);
-  border-radius: 20px;
-  background: linear-gradient(to right, #21333d, #454545);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.21);
-}
-:dir(ltr) .band {
-  background: linear-gradient(to left, #21333d, #454545);
-}
 .mirror {
   position: absolute;
   inset: 0;
+  /* The lines fade out toward the glass edges so the eye stays on the block being read. */
+  mask-image: linear-gradient(to bottom, transparent, #000 14%, #000 80%, transparent);
 }
 .mirror.on {
   transform: scaleX(-1);
@@ -187,13 +197,40 @@ defineExpose({ measure })
 .column.smooth {
   transition: transform 0.35s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
-.column p {
-  margin: 0 0 0.6em;
+.column .ph {
+  margin: 0 0 0.5em;
   text-align: start;
-  transition: color 0.25s;
+  transition: color 0.25s, opacity 0.25s;
 }
-.column p.now {
+/* A sentence break is a stop: the gap after it is wider than the line gap inside a block. */
+.column .ph.end {
+  margin-block-end: 1em;
+}
+.column .ph.now {
   color: var(--tilw-stage-text);
+}
+.column .ph:not(.now) {
+  opacity: 0.5;
+}
+.column .ph.past {
+  opacity: 0.32;
+}
+/* Pause mark from the editor: a chip where the speaker stops, lit while the reader is holding. */
+.column .pz {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  inline-size: fit-content;
+  margin: 0 0 0.9em;
+  padding: 3px 12px;
+  border: 1px solid var(--tilw-stage-secondary);
+  border-radius: 14px;
+  color: var(--tilw-stage-secondary);
+  font: 500 15px/20px var(--tilw-font-ar);
+}
+.column .pz.hold {
+  border-color: var(--tilw-stage-cue);
+  color: var(--tilw-stage-cue);
 }
 .column[dir='ltr'] {
   font-family: var(--tilw-font-lat);
@@ -217,9 +254,6 @@ defineExpose({ measure })
   background: none;
   box-shadow: none;
 }
-.bare .band {
-  inset-inline: 0 22px;
-}
 .bare .column {
   inline-size: calc(100% - 60px);
   margin-inline: 16px auto;
@@ -227,7 +261,7 @@ defineExpose({ measure })
 
 @media (prefers-reduced-motion: reduce) {
   .column.smooth,
-  .column p {
+  .column .ph {
     transition: none;
   }
 }
@@ -254,11 +288,6 @@ defineExpose({ measure })
   }
   .glass {
     border-radius: 20px;
-  }
-  .band {
-    inset-inline: 8px;
-    border-radius: 15px;
-    block-size: calc(var(--fs) * 0.625 * 1.43px + 40px);
   }
   .column {
     inline-size: calc(100% - 50px);

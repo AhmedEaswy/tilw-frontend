@@ -27,7 +27,34 @@ export const useReaderStore = defineStore('reader', () => {
   const api = () => useServices()
 
   const paragraphs = computed(() => splitParagraphs(script.value?.body ?? ''))
-  const paragraphWords = computed(() => paragraphs.value.map(countWords))
+  /** Each paragraph as phrase blocks, with the script's pause marks placed on them. */
+  const units = computed<Phrase[][]>(() => {
+    const body = (script.value?.body ?? '').replace(/\r\n?/g, '\n')
+    const ranges = paragraphRanges(body)
+    const plain = paragraphs.value
+    if (ranges.length !== plain.length) return plain.map(p => splitPhrases(p))
+    const pauses = (script.value?.marks ?? []).filter(m => m.type === 'pause')
+    return ranges.map((r, i) => {
+      const lead = body.slice(r.start, r.end).length - body.slice(r.start, r.end).trimStart().length
+      const here = pauses
+        .filter(m => m.start >= r.start && m.start <= r.end)
+        .map(m => ({ offset: m.start - r.start - lead, sec: m.pauseSec ?? 1 }))
+      return splitPhrases(plain[i]!, here)
+    })
+  })
+  const paragraphWords = computed(() => units.value.map(u => u.reduce((n, p) => n + p.words, 0)))
+  /** Where the reader holds still: word position (from the start of the script) and seconds. */
+  const pauses = computed(() => {
+    const out: { at: number, sec: number }[] = []
+    let at = 0
+    for (const u of units.value) {
+      for (const p of u) {
+        at += p.words
+        if (p.pause) out.push({ at, sec: p.pause })
+      }
+    }
+    return out
+  })
   const direction = computed<'rtl' | 'ltr'>(() => {
     const d = script.value?.direction ?? 'auto'
     return d === 'auto' ? detectDirection(script.value?.body || script.value?.title || 'ا') : d
@@ -126,7 +153,7 @@ export const useReaderStore = defineStore('reader', () => {
   }
 
   return {
-    script, status, loadError, settings, settingsError, positionError, paragraphs, paragraphWords, direction,
+    script, status, loadError, settings, settingsError, positionError, paragraphs, paragraphWords, units, pauses, direction,
     load, updateSettings, flushSettings, setDirection, savePosition, reset,
   }
 })

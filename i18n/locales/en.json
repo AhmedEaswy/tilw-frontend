@@ -225,7 +225,7 @@
       "inScript": "In this script ({n})",
       "none": "No marks yet.",
       "emphasis": "Emphasis",
-      "pause": "Pause",
+    "pause": "Pause",
       "note": "Note",
       "remove": "Remove {mark}",
       "added": "Mark added.",
@@ -253,6 +253,7 @@
   "reader": {
     "title": "Rehearsal",
     "play": "Play",
+    "pauseMark": "Pause {s}s",
     "pause": "Pause",
     "prev": "Previous paragraph",
     "next": "Next paragraph",

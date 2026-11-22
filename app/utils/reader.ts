@@ -61,19 +61,30 @@ export function advance(tl: Timeline, progress: number, dtMs: number, wpm: numbe
 }
 
 /**
- * Scroll offset (px from the top of the column) of the reading line for a progress value.
- * The text moves in steps, not continuously: each rendered line gets an equal share of its paragraph's
- * words, the view holds on a line for that long, then moves once to the next line (or paragraph).
+ * One playback step that stops on pause marks. Moves `progress` on by `dtMs`; when that crosses a pause
+ * mark it lands on the mark instead and reports it, so the caller can hold there for `sec` seconds.
+ */
+export function stepWithPauses(
+  tl: Timeline,
+  progress: number,
+  dtMs: number,
+  wpm: number,
+  pauses: { at: number, sec: number }[] = [],
+): { progress: number, hold: { at: number, sec: number } | null } {
+  const next = advance(tl, progress, dtMs, wpm)
+  const hit = pauses.find(p => p.at > progress && p.at <= next && p.at < tl.total)
+  return hit ? { progress: hit.at, hold: hit } : { progress: next, hold: null }
+}
+
+/**
+ * Scroll offset (px from the top of the column) of the block being read. The text moves in steps: the
+ * view holds on a block for its share of the words, then moves once to the next one. `layout` describes
+ * the blocks, and `tl` is built from their word counts.
  */
 export function progressToY(tl: Timeline, layout: ReaderLayout, progress: number): number {
   const n = tl.words.length
   if (!n || layout.tops.length !== n) return 0
-  const i = paragraphOfProgress(tl, progress)
-  const half = layout.lineH / 2
-  const lines = layout.lineH > 0 ? Math.max(1, Math.round(layout.heights[i]! / layout.lineH)) : 1
-  const frac = Math.min(1, Math.max(0, (progress - tl.starts[i]!) / tl.words[i]!))
-  const line = Math.min(lines - 1, Math.floor(frac * lines))
-  return layout.tops[i]! + line * layout.lineH + half
+  return layout.tops[paragraphOfProgress(tl, progress)]!
 }
 
 /** Saved position ↔ progress. `offset` is the word offset inside the paragraph. */

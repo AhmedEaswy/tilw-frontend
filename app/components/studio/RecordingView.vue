@@ -15,6 +15,8 @@ const props = defineProps<{
   level: number
   saving: boolean
   paragraphs: string[]
+  units?: Phrase[][]
+  holdAt?: number | null
   timeline: Timeline
   progress: number
   paragraph: number
@@ -61,6 +63,8 @@ onMounted(() => stopBtn.value?.focus())
           class="prompter"
           bare
           :paragraphs="paragraphs"
+          :units="units"
+          :hold-at="holdAt"
           :timeline="timeline"
           :progress="progress"
           :paragraph="paragraph"

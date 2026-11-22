@@ -17,7 +17,7 @@ const id = computed(() => String(route.params.id))
 useHead({ title: () => `${t('reader.title')} · ${reader.script?.title ?? ''} · tilwprompter` })
 
 const settings = computed(() => reader.settings)
-const engine = useReaderEngine({ words: computed(() => reader.paragraphWords), settings })
+const engine = useReaderEngine({ words: computed(() => reader.paragraphWords), pauses: computed(() => reader.pauses), settings })
 
 const uiDir = computed<'rtl' | 'ltr'>(() => (localeProperties.value.dir === 'rtl' ? 'rtl' : 'ltr'))
 const reducedMotion = usePreferredReducedMotion()
@@ -172,6 +172,8 @@ onBeforeUnmount(() => {
           v-else
           class="surface"
           :paragraphs="reader.paragraphs"
+          :units="reader.units"
+          :hold-at="engine.holdAt.value"
           :timeline="engine.timeline.value"
           :progress="engine.progress.value"
           :paragraph="engine.paragraph.value"

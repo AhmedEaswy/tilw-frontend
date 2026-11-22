@@ -67,7 +67,7 @@ onMounted(async () => {
 
 // ---------- prompter ----------
 const settings = computed(() => reader.settings)
-const engine = useReaderEngine({ words: computed(() => reader.paragraphWords), settings })
+const engine = useReaderEngine({ words: computed(() => reader.paragraphWords), pauses: computed(() => reader.pauses), settings })
 const reducedMotion = usePreferredReducedMotion()
 const smooth = computed(() => reducedMotion.value !== 'reduce')
 
@@ -241,6 +241,8 @@ const firstLine = computed(() => reader.paragraphs[0] ?? '')
     :level="level"
     :saving="saving"
     :paragraphs="reader.paragraphs"
+    :units="reader.units"
+    :hold-at="engine.holdAt.value"
     :timeline="engine.timeline.value"
     :progress="engine.progress.value"
     :paragraph="engine.paragraph.value"
