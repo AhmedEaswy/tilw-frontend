@@ -21,8 +21,12 @@ The app talks to data exclusively through typed service interfaces (`AuthPort`, 
 failures). The Laravel API adapter replaces it later with no UI changes. Components and stores
 MUST NOT call `fetch` or touch storage directly.
 
-### IV. Recordings never leave the device
-Audio/video takes are stored in the browser (IndexedDB) only and downloaded as original files.
+### IV. Recordings never touch Tilw's servers
+Audio/video takes are stored in the browser (IndexedDB) and downloaded as original files. When the
+person links their own storage (Google Drive first) and chooses manual or auto sync, the app MAY
+upload takes directly from the browser to that storage; take bytes MUST NOT be sent to, proxied by,
+or stored on the Tilw API, which holds take metadata only. Sync is off by default, and a take is
+never deleted from the device because an upload failed.
 Camera and microphone are requested only on explicit user action in the recording studio, and the
 app MUST remain usable (write, rehearse) when permission is denied.
 
@@ -51,4 +55,8 @@ the mock adapter.
 This constitution overrides ad-hoc choices. Amendments are made by editing this file with a version
 bump and a note in the commit message. Reviews check principles II, III and IV explicitly.
 
-**Version**: 1.0.0 | **Ratified**: 2026-11-19 | **Last Amended**: 2026-11-19
+**Version**: 1.1.0 | **Ratified**: 2026-11-19 | **Last Amended**: 2026-11-22
+
+Amendment 1.1.0 (2026-11-22, release 2): principle IV changed from "Recordings never leave the device"
+to "Recordings never touch Tilw's servers" to allow opt-in backup to the person's own storage
+(owner decision, `release-2-plan.md`).
