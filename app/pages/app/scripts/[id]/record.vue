@@ -69,7 +69,7 @@ onMounted(async () => {
 const settings = computed(() => reader.settings)
 const engine = useReaderEngine({ words: computed(() => reader.paragraphWords), settings })
 const reducedMotion = usePreferredReducedMotion()
-const smooth = computed(() => !engine.playing.value && reducedMotion.value !== 'reduce')
+const smooth = computed(() => reducedMotion.value !== 'reduce')
 
 // ---------- countdown → recording ----------
 type Phase = 'setup' | 'countdown' | 'recording'

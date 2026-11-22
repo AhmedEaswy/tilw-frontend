@@ -62,18 +62,18 @@ export function advance(tl: Timeline, progress: number, dtMs: number, wpm: numbe
 
 /**
  * Scroll offset (px from the top of the column) of the reading line for a progress value.
- * Each paragraph's span runs from its first line's centre to the next paragraph's first line, so the
- * gap between paragraphs is crossed smoothly instead of jumping.
+ * The text moves in steps, not continuously: each rendered line gets an equal share of its paragraph's
+ * words, the view holds on a line for that long, then moves once to the next line (or paragraph).
  */
 export function progressToY(tl: Timeline, layout: ReaderLayout, progress: number): number {
   const n = tl.words.length
   if (!n || layout.tops.length !== n) return 0
   const i = paragraphOfProgress(tl, progress)
   const half = layout.lineH / 2
-  const from = layout.tops[i]! + half
-  const to = i + 1 < n ? layout.tops[i + 1]! + half : layout.tops[i]! + Math.max(layout.heights[i]! - half, half)
+  const lines = layout.lineH > 0 ? Math.max(1, Math.round(layout.heights[i]! / layout.lineH)) : 1
   const frac = Math.min(1, Math.max(0, (progress - tl.starts[i]!) / tl.words[i]!))
-  return from + frac * (to - from)
+  const line = Math.min(lines - 1, Math.floor(frac * lines))
+  return layout.tops[i]! + line * layout.lineH + half
 }
 
 /** Saved position ↔ progress. `offset` is the word offset inside the paragraph. */

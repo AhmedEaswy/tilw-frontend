@@ -83,7 +83,7 @@ function select(start: number, end: number) {
   el.setSelectionRange(start, end)
   track()
   nextTick(() => {
-    document.querySelector('.editor-canvas .hit.on, .editor-canvas .sel-target')?.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    document.querySelector('.editor-canvas .hit.on, .editor-canvas .sel-target')?.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
   })
 }
 defineExpose({ select, focus: () => area.value?.focus() })

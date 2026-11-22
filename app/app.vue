@@ -13,4 +13,5 @@ useHead(() => ({ htmlAttrs: { lang: localeHead.value.htmlAttrs?.lang, dir: local
     <NuxtPage />
   </NuxtLayout>
   <UiToast />
+  <ClientOnly><OfflineBanner /></ClientOnly>
 </template>

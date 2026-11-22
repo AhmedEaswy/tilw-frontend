@@ -21,7 +21,7 @@ const engine = useReaderEngine({ words: computed(() => reader.paragraphWords), s
 
 const uiDir = computed<'rtl' | 'ltr'>(() => (localeProperties.value.dir === 'rtl' ? 'rtl' : 'ltr'))
 const reducedMotion = usePreferredReducedMotion()
-const smooth = computed(() => !engine.playing.value && reducedMotion.value !== 'reduce')
+const smooth = computed(() => reducedMotion.value !== 'reduce')
 
 // ---------- load ----------
 async function load() {

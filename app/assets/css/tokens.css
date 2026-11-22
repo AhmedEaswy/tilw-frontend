@@ -100,7 +100,7 @@
     --tilw-border-strong: #5f7379;
     --tilw-focus-ring: #f2b28b;
     --tilw-action-primary: #f2b28b;
-    --tilw-action-solid: #b5603a;
+    --tilw-action-solid: #9a4f31; /* ivory text on it passes 4.5:1 (axe, T103) */
     --tilw-status-error: #f08a80;
     --tilw-status-success: #7fd3a6;
     --tilw-brand-wordmark: #f7f2e9;
@@ -123,7 +123,7 @@
   --tilw-border-strong: #5f7379;
   --tilw-focus-ring: #f2b28b;
   --tilw-action-primary: #f2b28b;
-  --tilw-action-solid: #b5603a;
+  --tilw-action-solid: #9a4f31; /* ivory text on it passes 4.5:1 (axe, T103) */
   --tilw-status-error: #f08a80;
   --tilw-status-success: #7fd3a6;
   --tilw-brand-wordmark: #f7f2e9;

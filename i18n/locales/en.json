@@ -482,5 +482,15 @@
     "deletedTitle": "Your account is deleted",
     "deletedLede": "Thank you for trying tilw. You've been signed out of this browser.",
     "toHome": "Go to the home page"
+  },
+  "errorPage": {
+    "notFoundTitle": "Page not found",
+    "notFoundLede": "The link may have changed or the page was removed. Go back to the website or to your scripts.",
+    "title": "Something went wrong",
+    "lede": "None of your scripts were lost. Try again, and if it keeps happening go back to the website."
+  },
+  "offline": {
+    "text": "You're offline. What you write stays on this device and saves to your account when you're back online.",
+    "back": "Back online."
   }
 }

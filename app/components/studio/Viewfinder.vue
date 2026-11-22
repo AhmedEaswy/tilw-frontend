@@ -37,7 +37,7 @@ const bars = computed(() => {
         <span class="cam-off" aria-hidden="true"><i class="body"><b /></i><i class="lens" /></span>
         <span v-if="compact" class="off-label">{{ t('studio.cameraOff') }}</span>
       </template>
-      <div v-else class="audio">
+      <div v-else class="audio-body">
         <span class="mic"><UiGlyph name="mic" :size="28" /></span>
         <div v-if="live" class="wave" aria-hidden="true">
           <i v-for="(b, i) in bars" :key="i" :style="{ blockSize: `${Math.round(b * 34)}px` }" />
@@ -138,7 +138,7 @@ const bars = computed(() => {
   border-radius: 4px;
   background: var(--tilw-stage-cue);
 }
-.audio {
+.audio-body {
   display: grid;
   justify-items: center;
   gap: 22px;
@@ -169,7 +169,7 @@ const bars = computed(() => {
 .cap {
   font: 500 14px/1.36 var(--tilw-font-ar);
 }
-.audio:not(:has(.wave)) .cap {
+.audio-body:not(:has(.wave)) .cap {
   font-size: 16px;
 }
 .strip {

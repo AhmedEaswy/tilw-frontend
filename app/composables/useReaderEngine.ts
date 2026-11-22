@@ -1,7 +1,7 @@
 /**
  * Reader engine (US5, T060): plays a script at a constant WPM on requestAnimationFrame, or steps one
  * paragraph at a time in manual mode. Exposes `progress` (words read) and the current paragraph; the
- * surface maps progress to a scroll offset with `progressToY`. Optional countdown before playing.
+ * surface maps progress to a stepped scroll offset (one move per line) with `progressToY`. Optional countdown before playing.
  */
 import type { Ref } from 'vue'
 import type { ReadingSettings } from '~/services/types'
@@ -31,7 +31,8 @@ export function useReaderEngine(opts: ReaderEngineOptions) {
 
   function frame(now: number) {
     if (!playing.value) return
-    const dt = last ? Math.min(now - last, 250) : 0 // a background tab must not jump far ahead
+    // Keep real time on slow or throttled devices; a hidden tab restarts the clock instead (see below).
+    const dt = last ? Math.min(now - last, 1000) : 0
     last = now
     progress.value = advance(timeline.value, progress.value, dt, opts.settings.value.wpm)
     if (progress.value >= timeline.value.total) {
@@ -123,7 +124,15 @@ export function useReaderEngine(opts: ReaderEngineOptions) {
     }
   })
 
-  onBeforeUnmount(stop)
+  // A hidden tab gets no frames: start timing again from the next visible frame so the text doesn't jump.
+  function onVisibility() {
+    last = 0
+  }
+  onMounted(() => document.addEventListener('visibilitychange', onVisibility))
+  onBeforeUnmount(() => {
+    document.removeEventListener('visibilitychange', onVisibility)
+    stop()
+  })
 
   return { timeline, progress, playing, countdown, ended, paragraph, total, play, stop, toggle, next, prev, rewind, restart, goTo, seek }
 }

@@ -115,6 +115,8 @@ label {
 }
 input {
   flex: 1;
+  /* Without this the input's built-in ~20-character width becomes the form's minimum width (overflow at 320 px). */
+  inline-size: 0;
   min-inline-size: 0;
   block-size: 100%;
   padding-inline: var(--tilw-space-16);

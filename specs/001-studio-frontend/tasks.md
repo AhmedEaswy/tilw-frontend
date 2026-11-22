@@ -111,12 +111,21 @@ where a frame exists).
 **Checkpoint US8** ✅ 2026-11-19 — settings verified in the browser on the dev server (1120 px and 390 px, ar, dark system theme): preferences page matches 6:65 / 6:104 (account card at the start side, language and appearance beside it, 81-px rows); theme choice applies at once and saves to the account; reading settings open the rehearsal panel as a drawer without the per-script direction; export rejects a wrong password and starts `tilw-account-v1.json` (6:66 → 6:67, download captured in the test); legacy recovery consent → list → confirm adds a copy to the account (6:68 → 6:71); account page saves the name and rejects a wrong current password and a short / mismatched new one; delete account shows what goes and what stays and rejects a wrong password. Not run in the browser: a real password change and a real account delete (would change the seeded account) — covered by mock unit tests and `tests/e2e/settings.spec.ts` (not run yet).
 
 ## Phase 11: US9 Public & polish (P3)
-- [ ] T100 [P] `/demo` reader demo [6:6–6:17] reusing reader engine
-- [ ] T101 [P] `/contact` [6:5] — shows `public.contactEmail` placeholder; form validates only (static build, no sending) (G16)
-- [ ] T102 English pass across all routes; RTL/LTR mixed-text checks
-- [ ] T103 Responsive pass (320, 390, 768, landscape, desktop); reduced-motion; axe checks
-- [ ] T104 System states: offline, save failed, session expired, 404, error page (G10)
-- [ ] T105 Landing CTAs point to `/signin`, `/waitlist`, `/demo`
+- [-] T100 [P] `/demo` — dropped (owner, 2026-11-22); reader demo [6:6–6:17] reusing reader engine
+- [-] T101 [P] `/contact` — dropped (owner, 2026-11-22); [6:5] — shows `public.contactEmail` placeholder; form validates only (static build, no sending) (G16)
+- [x] T102 English pass across all routes; RTL/LTR mixed-text checks
+- [x] T103 Responsive pass (320, 390, 768, landscape, desktop); reduced-motion; axe checks
+- [x] T104 System states: offline, save failed, session expired, 404, error page (G10)
+- [x] T105 Landing CTAs point to `/signin`, `/waitlist`
+
+**Checkpoint US9 / polish** ✅ 2026-11-22 — checked in the browser on the dev server and the static build:
+- `/demo` and `/contact` were removed at the owner's request; landing "جرّب الملقّن مجاناً" and "ابدأ مجاناً" go to `/waitlist`, and the footer contact link is gone.
+- System states: `app/error.vue` for 404 (real 404 status) and unexpected errors; an offline bar app-wide (not on the rehearsal / recording stages) with "عاد الاتصال." on return. Save failed and session expired were already handled by the editor status and the 401 redirect.
+- English pass: every app and public route renders in English with `lang="en" dir="ltr"`; no missing translation keys in the console; the only Arabic left on screen is user content.
+- Responsive pass: no sideways overflow on any route at 320, 390, 768, 844×390 landscape and 1440 (fixed: form inputs forced cards wider than 320 px; contact header at 320 px).
+- Accessibility: axe-core (WCAG 2.2 AA) on 14 signed-in routes in ar and en, light and dark, and 9 signed-out routes — 0 violations after fixing dark-theme button contrast, the contact email colour and the level meter's missing name. Reduced motion: global CSS rule plus the editor's search scroll.
+- Reader engine: frame steps are capped at 1 s (was 250 ms) and the clock restarts when the tab is hidden. The text now moves in steps (one eased move per rendered line, held for that line's share of the words) instead of scrolling continuously.
+- `tests/e2e/public.spec.ts` adds landing links, 404, offline and axe checks (with `@axe-core/playwright`); not run yet, like the other e2e specs.
 
 ## Dependencies
 Setup → Foundation → US1 → (US3 → US4 → US5 → US6 → US7) ; US8 after US1 ; US9 after US5.

@@ -28,6 +28,8 @@ const column = ref<HTMLElement>()
 const glass = ref<HTMLElement>()
 const layout = ref<ReaderLayout>({ tops: [], heights: [], lineH: 0 })
 const glassH = ref(0)
+/** Ease between positions only after the web font is in, so the first layout doesn't visibly slide. */
+const ready = ref(false)
 
 function measure() {
   const col = column.value
@@ -45,7 +47,12 @@ onMounted(() => {
   if (glass.value) ro.observe(glass.value)
   measure()
   // Web fonts change line metrics once they load.
-  document.fonts?.ready.then(measure).catch(() => {})
+  const settle = () => {
+    measure()
+    requestAnimationFrame(() => (ready.value = true))
+  }
+  if (document.fonts) document.fonts.ready.then(settle).catch(settle)
+  else settle()
 })
 onBeforeUnmount(() => ro?.disconnect())
 watch(() => [props.paragraphs, props.settings.fontSize, props.settings.lineWidth], () => nextTick(measure), { deep: true })
@@ -83,7 +90,7 @@ defineExpose({ measure })
         <div
           ref="column"
           class="column"
-          :class="{ smooth }"
+          :class="{ smooth: smooth && ready }"
           :dir="direction"
           :style="{ transform: `translate3d(0, ${shift}px, 0)` }"
         >

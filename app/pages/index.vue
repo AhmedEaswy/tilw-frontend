@@ -43,7 +43,7 @@ onMounted(() => {
     <h1>هاتفك يتحكم.<br><em>وأنت تتحدث.</em></h1>
     <p class="lede">ضع النص قرب العدسة، وتحكّم بالقراءة من مكانك. جهاز التحكم مشمول مجاناً.</p>
     <div class="acts">
-      <a class="btn btn-cta" href="#">جرّب الملقّن مجاناً <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      <a class="btn btn-cta" href="/waitlist">جرّب الملقّن مجاناً <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
       <a class="lnk" href="#features">كل المزايا</a>
     </div>
     <div class="now" aria-live="polite">
@@ -215,7 +215,7 @@ onMounted(() => {
   <div class="pl-head"><h2>الأساس معك مجاناً.</h2><p>الكتابة، التدريب، التسجيل، وجهاز التحكم. تضيف بلس مساعدة في توزيع كلماتك على أسطر مريحة للقراءة.</p></div>
   <div class="pl-poster">
     <div class="pl-half pl-free"><span class="pl-kick">للجميع</span><span class="pl-big">مجاني</span><ul><li style="--i:0"><span class="pl-ck"></span>كتابة النصوص واستيراد وتصدير TXT</li><li style="--i:1"><span class="pl-ck"></span>تنسيق الأسطر على جهازك وإشارات الإلقاء</li><li style="--i:2"><span class="pl-ck"></span>3 إعدادات للقراءة مع تحكم بالسرعة والخط</li><li style="--i:3"><span class="pl-ck"></span>التسجيل والمراجعة وتنزيل النسخة الأصلية</li><li style="--i:4"><span class="pl-ck"></span>التحكم بالملقن من هاتفك</li></ul>
-      <a class="pl-btn pl-btn-light" href="#">ابدأ مجاناً <svg class="pl-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+      <a class="pl-btn pl-btn-light" href="/waitlist">ابدأ مجاناً <svg class="pl-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
     <div class="pl-half pl-plus"><div class="pl-dots" id="pl-dots"></div><span class="pl-kick">عندما تريد مساعدة إضافية</span><span class="pl-big pl-lat">Tilw Plus</span>
       <p class="pl-d">رصيد شهري لاقتراح فواصل أسطر بالذكاء الاصطناعي. الكلمات تبقى كلماتك، والتطبيق بعد مراجعتك.</p>
       <div class="pl-ai" id="pl-ai"><span class="pl-scan"></span>
@@ -262,7 +262,7 @@ onMounted(() => {
   <div class="wrap jn-cols">
     <div class="jn-brand"><span class="jn-sig"><img class="s1" src="/assets/logo-symbol-stage.svg" width="23" height="21" alt=""><img class="s2" src="/assets/logo-tilw-stage.svg" width="33" height="13" alt=""><img class="s3" src="/assets/logo-prompter-stage.svg" width="78" height="16" alt=""></span><p>هاتفك يتحكم. وأنت تتحدث.</p></div>
     <div><div class="jn-fh">الموقع</div><ul><li><a href="#features">المزايا</a></li><li><a href="#how">كيف يعمل</a></li><li><a href="#plans">الخطط</a></li><li><a href="#faq">الأسئلة الشائعة</a></li></ul></div>
-    <div><div class="jn-fh">تِلو</div><ul><li><a href="/app">افتح تطبيق الويب</a></li><li><a href="#">تواصل معنا</a></li><li><a href="/privacy">الخصوصية</a></li><li><a href="/terms">الشروط</a></li></ul></div>
+    <div><div class="jn-fh">تِلو</div><ul><li><a href="/app">افتح تطبيق الويب</a></li><li><a href="/privacy">الخصوصية</a></li><li><a href="/terms">الشروط</a></li></ul></div>
   </div>
   <div class="jn-mark" aria-hidden="true"><b>tilw</b>prompter</div>
   <div class="wrap"><div class="jn-bottom"><span dir="ltr">© 2026 tilwprompter</span><a href="#">English</a></div></div>

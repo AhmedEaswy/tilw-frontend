@@ -120,3 +120,12 @@ Severity: 🔴 blocks the cycle · 🟠 breaks a promise made in landing/legal c
   browser keys needs their format. An added script shows "أُضيف" in the list; the original is not removed.
 - **Danger button** text now uses the paper colour so it stays readable in the dark theme.
 
+## Found while building US9 and the polish pass (2026-11-22)
+- **Contact (6:5) and Demo (6:6)** were built, then removed at the owner's request. The reader now moves one line at a time instead of scrolling continuously.
+- **Error and offline states (G10)** have no frames: the error page uses the paper surface and task-card type
+  scale; the offline notice is a bar at the bottom. Neither shows on the reading or recording stages.
+- **Dark theme button colour** changed from #b5603a to #9a4f31 so ivory text passes WCAG AA (Figma has no dark
+  frames; tokens were derived).
+- **Landing "تعرف على بلس داخل التطبيق"** still points nowhere: Tilw Plus is deferred (G6). The landing's
+  "English" links also stay, as the landing page is Arabic-only.
+
