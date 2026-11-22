@@ -30,6 +30,8 @@ export interface User {
   locale: Locale
   theme: Theme
   reading: ReadingSettings
+  /** Present when the real service is used; the mock has no admins. */
+  isAdmin?: boolean
   createdAt: string
 }
 

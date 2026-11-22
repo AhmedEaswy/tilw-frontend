@@ -1,7 +1,8 @@
 # Service Port Contracts
 
-UI and stores depend only on these interfaces. Phase 1: `services/mock/*`. Later: `services/http/*`
-mapped to the Laravel routes in the right-hand column (proposed — backend not built yet).
+UI and stores depend only on these interfaces. `services/mock/*` is the in-browser mock; `services/http/*` is the
+adapter for the Laravel API (routes in the right-hand column; contract: `backend/specs/001-backend-api/contracts/openapi.yaml`).
+Switch with `NUXT_PUBLIC_SERVICES_MODE=http` and `NUXT_PUBLIC_API_BASE_URL=http://localhost:8000`.
 
 All methods return `Promise<T>` and reject with `PortError`:
 

@@ -11,6 +11,8 @@ definePageMeta({ layout: false })
 useHead({ title: 'Mock backend · tilw', meta: [{ name: 'robots', content: 'noindex' }], htmlAttrs: { dir: 'ltr', lang: 'en' } })
 
 const mock = useNuxtApp().$mock as MockBackend
+// With servicesMode 'http' there is no mock backend: this dev page does not exist.
+if (!mock) throw createError({ statusCode: 404, statusMessage: 'Not found', fatal: true })
 const auth = useAuthStore()
 const { show } = useToast()
 

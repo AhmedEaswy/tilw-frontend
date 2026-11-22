@@ -1,0 +1,129 @@
+/**
+ * Small fetch wrapper for the Laravel API (Sanctum SPA cookie sessions).
+ *
+ * - Sends cookies (`credentials: 'include'`) and the `X-XSRF-TOKEN` header on every write. The token comes from the
+ *   `XSRF-TOKEN` cookie; when it is missing, `GET /sanctum/csrf-cookie` is called first. A `419` (stale token) is
+ *   retried once after refreshing the cookie.
+ * - Turns every failure into a `PortError` using the API's error envelope `{ code, message, fields?, current? }`.
+ *   A request that never reached the server is `network`.
+ * Contract: backend/specs/001-backend-api/contracts/openapi.yaml.
+ */
+import { PortError, type PortErrorCode } from '../types'
+
+export interface HttpClientOptions {
+  /** API origin, no trailing slash, e.g. `http://localhost:8000`. */
+  baseUrl: string
+  fetch?: typeof fetch
+  /** Reads a cookie value (already URL-decoded is not required). Defaults to `document.cookie`. */
+  readCookie?: (name: string) => string | null
+  /** Extra headers on every request (the unit tests send Origin/Referer, which browsers add themselves). */
+  headers?: Record<string, string>
+}
+
+export interface RequestOptions {
+  body?: unknown
+  headers?: Record<string, string>
+  /** `json` (default) parses the body, `blob` returns it as a Blob, `none` ignores it. */
+  as?: 'json' | 'blob' | 'none'
+}
+
+const CODES: readonly PortErrorCode[] = [
+  'invalid_credentials', 'validation', 'unauthenticated', 'token_invalid', 'token_expired',
+  'conflict', 'not_found', 'rate_limited', 'network', 'unknown',
+]
+
+function browserCookie(name: string): string | null {
+  if (typeof document === 'undefined') return null
+  for (const part of document.cookie.split(';')) {
+    const i = part.indexOf('=')
+    if (i > 0 && part.slice(0, i).trim() === name) return part.slice(i + 1).trim()
+  }
+  return null
+}
+
+/** Maps a failed response to a PortError. Exported for tests. */
+export async function toPortError(res: Response): Promise<PortError> {
+  let body: { code?: unknown; fields?: unknown; current?: unknown } | null = null
+  try {
+    body = await res.json()
+  } catch {
+    body = null
+  }
+  const code = body && typeof body.code === 'string' && (CODES as readonly string[]).includes(body.code)
+    ? (body.code as PortErrorCode)
+    : res.status === 429 ? 'rate_limited'
+      : res.status === 419 || res.status === 401 ? 'unauthenticated'
+        : res.status === 404 ? 'not_found'
+          : 'unknown'
+  const fields = body && body.fields && typeof body.fields === 'object' ? (body.fields as Record<string, string>) : undefined
+  return new PortError(code, fields, body?.current)
+}
+
+export function createHttpClient(opts: HttpClientOptions) {
+  const f: typeof fetch = opts.fetch ?? ((...args) => fetch(...args))
+  const readCookie = opts.readCookie ?? browserCookie
+  const base = opts.baseUrl.replace(/\/+$/, '')
+
+  const xsrf = () => {
+    const raw = readCookie('XSRF-TOKEN')
+    return raw ? decodeURIComponent(raw) : null
+  }
+
+  async function send(method: string, path: string, o: RequestOptions, write: boolean): Promise<Response> {
+    const headers: Record<string, string> = { Accept: 'application/json', ...opts.headers, ...o.headers }
+    if (o.body !== undefined) headers['Content-Type'] = 'application/json'
+    if (write) {
+      let token = xsrf()
+      if (!token) {
+        await refreshCsrf()
+        token = xsrf()
+      }
+      if (token) headers['X-XSRF-TOKEN'] = token
+    }
+    try {
+      return await f(base + path, {
+        method,
+        credentials: 'include',
+        headers,
+        body: o.body === undefined ? undefined : JSON.stringify(o.body),
+      })
+    } catch {
+      throw new PortError('network')
+    }
+  }
+
+  /** `GET /sanctum/csrf-cookie`: starts the session and sets the XSRF-TOKEN cookie. */
+  async function refreshCsrf(): Promise<void> {
+    try {
+      await f(base + '/sanctum/csrf-cookie', { method: 'GET', credentials: 'include', headers: { Accept: 'application/json', ...opts.headers } })
+    } catch {
+      throw new PortError('network')
+    }
+  }
+
+  async function request<T = unknown>(method: string, path: string, o: RequestOptions = {}): Promise<T> {
+    const write = !['GET', 'HEAD', 'OPTIONS'].includes(method)
+    let res = await send(method, path, o, write)
+    if (res.status === 419 && write) {
+      await refreshCsrf()
+      res = await send(method, path, o, write)
+    }
+    if (!res.ok) throw await toPortError(res)
+    if (o.as === 'none' || res.status === 204) return undefined as T
+    if (o.as === 'blob') return (await res.blob()) as T
+    const text = await res.text()
+    return (text ? JSON.parse(text) : null) as T
+  }
+
+  return {
+    request,
+    refreshCsrf,
+    get: <T>(path: string, o?: RequestOptions) => request<T>('GET', path, o),
+    post: <T>(path: string, body?: unknown, o: RequestOptions = {}) => request<T>('POST', path, { ...o, body }),
+    put: <T>(path: string, body?: unknown, o: RequestOptions = {}) => request<T>('PUT', path, { ...o, body }),
+    patch: <T>(path: string, body?: unknown, o: RequestOptions = {}) => request<T>('PATCH', path, { ...o, body }),
+    del: <T>(path: string, body?: unknown, o: RequestOptions = {}) => request<T>('DELETE', path, { ...o, body }),
+  }
+}
+
+export type HttpClient = ReturnType<typeof createHttpClient>

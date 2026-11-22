@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "typecheck": "vue-tsc --noEmit -p .nuxt/tsconfig.app.json"
+    "typecheck": "vue-tsc --noEmit -p .nuxt/tsconfig.app.json",
+    "test:live": "vitest run tests/unit/http-live.test.ts"
   },
   "dependencies": {
     "@nuxtjs/i18n": "^10.6.0",

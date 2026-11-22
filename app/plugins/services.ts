@@ -1,24 +1,31 @@
 /**
- * Provides the service ports as `$services` (use `useServices()`). Phase 1 always uses the mock;
- * `servicesMode: 'http'` is reserved for the Laravel adapter.
+ * Provides the service ports as `$services` (use `useServices()`): the in-browser mock by default, or the Laravel
+ * API adapter with `servicesMode: 'http'` (NUXT_PUBLIC_SERVICES_MODE=http, NUXT_PUBLIC_API_BASE_URL=...).
  *
  * Every port call is wrapped: an `unauthenticated` rejection (session ended elsewhere) clears the
  * session and sends the user to sign in, returning them to the same page afterwards (T025).
  */
 import type { Services } from '~/services/ports'
+import { createHttpServices } from '~/services/http'
 import { createMockServices, type MockBackend } from '~/services/mock'
 import { memoryKV } from '~/services/mock/db'
 import { isPortError } from '~/services/types'
 
 export default defineNuxtPlugin((nuxtApp) => {
   const config = useRuntimeConfig()
-  if (config.public.servicesMode !== 'mock') {
-    throw new Error(`servicesMode "${config.public.servicesMode}" is not implemented yet (Phase 1 is mock only).`)
+  const mode = config.public.servicesMode
+  if (mode !== 'mock' && mode !== 'http') {
+    throw new Error(`Unknown servicesMode "${mode}" (use "mock" or "http").`)
   }
 
-  // During prerender there is no localStorage; the app pages render client-side anyway.
+  // Mock: during prerender there is no localStorage; the app pages render client-side anyway.
   const kv = import.meta.client ? window.localStorage : memoryKV()
-  const mock = createMockServices(kv, { origin: import.meta.client ? window.location.origin : '' })
+  const mock = mode === 'mock'
+    ? createMockServices(kv, { origin: import.meta.client ? window.location.origin : '' })
+    : null
+  const base: Services = mock
+    ? mock.services
+    : createHttpServices({ baseUrl: config.public.apiBaseUrl as string }).services
 
   let redirecting = false
   async function onUnauthenticated() {
@@ -49,17 +56,18 @@ export default defineNuxtPlugin((nuxtApp) => {
   }
 
   const services: Services = {
-    auth: mock.services.auth,
-    waitlist: mock.services.waitlist,
-    scripts: guard(mock.services.scripts),
-    account: guard(mock.services.account),
-    legacy: guard(mock.services.legacy),
+    auth: base.auth,
+    waitlist: base.waitlist,
+    scripts: guard(base.scripts),
+    account: guard(base.account),
+    legacy: guard(base.legacy),
   }
 
   return {
     provide: {
       services,
-      mock: mock as MockBackend,
+      // Only the mock has knobs and an outbox (the /__mock dev page); null when talking to the real API.
+      mock: mock as MockBackend | null,
     },
   }
 })

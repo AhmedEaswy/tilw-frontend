@@ -15,8 +15,10 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      /** 'mock' (Phase 1) or 'http' (Laravel adapter, later). */
+      /** 'mock' (in-browser) or 'http' (Laravel API). Override with NUXT_PUBLIC_SERVICES_MODE. */
       servicesMode: 'mock',
+      /** Laravel API origin for servicesMode 'http' (NUXT_PUBLIC_API_BASE_URL). Cookie auth needs the same site. */
+      apiBaseUrl: 'http://localhost:8000',
       /** Placeholder until the owner supplies the real address (G16). */
       contactEmail: 'contact@example.com',
     },
