@@ -1,0 +1,51 @@
+<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;700&family=IBM+Plex+Sans:wght@500;700&display=swap"><style>
+:root{--paper:#f2eee7;--quiet:#e9e4db;--white:#f7f2e9;--selected:#f0decf;--ink:#243943;--muted:#53636b;--border:#ccc7bf;--strong:#77858a;--copper:#955239;--ok:#3d6b55;--err:#9d3339;
+--ar:"IBM Plex Sans Arabic","Segoe UI",Tahoma,sans-serif;--lat:"IBM Plex Sans","Segoe UI",sans-serif}
+*{box-sizing:border-box;margin:0}
+body{background:var(--paper);color:var(--ink);font:400 18px/1.6 var(--ar);width:1280px}
+.hdr{height:76px;border-bottom:1px solid var(--border);background:var(--paper)}
+.hdr .in{max-width:1164px;margin:0 auto;height:100%;display:flex;align-items:center;gap:48px}
+.brand{font:700 24px/1 var(--lat);color:var(--ink);letter-spacing:-.3px}.brand b{color:var(--copper)}
+.nav{display:flex;gap:32px;height:100%;flex:1}
+.nav a{display:flex;align-items:center;font:500 17px var(--ar);color:var(--muted);height:100%;border-block-end:3px solid transparent;text-decoration:none}
+.nav a.cur{color:var(--ink);border-color:var(--copper)}
+.av{width:44px;height:44px;border-radius:50%;background:var(--selected);color:var(--copper);display:grid;place-items:center;font:700 18px var(--ar)}
+.main{max-width:1164px;margin:0 auto;padding:40px 0 64px}
+h1{font:700 44px/1.25 var(--ar)}
+.top{display:flex;align-items:center;justify-content:space-between;margin-block-end:24px}
+.sub{display:flex;gap:28px;border-block-end:1px solid var(--border);margin-block-end:24px}
+.sub a{padding:12px 0;font:500 17px var(--ar);color:var(--muted);border-block-end:3px solid transparent;margin-block-end:-1px;display:flex;gap:8px;align-items:center}
+.sub a.cur{color:var(--ink);border-color:var(--copper)}
+.cnt{font:500 14px var(--ar);color:var(--muted);background:var(--quiet);border-radius:999px;padding:0 10px;min-width:26px;text-align:center}
+.cur .cnt{background:var(--selected);color:var(--copper)}
+.btn{height:48px;padding:0 22px;border-radius:12px;font:500 17px var(--ar);display:inline-flex;align-items:center;gap:8px;border:1px solid var(--border);background:transparent;color:var(--ink)}
+.btn.pri{background:var(--copper);border-color:var(--copper);color:var(--white)}
+.btn.sm{height:36px;padding:0 14px;font-size:15px;border-radius:9px}
+.btn.sm.pri{background:var(--copper)}
+.btn.link{border:0;color:var(--copper);padding:0 8px}
+.btn.danger{color:var(--err);border-color:transparent}
+.tools{display:flex;gap:12px;margin-block-end:16px;align-items:center}
+.search{flex:1;max-width:420px;height:44px;border:1px solid var(--border);border-radius:10px;background:var(--white);padding:0 16px;display:flex;align-items:center;color:var(--muted);font:400 16px var(--ar)}
+.sel{height:44px;border:1px solid var(--border);border-radius:10px;background:var(--white);padding:0 16px;display:flex;align-items:center;gap:8px;font:500 16px var(--ar)}
+.card{background:var(--white);border:1px solid var(--border);border-radius:18px;overflow:hidden}
+table{width:100%;border-collapse:collapse}
+th{font:500 14px var(--ar);color:var(--muted);text-align:start;padding:14px 20px;background:var(--quiet);border-block-end:1px solid var(--border)}
+td{padding:16px 20px;border-block-end:1px solid var(--border);font:400 17px var(--ar);vertical-align:middle}
+tr:last-child td{border-block-end:0}
+td.em{font:500 17px var(--lat);direction:ltr;text-align:start}
+td.mu{color:var(--muted);font-size:16px}
+td.act{text-align:end;white-space:nowrap}
+.chip{font:500 14px var(--ar);border-radius:999px;padding:2px 12px;display:inline-block}
+.chip.pend{background:var(--selected);color:var(--copper)}
+.chip.ok{background:#dfe9e2;color:var(--ok)}
+.chip.mut{background:var(--quiet);color:var(--muted)}
+.chip.err{background:#f0d9da;color:var(--err)}
+.sec{margin-block-end:32px}
+.sec h2{font:700 22px/1.36 var(--ar);margin-block-end:12px;display:flex;gap:10px;align-items:center}
+.empty{padding:28px;text-align:center;color:var(--muted);font:400 16px var(--ar)}
+.legend{color:var(--muted);font:400 16px var(--ar);margin-block-end:16px}
+</style></head><body>
+<header class="hdr"><div class="in"><div class="brand">tilw<b>prompter</b></div>
+<nav class="nav"><a>نصوصي</a><a>تسجيلاتي</a><a>الإعدادات</a><a class="cur">الإدارة</a></nav><div class="av">ل</div></div></header><main class="main"><div class="top"><h1>الإدارة</h1><button class="btn pri">+ دعوة شخص</button></div><nav class="sub"><a class="">قائمة الانتظار <span class="cnt">12</span></a><a class="cur">الدعوات <span class="cnt">14</span></a></nav>
+<div class="tools"><div class="search">ابحث بالبريد الإلكتروني</div><div class="sel">الحالة: الكل <span style="color:var(--muted)">⌄</span></div></div>
+<div class="card"><table><thead><tr><th>البريد الإلكتروني</th><th>الحالة</th><th>التاريخ</th><th></th></tr></thead><tbody><tr><td class="em">noor.h@example.com</td><td><span class="chip pend">معلّقة</span></td><td class="mu">اليوم</td><td class="act"><button class="btn sm">إعادة الإرسال</button> <button class="btn sm danger">سحب الدعوة</button></td></tr><tr><td class="em">sami.k@example.com</td><td><span class="chip pend">معلّقة</span></td><td class="mu">قبل ٣ أيام</td><td class="act"><button class="btn sm">إعادة الإرسال</button> <button class="btn sm danger">سحب الدعوة</button></td></tr><tr><td class="em">rana@example.net</td><td><span class="chip mut">مسحوبة</span></td><td class="mu">أمس</td><td class="act"><button class="btn sm">دعوة مجددًا</button></td></tr><tr><td class="em">huda@example.org</td><td><span class="chip pend">معلّقة</span></td><td class="mu">قبل ٥ أيام</td><td class="act"><button class="btn sm">إعادة الإرسال</button> <button class="btn sm danger">سحب الدعوة</button></td></tr><tr><td class="em">omar.z@example.com</td><td><span class="chip err">منتهية</span></td><td class="mu">قبل أسبوع</td><td class="act"><button class="btn sm">دعوة مجددًا</button></td></tr><tr><td class="em">layla.a@example.com</td><td><span class="chip ok">انضمّت</span></td><td class="mu">قبل ٣ أيام</td><td class="act"></td></tr></tbody></table></div></main></body></html>

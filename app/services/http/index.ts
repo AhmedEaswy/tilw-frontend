@@ -3,7 +3,7 @@
  * (services/mock), so the screens do not change. Route table: specs/001-studio-frontend/contracts/ports.md.
  */
 import type { Services } from '../ports'
-import { PortError, isPortError, type Script, type ScriptSummary, type User } from '../types'
+import { PortError, isPortError, type Invitation, type Script, type ScriptSummary, type User, type WaitlistEntry } from '../types'
 import { createHttpClient, type HttpClientOptions } from './client'
 
 const seg = encodeURIComponent
@@ -52,6 +52,14 @@ export function createHttpServices(opts: HttpClientOptions): { services: Service
       exportData: input => api.post<Blob>('/api/user/export', input, { as: 'blob' }),
       changePassword: input => api.put<void>('/api/user/password', input),
       deleteAccount: input => api.del<void>('/api/user', input),
+    },
+
+    admin: {
+      waitlist: () => api.get<WaitlistEntry[]>('/api/admin/waitlist'),
+      invitations: () => api.get<Invitation[]>('/api/admin/invitations'),
+      invite: input => api.post<Invitation>('/api/admin/invitations', input),
+      resend: id => api.post<Invitation>(`/api/admin/invitations/${seg(id)}/resend`),
+      withdraw: id => api.del<void>(`/api/admin/invitations/${seg(id)}`),
     },
 
     // Device-only: the old app's browser keys are not defined for the real service, so there is nothing to offer.

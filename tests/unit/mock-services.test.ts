@@ -191,3 +191,14 @@ describe('account', () => {
     expect(await code(m.services.auth.me())).toBe('network')
   })
 })
+
+describe('admin', () => {
+  it('does not exist in the mock: every call is not_found', async () => {
+    const m = setup()
+    expect(await code(m.services.admin.waitlist())).toBe('not_found')
+    expect(await code(m.services.admin.invitations())).toBe('not_found')
+    expect(await code(m.services.admin.invite({ email: 'a@b.co' }))).toBe('not_found')
+    expect(await code(m.services.admin.resend('x'))).toBe('not_found')
+    expect(await code(m.services.admin.withdraw('x'))).toBe('not_found')
+  })
+})

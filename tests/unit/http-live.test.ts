@@ -134,9 +134,31 @@ describe.skipIf(!url || !password)('HTTP adapter against the real backend', () =
     expect(await code(s.auth.requestPasswordReset({ email: 'ghost-' + Date.now() + '@tilw.test' }))).toBe('ok')
   })
 
+  it('runs the admin cycle: waitlist, invite, resend, withdraw, invite again', async () => {
+    const e = `admin-cycle-${Date.now()}@tilw.test`
+    await s.waitlist.join({ email: e })
+    const entry = (await s.admin.waitlist()).find(w => w.email === e)
+    expect(entry).toMatchObject({ invited: false })
+
+    const inv = await s.admin.invite({ email: e })
+    expect(inv).toMatchObject({ email: e, state: 'pending' })
+    expect((await s.admin.waitlist()).find(w => w.email === e)?.invited).toBe(true)
+    expect(await code(s.admin.invite({ email: e }))).toBe('conflict')
+
+    expect((await s.admin.resend(inv.id)).state).toBe('pending')
+    await s.admin.withdraw(inv.id)
+    expect((await s.admin.invitations()).find(i => i.id === inv.id)?.state).toBe('withdrawn')
+    expect(await code(s.admin.withdraw(inv.id))).toBe('conflict')
+
+    const again = await s.admin.invite({ email: e })
+    expect(again.state).toBe('pending')
+    await s.admin.withdraw(again.id)
+  })
+
   it('signs out, after which the library is not available', async () => {
     await s.auth.signOut()
     expect(await s.auth.me()).toBeNull()
     expect(await code(s.scripts.list())).toBe('unauthenticated')
+    expect(await code(s.admin.waitlist())).toBe('unauthenticated')
   })
 })

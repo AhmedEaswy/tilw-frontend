@@ -1,0 +1,157 @@
+/* Shared by the admin pages (imported with <style scoped src>): search/filter row, table card, status chips. */
+.tools {
+  display: flex;
+  gap: var(--tilw-space-12);
+  align-items: center;
+  margin-block-end: var(--tilw-space-16);
+}
+.search {
+  flex: 1;
+  max-inline-size: 420px;
+  block-size: 44px;
+  padding-inline: var(--tilw-space-16);
+  border: 1px solid var(--tilw-border-subtle);
+  border-radius: var(--tilw-radius-field);
+  background: var(--tilw-surface-white);
+  color: var(--tilw-text-ink);
+  font: var(--tilw-type-label);
+}
+.sel select {
+  block-size: 44px;
+  padding-inline: var(--tilw-space-16);
+  border: 1px solid var(--tilw-border-subtle);
+  border-radius: var(--tilw-radius-field);
+  background: var(--tilw-surface-white);
+  color: var(--tilw-text-ink);
+  font: var(--tilw-type-label);
+}
+.sr {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.none {
+  padding: var(--tilw-space-32);
+  text-align: center;
+  color: var(--tilw-text-muted);
+  font: var(--tilw-type-label);
+}
+.card {
+  border: 1px solid var(--tilw-border-subtle);
+  border-radius: var(--tilw-radius-card);
+  background: var(--tilw-surface-white);
+  overflow: hidden;
+}
+.tbl {
+  inline-size: 100%;
+  border-collapse: collapse;
+}
+.tbl th {
+  padding: 14px 20px;
+  background: var(--tilw-surface-quiet);
+  border-block-end: 1px solid var(--tilw-border-subtle);
+  color: var(--tilw-text-muted);
+  font: var(--tilw-type-meta);
+  text-align: start;
+}
+.tbl td {
+  padding: 16px 20px;
+  border-block-end: 1px solid var(--tilw-border-subtle);
+  font: var(--tilw-type-body);
+  vertical-align: middle;
+}
+.tbl tr:last-child td {
+  border-block-end: 0;
+}
+.em {
+  font: var(--tilw-type-control);
+  font-family: var(--tilw-font-lat);
+  text-align: start;
+  overflow-wrap: anywhere;
+}
+.mu {
+  color: var(--tilw-text-muted);
+  font-size: 16px;
+}
+.act {
+  text-align: end;
+  white-space: nowrap;
+}
+.act > * + * {
+  margin-inline-start: var(--tilw-space-8);
+}
+.chip {
+  display: inline-block;
+  padding: 2px 12px;
+  border-radius: var(--tilw-radius-pill);
+  font: var(--tilw-type-meta);
+}
+.chip.pend {
+  background: var(--tilw-surface-selected);
+  color: var(--tilw-action-primary);
+}
+.chip.ok {
+  background: color-mix(in srgb, var(--tilw-status-success) 16%, var(--tilw-surface-white));
+  color: var(--tilw-status-success);
+}
+.chip.err {
+  background: color-mix(in srgb, var(--tilw-status-error) 14%, var(--tilw-surface-white));
+  color: var(--tilw-status-error);
+}
+.chip.mut {
+  background: var(--tilw-surface-quiet);
+  color: var(--tilw-text-muted);
+}
+.danger {
+  color: var(--tilw-status-error);
+}
+
+/* Phone: each row becomes a small card, the column label sits before its value. */
+@media (max-width: 720px) {
+  .tools {
+    flex-wrap: wrap;
+  }
+  .search {
+    max-inline-size: none;
+    flex-basis: 100%;
+  }
+  .tbl thead {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .tbl,
+  .tbl tbody,
+  .tbl tr,
+  .tbl td {
+    display: block;
+  }
+  .tbl tr {
+    padding: var(--tilw-space-16);
+    border-block-end: 1px solid var(--tilw-border-subtle);
+  }
+  .tbl tr:last-child {
+    border-block-end: 0;
+  }
+  .tbl td {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--tilw-space-16);
+    padding: var(--tilw-space-4) 0;
+    border: 0;
+  }
+  .tbl td[data-label]::before {
+    content: attr(data-label);
+    color: var(--tilw-text-muted);
+    font: var(--tilw-type-meta);
+  }
+  .tbl td.act {
+    justify-content: flex-start;
+    padding-block-start: var(--tilw-space-12);
+  }
+}

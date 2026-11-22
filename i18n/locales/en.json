@@ -26,7 +26,8 @@
     "account": "{name}'s account",
     "profile": "Profile",
     "darkMode": "Dark mode",
-    "backToSite": "Back to website"
+    "backToSite": "Back to website",
+    "admin": "Admin"
   },
   "legal": {
     "privacy": "Privacy policy",
@@ -234,7 +235,7 @@
       "inScript": "In this script ({n})",
       "none": "No marks yet. Select words in the script to add one.",
       "emphasis": "Emphasis",
-    "pause": "Pause",
+      "pause": "Pause",
       "note": "Note",
       "remove": "Remove {mark}",
       "added": "Mark added.",
@@ -502,5 +503,45 @@
   "offline": {
     "text": "You're offline. What you write stays on this device and saves to your account when you're back online.",
     "back": "Back online."
+  },
+  "admin": {
+    "title": "Admin",
+    "inviteButton": "Invite someone",
+    "tabWaitlist": "Waitlist",
+    "tabInvitations": "Invitations",
+    "search": "Search by email",
+    "colEmail": "Email",
+    "colJoined": "Joined the list",
+    "colStatus": "Status",
+    "colDate": "Date",
+    "waiting": "Waiting for an invitation",
+    "invited": "Invited",
+    "invitationSent": "Invitation sent",
+    "invite": "Invite",
+    "resend": "Resend",
+    "withdraw": "Withdraw",
+    "inviteAgain": "Invite again",
+    "filterLabel": "Status",
+    "filterAll": "All",
+    "state": {
+      "pending": "Pending",
+      "used": "Joined",
+      "expired": "Expired",
+      "withdrawn": "Withdrawn"
+    },
+    "emptyWaitlist": "Nobody is on the waitlist yet.",
+    "emptyInvitations": "No invitations yet.",
+    "noMatches": "Nothing matches that search.",
+    "loadFailed": "The list could not be loaded.",
+    "inviteTitle": "Invite someone",
+    "emailLabel": "Email",
+    "send": "Send invitation",
+    "alreadyMember": "This email already has an account or a pending invitation.",
+    "invalidEmail": "Enter a valid email address.",
+    "toastInvited": "Invitation sent to {email}",
+    "toastResent": "Invitation resent to {email}",
+    "toastWithdrawn": "Invitation to {email} withdrawn",
+    "withdrawTitle": "Withdraw this invitation?",
+    "withdrawText": "The link for {email} will stop working. You can invite them again later."
   }
 }

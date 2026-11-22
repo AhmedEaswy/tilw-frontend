@@ -242,6 +242,15 @@ export function createMockServices(kv: KV, opts: { origin?: string; sleep?: (ms:
       }),
     },
 
+    // The mock has no admins: the admin area does not exist here, like for any non-admin on the real API.
+    admin: {
+      waitlist: () => call(() => { throw new PortError('not_found') }),
+      invitations: () => call(() => { throw new PortError('not_found') }),
+      invite: () => call(() => { throw new PortError('not_found') }),
+      resend: () => call(() => { throw new PortError('not_found') }),
+      withdraw: () => call(() => { throw new PortError('not_found') }),
+    },
+
     // Phase 1 stands in for the old app's browser keys with fixed sample scripts.
     legacy: {
       scan: () => call(() => {

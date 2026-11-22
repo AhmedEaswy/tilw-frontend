@@ -2,7 +2,7 @@
  * Service ports. The UI and stores depend only on these interfaces (constitution III).
  * Phase 1: services/mock. Later: services/http (Laravel). Contracts: specs/001-studio-frontend/contracts/ports.md
  */
-import type { LegacyScript, ReadingPosition, ReadingSettings, Script, ScriptPatch, ScriptSummary, User } from './types'
+import type { Invitation, LegacyScript, ReadingPosition, ReadingSettings, Script, ScriptPatch, ScriptSummary, User, WaitlistEntry } from './types'
 
 export interface AuthPort {
   me(): Promise<User | null>
@@ -49,10 +49,25 @@ export interface LegacyPort {
   scan(): Promise<LegacyScript[]>
 }
 
+/**
+ * Admin area: who is waiting, and the invitations sent. Admins only; anyone else gets `not_found`, as if the area did
+ * not exist. The in-browser mock has no admins, so every call rejects with `not_found` there.
+ */
+export interface AdminPort {
+  waitlist(): Promise<WaitlistEntry[]>
+  invitations(): Promise<Invitation[]>
+  /** From the waitlist or a new email. Rejects with `conflict` when the email has an account or a pending invitation. */
+  invite(input: { email: string }): Promise<Invitation>
+  /** New link and expiry for a pending invitation; the old link stops working. */
+  resend(id: string): Promise<Invitation>
+  withdraw(id: string): Promise<void>
+}
+
 export interface Services {
   auth: AuthPort
   waitlist: WaitlistPort
   scripts: ScriptsPort
   account: AccountPort
+  admin: AdminPort
   legacy: LegacyPort
 }

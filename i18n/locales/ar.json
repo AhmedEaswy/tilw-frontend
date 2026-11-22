@@ -26,7 +26,8 @@
     "account": "حساب {name}",
     "profile": "الملف الشخصي",
     "darkMode": "الوضع الداكن",
-    "backToSite": "العودة إلى الموقع"
+    "backToSite": "العودة إلى الموقع",
+    "admin": "الإدارة"
   },
   "legal": {
     "privacy": "سياسة الخصوصية",
@@ -234,7 +235,7 @@
       "inScript": "في النص ({n})",
       "none": "لا علامات بعد. حدد كلمات في النص لإضافة علامة.",
       "emphasis": "تأكيد",
-    "pause": "وقفة",
+      "pause": "وقفة",
       "note": "ملاحظة",
       "remove": "إزالة {mark}",
       "added": "أضيفت العلامة.",
@@ -502,5 +503,45 @@
   "offline": {
     "text": "أنت غير متصل. ما تكتبه يبقى على هذا الجهاز ويُحفظ في حسابك عند عودة الاتصال.",
     "back": "عاد الاتصال."
+  },
+  "admin": {
+    "title": "الإدارة",
+    "inviteButton": "دعوة شخص",
+    "tabWaitlist": "قائمة الانتظار",
+    "tabInvitations": "الدعوات",
+    "search": "ابحث بالبريد الإلكتروني",
+    "colEmail": "البريد الإلكتروني",
+    "colJoined": "انضم للقائمة",
+    "colStatus": "الحالة",
+    "colDate": "التاريخ",
+    "waiting": "بانتظار الدعوة",
+    "invited": "دُعي",
+    "invitationSent": "تم إرسال الدعوة",
+    "invite": "دعوة",
+    "resend": "إعادة الإرسال",
+    "withdraw": "سحب الدعوة",
+    "inviteAgain": "دعوة مجددًا",
+    "filterLabel": "الحالة",
+    "filterAll": "الكل",
+    "state": {
+      "pending": "معلّقة",
+      "used": "انضمّت",
+      "expired": "منتهية",
+      "withdrawn": "مسحوبة"
+    },
+    "emptyWaitlist": "لا أحد في قائمة الانتظار بعد.",
+    "emptyInvitations": "لا توجد دعوات بعد.",
+    "noMatches": "لا نتائج مطابقة للبحث.",
+    "loadFailed": "تعذّر تحميل القائمة.",
+    "inviteTitle": "دعوة شخص",
+    "emailLabel": "البريد الإلكتروني",
+    "send": "إرسال الدعوة",
+    "alreadyMember": "هذا البريد لديه حساب أو دعوة معلّقة.",
+    "invalidEmail": "أدخل بريدًا إلكترونيًا صحيحًا.",
+    "toastInvited": "أُرسلت الدعوة إلى {email}",
+    "toastResent": "أُعيد إرسال الدعوة إلى {email}",
+    "toastWithdrawn": "سُحبت الدعوة إلى {email}",
+    "withdrawTitle": "سحب هذه الدعوة؟",
+    "withdrawText": "سيتوقف رابط {email} عن العمل، ويمكنك دعوته مجددًا لاحقًا."
   }
 }

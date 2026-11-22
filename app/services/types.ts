@@ -69,6 +69,25 @@ export type ScriptSummary = Omit<Script, 'body' | 'marks'> & { excerpt: string; 
 
 export type ScriptPatch = Partial<Pick<Script, 'title' | 'body' | 'marks' | 'direction' | 'pinned' | 'archivedAt' | 'lastOpenedAt'>>
 
+/** Admin area (real API only). A waitlist entry is "invited" once any invitation exists for its email. */
+export interface WaitlistEntry {
+  id: string
+  email: string
+  joinedAt: string
+  invited: boolean
+}
+
+export type InvitationState = 'pending' | 'used' | 'expired' | 'withdrawn'
+
+export interface Invitation {
+  id: string
+  email: string
+  state: InvitationState
+  expiresAt: string
+  usedAt?: string | null
+  createdAt: string
+}
+
 export interface LegacyScript {
   key: string
   title: string

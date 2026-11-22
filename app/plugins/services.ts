@@ -60,6 +60,7 @@ export default defineNuxtPlugin((nuxtApp) => {
     waitlist: base.waitlist,
     scripts: guard(base.scripts),
     account: guard(base.account),
+    admin: guard(base.admin),
     legacy: guard(base.legacy),
   }
 

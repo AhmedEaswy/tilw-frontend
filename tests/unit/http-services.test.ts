@@ -178,6 +178,43 @@ describe('account port', () => {
   })
 })
 
+describe('admin port', () => {
+  it('uses the admin routes', async () => {
+    const { services, calls } = setup([
+      { json: [{ id: 'w', email: 'a@b.co', joinedAt: 'x', invited: false }] },
+      { json: [] },
+      { json: { id: 'i', state: 'pending' }, status: 201 },
+      { json: { id: 'i', state: 'pending' } },
+      { status: 204 },
+    ])
+    expect(await services.admin.waitlist()).toHaveLength(1)
+    await services.admin.invitations()
+    await services.admin.invite({ email: 'new@b.co' })
+    await services.admin.resend('i/1')
+    await services.admin.withdraw('i/1')
+
+    const lines = calls.filter(c => !c.url.endsWith('csrf-cookie')).map(c => `${c.method} ${c.url.replace('http://api.test', '')}`)
+    expect(lines).toEqual([
+      'GET /api/admin/waitlist',
+      'GET /api/admin/invitations',
+      'POST /api/admin/invitations',
+      'POST /api/admin/invitations/i%2F1/resend',
+      'DELETE /api/admin/invitations/i%2F1',
+    ])
+    expect(calls.find(c => c.method === 'POST')!.body).toEqual({ email: 'new@b.co' })
+  })
+
+  it('an email that already has an account or a pending invitation is a conflict', async () => {
+    const { services } = setup([{ status: 409, json: { code: 'conflict', message: 'x' } }])
+    expect(await code(services.admin.invite({ email: 'a@b.co' }))).toBe('conflict')
+  })
+
+  it('a non-admin gets not_found, as if the area did not exist', async () => {
+    const { services } = setup([{ status: 404, json: { code: 'not_found', message: 'Not found.' } }])
+    expect(await code(services.admin.waitlist())).toBe('not_found')
+  })
+})
+
 describe('error mapping', () => {
   const cases: Array<[number, unknown, string, Record<string, string> | undefined]> = [
     [401, { code: 'invalid_credentials', message: 'x' }, 'invalid_credentials', undefined],
