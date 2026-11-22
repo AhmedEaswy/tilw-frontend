@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { splitPhrases } from '../../app/utils/phrases'
+import { emphasisPieces, splitPhrases } from '../../app/utils/phrases'
 
 describe('splitPhrases', () => {
   it('breaks after a sentence and keeps a sentence whole', () => {
@@ -25,5 +25,23 @@ describe('splitPhrases', () => {
 
   it('counts words per phrase', () => {
     expect(splitPhrases('a b c. d e.').map(x => x.words)).toEqual([3, 2])
+  })
+
+  it('keeps emphasis inside the phrase it falls in, as offsets of that phrase', () => {
+    const p = splitPhrases('Hello there. Stress this word now.', [], { emphasis: [{ start: 20, end: 29 }] })
+    expect(p.map(x => x.text)).toEqual(['Hello there.', 'Stress this word now.'])
+    expect(p[0]!.emph).toBeUndefined()
+    expect(p[1]!.emph).toEqual([[7, 16]])
+    expect(emphasisPieces(p[1]!.text, p[1]!.emph)).toEqual([
+      { text: 'Stress ', emph: false },
+      { text: 'this word', emph: true },
+      { text: ' now.', emph: false },
+    ])
+  })
+
+  it('puts a note on the phrase where it starts', () => {
+    const p = splitPhrases('First part. Second part here.', [], { notes: [{ start: 14, text: 'slow down' }] })
+    expect(p[0]!.note).toBeUndefined()
+    expect(p[1]!.note).toBe('slow down')
   })
 })

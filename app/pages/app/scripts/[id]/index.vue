@@ -35,8 +35,9 @@ onBeforeUnmount(() => {
 })
 
 const canvas = ref<{ select: (s: number, e: number) => void; focus: () => void }>()
-const tools = ref<{ openSearch: () => void }>()
 const selection = ref({ start: 0, end: 0 })
+const hasSelection = computed(() => editor.body.slice(selection.value.start, selection.value.end).trim().length > 0)
+const tools = ref<{ openSearch: () => void }>()
 
 const direction = computed<'rtl' | 'ltr'>(() => {
   const d = editor.script?.direction ?? 'auto'
@@ -79,6 +80,11 @@ function onKeys(e: KeyboardEvent) {
 
 // ----- marks -----
 const marksOpen = ref(false)
+/** With words selected the toolbar is already over them, so bring it back into focus; otherwise list the marks. */
+function openMarks() {
+  if (hasSelection.value) canvas.value?.select(selection.value.start, selection.value.end)
+  else marksOpen.value = true
+}
 function addMark(m: Omit<DeliveryMark, 'id'>) {
   editor.addMark(m)
   show(t('editor.marks.added'))
@@ -177,6 +183,8 @@ const statusLabel = computed(() => t(`editor.status.${editor.saveState}`))
           @update:body="v => editor.setContent({ body: v })"
           @selection="r => (selection = r)"
           @keys="onKeys"
+          @add-mark="addMark"
+          @remove-mark="editor.removeMark"
         />
         <WritingTools
           ref="tools"
@@ -187,7 +195,9 @@ const statusLabel = computed(() => t(`editor.status.${editor.saveState}`))
           :can-redo="editor.canRedo"
           :match-count="matches.length"
           :active-match="active"
-          @marks="marksOpen = true"
+          :marks-count="editor.marks.length"
+          :has-selection="hasSelection"
+          @marks="openMarks"
           @undo="editor.undo()"
           @redo="editor.redo()"
           @download="download"
@@ -206,8 +216,6 @@ const statusLabel = computed(() => t(`editor.status.${editor.saveState}`))
         v-model:open="marksOpen"
         :body="editor.body"
         :marks="editor.marks"
-        :selection="selection"
-        @add="addMark"
         @remove="editor.removeMark"
         @jump="jumpTo"
       />

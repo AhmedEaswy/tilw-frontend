@@ -132,4 +132,10 @@ Severity: 🔴 blocks the cycle · 🟠 breaks a promise made in landing/legal c
   is shown as phrase blocks (a stop after each sentence, typed line break or pause mark); the block being read is
   bright and the rest dimmed. Pause marks from the editor now show as a chip in the reader and the reader holds on
   them for their seconds (the seed script has one 2 s pause for checking). Figma has no frame for this yet.
-
+- **Delivery marks (G7, 2026-11-22)**: marks are added from a toolbar over the selected words (Emphasis, Note, Pause;
+  pause lengths 1 / 2 / 4 s). The writing-tools item "علامات الإلقاء" stays enabled, shows the mark count and a hint under it
+  ("select words in the script to add a mark"); with words selected it brings the toolbar back, otherwise it opens
+  the list of marks (jump to, remove). A pause is placed right after the selection, so select the words it follows. No Figma frame yet.
+- **Notes and emphasis in the reader (2026-11-22)**: a note shows as a tip above its block while that block is the
+  one being read; emphasised words are drawn in the cue colour (same size and weight, so nothing reflows). Both
+  also show in the recording prompter. A note belongs to the block where its first word is.

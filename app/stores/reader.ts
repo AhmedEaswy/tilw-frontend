@@ -33,13 +33,20 @@ export const useReaderStore = defineStore('reader', () => {
     const ranges = paragraphRanges(body)
     const plain = paragraphs.value
     if (ranges.length !== plain.length) return plain.map(p => splitPhrases(p))
-    const pauses = (script.value?.marks ?? []).filter(m => m.type === 'pause')
+    const all = script.value?.marks ?? []
     return ranges.map((r, i) => {
       const lead = body.slice(r.start, r.end).length - body.slice(r.start, r.end).trimStart().length
-      const here = pauses
-        .filter(m => m.start >= r.start && m.start <= r.end)
-        .map(m => ({ offset: m.start - r.start - lead, sec: m.pauseSec ?? 1 }))
-      return splitPhrases(plain[i]!, here)
+      const rel = (x: number) => x - r.start - lead
+      const here = all
+        .filter(m => m.type === 'pause' && m.start >= r.start && m.start <= r.end)
+        .map(m => ({ offset: rel(m.start), sec: m.pauseSec ?? 1 }))
+      const emphasis = all
+        .filter(m => m.type === 'emphasis' && m.end > r.start && m.start < r.end)
+        .map(m => ({ start: rel(m.start), end: rel(m.end) }))
+      const notes = all
+        .filter(m => m.type === 'note' && m.note && m.start >= r.start && m.start <= r.end)
+        .map(m => ({ start: rel(m.start), text: m.note! }))
+      return splitPhrases(plain[i]!, here, { emphasis, notes })
     })
   })
   const paragraphWords = computed(() => units.value.map(u => u.reduce((n, p) => n + p.words, 0)))

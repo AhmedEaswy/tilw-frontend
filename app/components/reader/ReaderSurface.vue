@@ -120,7 +120,10 @@ defineExpose({ measure })
           :style="{ transform: `translate3d(0, ${shift}px, 0)` }"
         >
           <template v-for="(p, i) in flat" :key="i">
-            <p class="ph" :class="{ now: i === current, past: i < current, end: p.last }" :aria-current="i === current ? 'true' : undefined">{{ p.text }}</p>
+            <p v-if="p.note" class="nt" :class="{ on: i === current }">
+              <UiGlyph name="edit" :size="14" /><span class="nt-t" dir="auto">{{ p.note }}</span>
+            </p>
+            <p class="ph" :class="{ now: i === current, past: i < current, end: p.last }" :aria-current="i === current ? 'true' : undefined"><template v-for="(piece, k) in emphasisPieces(p.text, p.emph)" :key="k"><mark v-if="piece.emph" class="em">{{ piece.text }}</mark><template v-else>{{ piece.text }}</template></template></p>
             <p v-if="p.pause" class="pz" :class="{ hold: holdAt === p.end }" aria-hidden="true">
               <UiGlyph name="pause" :size="14" />{{ t('reader.pauseMark', { s: nf.format(p.pause) }) }}
             </p>
@@ -250,6 +253,36 @@ defineExpose({ measure })
   color: var(--tilw-stage-secondary);
   font: 500 15px/20px var(--tilw-font-ar);
 }
+/* Note for the speaker: a tip above its block, shown while that block is the one being read. */
+.column .nt {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  max-inline-size: 100%;
+  inline-size: fit-content;
+  margin: 0 0 28px;
+  padding: 3px 12px;
+  border: 1px solid var(--tilw-stage-secondary);
+  border-radius: 12px;
+  color: var(--tilw-stage-secondary);
+  font: 500 15px/20px var(--tilw-font-ar);
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+.column .nt :deep(.ui-glyph) {
+  flex: none;
+  margin-block-start: 3px;
+}
+.column .nt.on {
+  border-color: var(--tilw-stage-cue);
+  color: var(--tilw-stage-cue);
+  opacity: 1;
+}
+/* Emphasis keeps its size and weight, so nothing reflows: only the colour changes. */
+.column .em {
+  background: none;
+  color: var(--tilw-stage-cue);
+}
 .column .pz.hold {
   border-color: var(--tilw-stage-cue);
   color: var(--tilw-stage-cue);
@@ -287,6 +320,7 @@ defineExpose({ measure })
 @media (prefers-reduced-motion: reduce) {
   .column.smooth,
   .band.smooth,
+  .column .nt,
   .column .ph {
     transition: none;
   }

@@ -24,18 +24,75 @@ const emit = defineEmits<{
   'update:body': [v: string]
   selection: [range: { start: number; end: number }]
   keys: [e: KeyboardEvent]
+  'add-mark': [m: Omit<DeliveryMark, 'id'>]
+  'remove-mark': [id: string]
 }>()
 
 const { t, locale } = useI18n()
 const area = ref<HTMLTextAreaElement>()
+const sheet = ref<HTMLElement>()
+const backdrop = ref<HTMLElement>()
+const bar = ref<{ el: HTMLElement | undefined }>()
 const caret = ref(0)
+const range = ref({ start: 0, end: 0 })
+const focused = ref(false)
+/** Where the marks toolbar goes (inside the sheet), or null when it is hidden. */
+const barAt = ref<{ x: number, y: number } | null>(null)
+const sheetW = ref(0)
+const dismissed = ref(false)
 
 function track() {
   const el = area.value
   if (!el) return
   caret.value = el.selectionStart
-  emit('selection', { start: el.selectionStart, end: el.selectionEnd })
+  if (range.value.start !== el.selectionStart || range.value.end !== el.selectionEnd) {
+    dismissed.value = false
+    range.value = { start: el.selectionStart, end: el.selectionEnd }
+    emit('selection', range.value)
+  }
+  placeBar()
 }
+
+/** The text node and offset in the backdrop that hold a character position of the body. */
+function pointAt(pos: number): { node: Node, offset: number } | null {
+  const root = backdrop.value
+  if (!root) return null
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+  let left = pos
+  let last: Text | null = null
+  for (let n = walker.nextNode() as Text | null; n; n = walker.nextNode() as Text | null) {
+    last = n
+    if (left <= n.data.length) return { node: n, offset: left }
+    left -= n.data.length
+  }
+  return last ? { node: last, offset: last.data.length } : null
+}
+
+/** Put the toolbar above the first line of the selection, inside the sheet. */
+function placeBar() {
+  const { start, end } = range.value
+  const host = sheet.value
+  if (!host || end <= start || !props.body.slice(start, end).trim()) return void (barAt.value = null)
+  const a = pointAt(start)
+  const b = pointAt(end)
+  if (!a || !b) return void (barAt.value = null)
+  const r = document.createRange()
+  r.setStart(a.node, a.offset)
+  r.setEnd(b.node, b.offset)
+  const first = r.getClientRects()[0]
+  if (!first) return void (barAt.value = null)
+  const box = host.getBoundingClientRect()
+  sheetW.value = box.width
+  barAt.value = { x: first.left - box.left + first.width / 2, y: first.top - box.top }
+}
+const barShown = computed(() => !!barAt.value && !dismissed.value && (focused.value || barFocus.value))
+const barFocus = ref(false)
+function onBlur(e: FocusEvent) {
+  // The note field takes focus inside the toolbar, and the toolbar stays; anywhere else hides it.
+  if (bar.value?.el?.contains(e.relatedTarget as Node | null)) barFocus.value = true
+  focused.value = false
+}
+watch(() => [props.body, props.marks], () => nextTick(placeBar), { deep: true })
 
 const current = computed(() => {
   const ranges = paragraphRanges(props.body)
@@ -86,6 +143,13 @@ function select(start: number, end: number) {
     document.querySelector('.editor-canvas .hit.on, .editor-canvas .sel-target')?.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
   })
 }
+function onAreaKey(e: KeyboardEvent) {
+  if (e.key === 'Escape' && barShown.value) {
+    dismissed.value = true
+    return
+  }
+  emit('keys', e)
+}
 defineExpose({ select, focus: () => area.value?.focus() })
 </script>
 
@@ -99,8 +163,20 @@ defineExpose({ select, focus: () => area.value?.focus() })
       dir="auto"
       @input="emit('update:title', ($event.target as HTMLInputElement).value)"
     >
-    <div class="sheet">
-      <div class="backdrop" aria-hidden="true"><template v-for="(s, i) in segments" :key="i"><span v-if="s.pause" class="pz" :data-label="s.pause" /><span v-else :class="s.cls" :title="s.note">{{ s.text }}</span></template>{{ '\n ' }}</div>
+    <div ref="sheet" class="sheet">
+      <MarksToolbar
+        v-if="barShown && barAt"
+        ref="bar"
+        :selection="range"
+        :marks="marks"
+        :at="barAt"
+        :limit="sheetW"
+        @focus-in="barFocus = $event"
+        @add="m => (emit('add-mark', m), area?.focus())"
+        @remove="id => (emit('remove-mark', id), area?.focus())"
+        @close="dismissed = true; area?.focus()"
+      />
+      <div ref="backdrop" class="backdrop" aria-hidden="true"><template v-for="(s, i) in segments" :key="i"><span v-if="s.pause" class="pz" :data-label="s.pause" /><span v-else :class="s.cls" :title="s.note">{{ s.text }}</span></template>{{ '\n ' }}</div>
       <textarea
         ref="area"
         :value="body"
@@ -111,8 +187,9 @@ defineExpose({ select, focus: () => area.value?.focus() })
         @keyup="track"
         @click="track"
         @select="track"
-        @focus="track"
-        @keydown="emit('keys', $event)"
+        @focus="focused = true; track()"
+        @blur="onBlur"
+        @keydown="onAreaKey"
       />
     </div>
     <footer class="count">

@@ -10,6 +10,10 @@ const props = defineProps<{
   canRedo: boolean
   matchCount: number
   activeMatch: number
+  /** Marks in the script, shown on the item. */
+  marksCount: number
+  /** Words are selected, so the marks toolbar is already over them. */
+  hasSelection: boolean
 }>()
 const query = defineModel<string>('query', { required: true })
 const emit = defineEmits<{ marks: []; undo: []; redo: []; download: []; next: []; prev: [] }>()
@@ -60,7 +64,12 @@ defineExpose({ openSearch: () => !searchOpen.value && toggleSearch() })
           <button type="button" class="mini" :disabled="!matchCount" :aria-label="t('editor.nextMatch')" @click="emit('next')"><UiGlyph name="down" :size="16" /></button>
         </div>
       </li>
-      <li><button type="button" @click="emit('marks')"><UiGlyph name="edit" :size="18" />{{ t('editor.marks.title') }}</button></li>
+      <li>
+        <button type="button" aria-describedby="marks-hint" @click="emit('marks')">
+          <UiGlyph name="edit" :size="18" />{{ marksCount ? t('editor.marks.titleCount', { n: marksCount }) : t('editor.marks.title') }}
+        </button>
+        <p id="marks-hint" class="hint">{{ hasSelection ? t('editor.marks.hintSelected') : t('editor.marks.hint') }}</p>
+      </li>
       <li class="pair">
         <UiGlyph name="rewind" :size="18" />
         <button type="button" class="inline" :disabled="!canUndo" @click="emit('undo')">{{ t('editor.undo') }}</button>
@@ -151,6 +160,12 @@ li > button:hover,
 li > button :deep(.ui-glyph),
 .pair > :deep(.ui-glyph) {
   color: var(--tilw-text-ink);
+}
+.hint {
+  margin: -4px 0 6px;
+  padding-inline-start: 26px;
+  color: var(--tilw-text-muted);
+  font: 400 14px/1.45 var(--tilw-font-ar);
 }
 .inline {
   padding: 4px 2px;
