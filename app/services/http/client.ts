@@ -64,9 +64,13 @@ export function createHttpClient(opts: HttpClientOptions) {
   const readCookie = opts.readCookie ?? browserCookie
   const base = opts.baseUrl.replace(/\/+$/, '')
 
+  // Cross-site dev (SPA and API on different sites): the XSRF-TOKEN cookie is invisible to JS, so the token also
+  // comes back in the exposed `X-CSRF-TOKEN` header of the csrf-cookie response.
+  let headerToken: string | null = null
+
   const xsrf = () => {
     const raw = readCookie('XSRF-TOKEN')
-    return raw ? decodeURIComponent(raw) : null
+    return raw ? decodeURIComponent(raw) : headerToken
   }
 
   async function send(method: string, path: string, o: RequestOptions, write: boolean): Promise<Response> {
@@ -78,7 +82,7 @@ export function createHttpClient(opts: HttpClientOptions) {
         await refreshCsrf()
         token = xsrf()
       }
-      if (token) headers['X-XSRF-TOKEN'] = token
+      if (token) headers[readCookie('XSRF-TOKEN') ? 'X-XSRF-TOKEN' : 'X-CSRF-TOKEN'] = token
     }
     try {
       return await f(base + path, {
@@ -95,7 +99,8 @@ export function createHttpClient(opts: HttpClientOptions) {
   /** `GET /sanctum/csrf-cookie`: starts the session and sets the XSRF-TOKEN cookie. */
   async function refreshCsrf(): Promise<void> {
     try {
-      await f(base + '/sanctum/csrf-cookie', { method: 'GET', credentials: 'include', headers: { Accept: 'application/json', ...opts.headers } })
+      const res = await f(base + '/sanctum/csrf-cookie', { method: 'GET', credentials: 'include', headers: { Accept: 'application/json', ...opts.headers } })
+      headerToken = res.headers?.get?.('X-CSRF-TOKEN') ?? null
     } catch {
       throw new PortError('network')
     }

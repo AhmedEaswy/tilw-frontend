@@ -11,7 +11,7 @@ import { createHttpServices } from '~/services/http'
 import { isPortError } from '~/services/types'
 
 const url = process.env.TILW_API_URL
-const email = process.env.TILW_ADMIN_EMAIL ?? 'admin@tilw.com'
+const email = process.env.TILW_ADMIN_EMAIL ?? 'admin@tilw.app'
 const password = process.env.TILW_ADMIN_PASSWORD ?? ''
 
 function jarFetch() {
