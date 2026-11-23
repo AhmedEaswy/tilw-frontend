@@ -5,11 +5,17 @@ import type { User } from '~/services/types'
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null)
   const status = ref<'unknown' | 'guest' | 'authed'>('unknown')
+  /** Release 2: one-time notice from the last sign-in, shown by the app layout as a toast. */
+  const notice = ref<'deletion_cancelled' | null>(null)
   let pending: Promise<void> | null = null
 
   function setUser(u: User | null) {
     // Another account (or none): drop the previous account's cached scripts.
-    if (u?.id !== user.value?.id) useScriptsStore().reset()
+    if (u?.id !== user.value?.id) {
+      useScriptsStore().reset()
+      usePlanStore().reset()
+      useStorageStore().reset()
+    }
     user.value = u
     status.value = u ? 'authed' : 'guest'
   }
@@ -27,6 +33,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function signIn(email: string, password: string) {
     setUser(await useServices().auth.signIn({ email, password }))
+    notice.value = useServices().auth.lastNotice()
     return user.value!
   }
 
@@ -35,5 +42,11 @@ export const useAuthStore = defineStore('auth', () => {
     setUser(null)
   }
 
-  return { user, status, init, setUser, signIn, signOut }
+  function consumeNotice() {
+    const n = notice.value
+    notice.value = null
+    return n
+  }
+
+  return { user, status, notice, init, setUser, signIn, signOut, consumeNotice }
 })

@@ -63,9 +63,10 @@ function frameOf(url: string): Promise<string | null> {
 
 /** Start the browser download of the original file (FR-032). Resolves false when the take is gone. */
 export async function downloadTake(meta: TakeMeta, word: string): Promise<boolean> {
-  const take = await useTakesRepo().get(meta.id)
-  if (!take) return false
-  const url = URL.createObjectURL(take.blob)
+  // Release 2: a Drive-only take downloads the original file from Drive.
+  const blob = meta.driveOnly ? await useTakesStore().blobFor(meta.id) : (await useTakesRepo().get(meta.id))?.blob
+  if (!blob) return false
+  const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
   a.download = takeFileName(meta.scriptTitle, meta.number, meta.mimeType, word)

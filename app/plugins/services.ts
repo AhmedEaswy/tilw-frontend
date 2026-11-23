@@ -20,12 +20,24 @@ export default defineNuxtPlugin((nuxtApp) => {
 
   // Mock: during prerender there is no localStorage; the app pages render client-side anyway.
   const kv = import.meta.client ? window.localStorage : memoryKV()
-  const mock = mode === 'mock'
-    ? createMockServices(kv, { origin: import.meta.client ? window.location.origin : '' })
+  const mock: MockBackend | null = mode === 'mock'
+    ? createMockServices(kv, {
+        origin: import.meta.client ? window.location.origin : '',
+        locale: (): 'ar' | 'en' => ((nuxtApp.$i18n as unknown as { locale: { value: string } } | undefined)?.locale.value === 'en' ? 'en' : 'ar'),
+      })
     : null
+  // Release 2: another tab of the mock may upload or change plans; pick up what it wrote (the real API needs nothing).
+  if (mock && import.meta.client) {
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'tilw:mock:v1' || e.key === 'tilw:mock:knobs') mock.db.reload()
+    })
+  }
+  // A path base (`/_api`, the dev proxy) needs the page's origin when fetching on the server.
+  const apiBase = config.public.apiBaseUrl as string
+  const baseUrl = apiBase.startsWith('/') && import.meta.server ? useRequestURL().origin + apiBase : apiBase
   const base: Services = mock
     ? mock.services
-    : createHttpServices({ baseUrl: config.public.apiBaseUrl as string }).services
+    : createHttpServices({ baseUrl }).services
 
   let redirecting = false
   async function onUnauthenticated() {
@@ -46,11 +58,15 @@ export default defineNuxtPlugin((nuxtApp) => {
       get(target, key, receiver) {
         const value = Reflect.get(target, key, receiver)
         if (typeof value !== 'function') return value
-        return (...args: unknown[]) =>
-          (value as (...a: unknown[]) => Promise<unknown>).apply(target, args).catch((e: unknown) => {
+        return (...args: unknown[]) => {
+          const out = (value as (...a: unknown[]) => unknown).apply(target, args)
+          // Synchronous members (StoragePort.uploader) pass straight through.
+          if (!out || typeof (out as Promise<unknown>).catch !== 'function') return out
+          return (out as Promise<unknown>).catch((e: unknown) => {
             if (isPortError(e, 'unauthenticated')) void onUnauthenticated()
             throw e
           })
+        }
       },
     })
   }
@@ -62,6 +78,9 @@ export default defineNuxtPlugin((nuxtApp) => {
     account: guard(base.account),
     admin: guard(base.admin),
     legacy: guard(base.legacy),
+    plans: guard(base.plans),
+    storage: guard(base.storage),
+    remoteTakes: guard(base.remoteTakes),
   }
 
   return {

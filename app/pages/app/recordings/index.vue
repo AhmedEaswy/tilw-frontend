@@ -4,6 +4,8 @@
  * Desktop groups takes by script — a card for the newest take with older takes listed under it.
  * Phone shows the newest take as a feature card, then every take in one list (6:103).
  * A banner warns when browser storage is running low (G8).
+ * Release 2 (R2-7 `262:1018`): each take shows where it is (Storage status), device takes offer "نسخ إلى Drive"
+ * when sync is on, takes backed up from another device show as "In Drive only", and a line names the storage mode.
  */
 import type { TakeMeta } from '~/services/takes'
 
@@ -14,16 +16,26 @@ const takes = useTakesStore()
 const num = useTakeNumber()
 const phone = useMediaQuery('(max-width: 760px)')
 
+const storage = useStorageStore()
 const failed = ref(false)
-onMounted(() => takes.load().catch(() => (failed.value = true)))
+onMounted(async () => {
+  await takes.load().catch(() => (failed.value = true))
+  // SC-005: Drive-only takes from other devices appear as soon as the list opens.
+  void takes.loadRemote().catch(() => {})
+})
 
 const kindLabel = (k: TakeMeta['kind']) => (k === 'video' ? t('recordings.video') : t('recordings.audio'))
 function meta(take: TakeMeta, withNumber = true) {
-  return [withNumber ? t('recordings.take', { n: num(take.number) }) : null, kindLabel(take.kind), formatDuration(take.durationMs)]
+  return [withNumber && !take.driveOnly ? t('recordings.take', { n: num(take.number) }) : null, kindLabel(take.kind), formatDuration(take.durationMs)]
     .filter(Boolean)
     .join('  ·  ')
 }
-const latest = computed(() => takes.list[0] ?? null)
+const latest = computed(() => takes.all[0] ?? null)
+const modeLine = computed(() => {
+  if (!storage.status) return null
+  if (!storage.linked) return t('uploads.modeLine.none')
+  return t(`uploads.modeLine.${storage.syncMode}`)
+})
 </script>
 
 <template>
@@ -31,6 +43,7 @@ const latest = computed(() => takes.list[0] ?? null)
     <header class="head">
       <h1>{{ phone ? t('nav.recordings') : t('recordings.title') }}</h1>
       <p>{{ phone ? t('recordings.onDevice') : t('recordings.lede') }}</p>
+      <p v-if="modeLine" class="mode">{{ modeLine }} <NuxtLink to="/app/settings/storage">{{ storage.linked ? t('uploads.change') : t('storage.link') }}</NuxtLink></p>
     </header>
 
     <UiBanner v-if="takes.lowStorage" tone="warning" class="banner">{{ t('recordings.lowStorage') }}</UiBanner>
@@ -42,7 +55,7 @@ const latest = computed(() => takes.list[0] ?? null)
     </div>
 
     <!-- 6:77 first visit -->
-    <section v-else-if="takes.loaded && !takes.list.length" class="first">
+    <section v-else-if="takes.loaded && !takes.all.length" class="first">
       <div class="first-txt">
         <h2>{{ t('recordings.firstTitle') }}</h2>
         <p>{{ t('recordings.firstLede') }}</p>
@@ -64,9 +77,10 @@ const latest = computed(() => takes.list[0] ?? null)
           <span class="f-btn">{{ t('recordings.review') }}</span>
         </span>
       </NuxtLink>
-      <h2 v-if="takes.list.length > 1" class="all">{{ t('recordings.all') }}</h2>
-      <ul v-if="takes.list.length > 1" class="rows">
-        <li v-for="take in takes.list.slice(1)" :key="take.id">
+      <TakeStorageStatus class="f-status" :take="latest" actions />
+      <h2 v-if="takes.all.length > 1" class="all">{{ t('recordings.all') }}</h2>
+      <ul v-if="takes.all.length > 1" class="rows">
+        <li v-for="take in takes.all.slice(1)" :key="take.id">
           <NuxtLink :to="`/app/recordings/${take.id}`" class="row">
             <span class="kind" :class="take.kind"><UiGlyph :name="take.kind === 'video' ? 'video' : 'mic'" :size="20" /></span>
             <span class="r-txt">
@@ -75,6 +89,7 @@ const latest = computed(() => takes.list[0] ?? null)
             </span>
             <UiGlyph class="go" name="play" :size="16" />
           </NuxtLink>
+          <TakeStorageStatus class="r-status" :take="take" actions />
         </li>
       </ul>
     </template>
@@ -90,10 +105,14 @@ const latest = computed(() => takes.list[0] ?? null)
             <span class="c-link">{{ group[0]!.kind === 'video' ? t('recordings.reviewTake') : t('recordings.reviewRecording') }}</span>
           </span>
         </NuxtLink>
-        <NuxtLink v-for="take in group.slice(1)" :key="take.id" :to="`/app/recordings/${take.id}`" class="older">
-          <b>{{ t('recordings.take', { n: num(take.number) }) }}<template v-if="take.label">  ·  {{ take.label }}</template><span v-if="take.starred" class="star">{{ t('recordings.best') }}</span></b>
-          <small>{{ kindLabel(take.kind) }}  ·  {{ formatDuration(take.durationMs) }}</small>
-        </NuxtLink>
+        <TakeStorageStatus class="c-status" :take="group[0]!" actions />
+        <template v-for="take in group.slice(1)" :key="take.id">
+          <NuxtLink :to="`/app/recordings/${take.id}`" class="older">
+            <b>{{ take.driveOnly ? take.scriptTitle : t('recordings.take', { n: num(take.number) }) }}<template v-if="take.label">  ·  {{ take.label }}</template><span v-if="take.starred" class="star">{{ t('recordings.best') }}</span></b>
+            <small>{{ kindLabel(take.kind) }}  ·  {{ formatDuration(take.durationMs) }}</small>
+          </NuxtLink>
+          <TakeStorageStatus class="o-status" :take="take" actions />
+        </template>
       </section>
     </div>
   </div>
@@ -112,6 +131,25 @@ const latest = computed(() => takes.list[0] ?? null)
   color: var(--tilw-text-muted);
   font: 400 18px/1.36 var(--tilw-font-ar);
   white-space: pre-line;
+}
+.mode {
+  margin: 8px 0 0;
+  color: var(--tilw-text-muted);
+  font: 400 15px/1.5 var(--tilw-font-ar);
+}
+.mode a {
+  color: var(--tilw-action-primary);
+  font-weight: 500;
+}
+.c-status,
+.o-status,
+.f-status,
+.r-status {
+  margin-block-start: 10px;
+  padding-inline: 4px;
+}
+.r-status {
+  margin-block: 6px 4px;
 }
 .banner {
   margin-block-start: 24px;

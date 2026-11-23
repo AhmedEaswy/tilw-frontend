@@ -1,11 +1,13 @@
 /**
- * Takes repository (contracts/ports.md → TakesRepo). Recordings live only in this browser (constitution IV):
- * there is no network adapter and no upload path.
+ * Takes repository (contracts/ports.md → TakesRepo). Recordings live in this browser (constitution IV). Release 2:
+ * when the person chooses, a copy also goes straight from the browser to their own Google Drive (services/drive);
+ * this repository stays device-only and only remembers the link to that copy in `remote`.
  *
  * Metadata and the media blob are stored under separate keys so the recordings list can load without
  * reading every file: `tilw:take-meta:<id>` and `tilw:take:<id>`.
  */
 import { createStore, del, get, getMany, keys, set, type UseStore } from 'idb-keyval'
+import type { RemoteTakeState } from './types'
 
 export interface TakeMeta {
   id: string
@@ -25,6 +27,10 @@ export interface TakeMeta {
   /** Small JPEG data URL of the first frame (video takes), made the first time the list shows it. */
   poster?: string
   createdAt: string
+  /** Release 2: the service's record of this take's copy in Drive. */
+  remote?: { id: string; state: RemoteTakeState; providerFileId: string | null }
+  /** UI only: a take whose only copy is in Drive (made on another device, or this browser was cleared). */
+  driveOnly?: boolean
 }
 
 export interface Take extends TakeMeta {
@@ -35,7 +41,7 @@ export interface TakesRepo {
   list(): Promise<TakeMeta[]>
   get(id: string): Promise<Take | null>
   put(take: Take): Promise<void>
-  update(id: string, patch: Partial<Pick<TakeMeta, 'starred' | 'label' | 'poster'>>): Promise<TakeMeta>
+  update(id: string, patch: Partial<Pick<TakeMeta, 'starred' | 'label' | 'poster' | 'remote'>>): Promise<TakeMeta>
   remove(id: string): Promise<void>
   estimate(): Promise<{ quota?: number; usage?: number } | null>
 }

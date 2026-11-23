@@ -15,6 +15,9 @@ export function useErrorText() {
       case 'token_expired': return t('errors.tokenExpired')
       case 'token_invalid': return t('errors.tokenInvalid')
       case 'unauthenticated': return t('errors.sessionEnded')
+      case 'limit_reached': return t('errors.limitReached')
+      case 'storage_full': return t('errors.storageFull')
+      case 'storage_not_linked': return t('errors.storageNotLinked')
       default: return t('errors.unknown')
     }
   }

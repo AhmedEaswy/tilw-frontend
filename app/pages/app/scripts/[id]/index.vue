@@ -118,7 +118,19 @@ function useTheirs() {
   show(t('editor.conflict.usedTheirs'))
 }
 
-const statusLabel = computed(() => t(`editor.status.${editor.saveState}`))
+const statusLabel = computed(() => (editor.readOnly ? t('limits.readOnlyChip') : t(`editor.status.${editor.saveState}`)))
+
+// ----- release 2: read-only over the plan limit (R2-3), history (R2-9) -----
+const plan = usePlanStore()
+const upgrade = useUpgrade()
+onMounted(() => !plan.my && plan.load())
+const readOnlyText = computed(() => {
+  const active = plan.my?.limits.find(l => l.key === 'scripts.max_active')
+  return typeof active?.value === 'number' && typeof active.usage === 'number'
+    ? t('limits.readOnlyText', { n: active.usage, max: active.value })
+    : t('limits.readOnlyTextShort')
+})
+const historyOpen = ref(false)
 </script>
 
 <template>
@@ -163,8 +175,19 @@ const statusLabel = computed(() => t(`editor.status.${editor.saveState}`))
           class="chip warn"
           @click="editor.reviewing = false"
         >{{ statusLabel }}</button>
-        <span v-else class="chip" :class="editor.saveState" role="status">{{ statusLabel }}</span>
+        <span v-else class="chip" :class="editor.readOnly ? 'readonly' : editor.saveState" role="status">{{ statusLabel }}</span>
       </div>
+
+      <UiBanner v-if="editor.readOnly" tone="warning" class="ro">
+        <b>{{ t('limits.readOnlyTitle') }}</b>
+        <span>{{ readOnlyText }}</span>
+        <template #action>
+          <span class="ro-acts">
+            <UiButton v-if="!plan.isPro" size="sm" @click="upgrade.open()">{{ t('upgrade.cta') }}</UiButton>
+            <UiButton size="sm" tone="secondary" to="/app/scripts">{{ t('limits.dialog.archive') }}</UiButton>
+          </span>
+        </template>
+      </UiBanner>
 
       <UiBanner v-if="editor.restoredDraft && editor.saveState !== 'conflict'" tone="info" class="restored">{{ t('editor.restored') }}</UiBanner>
 
@@ -179,6 +202,7 @@ const statusLabel = computed(() => t(`editor.status.${editor.saveState}`))
           :active-match="active"
           :words="editor.words"
           :paragraphs="editor.paragraphs"
+          :read-only="editor.readOnly"
           @update:title="v => editor.setContent({ title: v })"
           @update:body="v => editor.setContent({ body: v })"
           @selection="r => (selection = r)"
@@ -197,6 +221,8 @@ const statusLabel = computed(() => t(`editor.status.${editor.saveState}`))
           :active-match="active"
           :marks-count="editor.marks.length"
           :has-selection="hasSelection"
+          :read-only="editor.readOnly"
+          @history="historyOpen = true"
           @marks="openMarks"
           @undo="editor.undo()"
           @redo="editor.redo()"
@@ -211,6 +237,8 @@ const statusLabel = computed(() => t(`editor.status.${editor.saveState}`))
         <UiButton :to="`/app/scripts/${id}/rehearse`">{{ t('library.rehearse') }}</UiButton>
         <UiButton tone="secondary" :to="`/app/scripts/${id}/record`">{{ t('library.setupRecording') }}</UiButton>
       </div>
+
+      <HistoryDrawer v-if="historyOpen && editor.script" :script-id="id" @close="historyOpen = false" />
 
       <MarksDialog
         v-model:open="marksOpen"
@@ -275,6 +303,22 @@ const statusLabel = computed(() => t(`editor.status.${editor.saveState}`))
 }
 .restored {
   margin-block-end: 16px;
+}
+.chip.readonly {
+  background: var(--tilw-surface-quiet);
+  color: var(--tilw-text-ink);
+}
+.ro {
+  margin-block-end: 18px;
+}
+.ro :deep(.txt) {
+  display: grid;
+  gap: 2px;
+}
+.ro-acts {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 .grid {
   display: grid;

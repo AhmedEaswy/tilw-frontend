@@ -62,6 +62,9 @@ export interface Script {
   updatedAt: string
   lastOpenedAt: string | null
   lastPosition: ReadingPosition | null
+  /** Release 2: the service keeps scripts over a lowered limit read-only (newest stay editable). */
+  readOnly?: boolean
+  readOnlyReason?: LimitKey | null
 }
 
 /** List rows omit the body; `excerpt` is the first line. */
@@ -95,6 +98,140 @@ export interface LegacyScript {
   body: string
 }
 
+// ---------- Release 2: plans, storage, history, account (specs/003-accounts-plans-storage/data-model.md) ----------
+
+/** Known keys: scripts.max_active, scripts.max_words, takes.max_minutes, ai.credits_monthly, storage.auto_sync,
+ * storage.providers, history.versions, history.days, byok.allowed, phone_link.allowed. Others may appear later. */
+export type LimitKey = string
+
+export interface LimitValue {
+  key: LimitKey
+  type: 'int' | 'bool' | 'list'
+  label: string
+  /** `null` on an `int` limit = unlimited. */
+  value: number | boolean | string[] | null
+  /** Counted limits only. */
+  usage?: number | null
+  overridden: boolean
+}
+
+export interface Plan {
+  key: string
+  name: string
+  priceMonthlyCents: number
+  priceYearlyCents: number
+  currency: 'USD'
+  limits: LimitValue[]
+}
+
+export type UpgradePeriod = 'monthly' | 'yearly'
+
+export interface UpgradeRequest {
+  id: string
+  reference: string
+  plan: string
+  period: UpgradePeriod
+  priceCents: number
+  state: 'pending' | 'fulfilled' | 'rejected' | 'cancelled' | 'expired'
+  createdAt: string
+  expiresAt: string
+}
+
+export interface MyPlan {
+  plan: Plan
+  period: 'monthly' | 'yearly' | 'custom' | null
+  startsAt?: string | null
+  endsAt?: string | null
+  renewsAfter?: string | null
+  limits: LimitValue[]
+  pendingRequest: UpgradeRequest | null
+  /** One-time notice since the last read. */
+  notice?: 'pro_started' | 'pro_ended' | null
+}
+
+export type SyncMode = 'off' | 'manual' | 'auto'
+
+export interface StorageStatus {
+  provider: 'google_drive' | null
+  accountEmail?: string | null
+  state: 'none' | 'linked' | 'revoked'
+  syncMode: SyncMode
+  autoSyncAllowed: boolean
+  quota?: { usedBytes: number; totalBytes: number | null; tilwBytes: number; tilwTakes: number } | null
+}
+
+export type RemoteTakeState = 'uploading' | 'backed_up' | 'unreachable' | 'failed'
+
+/** The service's record of a take backed up to Drive. `clientId` is the device take id. */
+export interface RemoteTake {
+  id: string
+  clientId: string
+  scriptId: string | null
+  title: string
+  kind: 'audio' | 'video'
+  mime: string
+  durationMs: number
+  sizeBytes: number
+  recordedAt: string
+  starred: boolean
+  providerFileId: string | null
+  state: RemoteTakeState
+}
+
+export interface RemoteTakeInput {
+  clientId: string
+  scriptId: string | null
+  title: string
+  kind: 'audio' | 'video'
+  mime: string
+  durationMs: number
+  sizeBytes: number
+  recordedAt: string
+  starred?: boolean
+}
+
+export interface UploadToken {
+  accessToken: string
+  expiresAt: string
+  rootFolderId: string
+  folderId: string | null
+}
+
+export interface ScriptVersionSummary {
+  id: string
+  createdAt: string
+  reason: 'edit' | 'restore' | 'ai'
+  wordCount: number
+}
+
+export interface ScriptVersion extends ScriptVersionSummary {
+  title: string
+  body: string
+  marks: DeliveryMark[]
+  direction: TextDirection
+}
+
+export interface Device {
+  /** Token id, or "browser" for the cookie session. */
+  id: string
+  name: string
+  platform: 'ios' | 'android' | 'other' | 'web'
+  createdAt: string
+  lastUsedAt: string | null
+  current: boolean
+}
+
+export interface PendingEmail {
+  email: string
+  expiresAt: string
+}
+
+export interface LimitInfo {
+  key: LimitKey
+  value: number | boolean | string[] | null
+  usage: number | null
+}
+
 export type PortErrorCode =
   | 'invalid_credentials'
   | 'validation'
@@ -106,6 +243,9 @@ export type PortErrorCode =
   | 'rate_limited'
   | 'network'
   | 'unknown'
+  | 'limit_reached'
+  | 'storage_full'
+  | 'storage_not_linked'
 
 export class PortError extends Error {
   constructor(
@@ -113,6 +253,8 @@ export class PortError extends Error {
     public fields?: Record<string, string>,
     /** For `conflict`: the server copy. */
     public current?: unknown,
+    /** For `limit_reached`: which limit, its value and the current usage. */
+    public limit?: LimitInfo,
   ) {
     super(code)
     this.name = 'PortError'

@@ -3,8 +3,18 @@
  */
 import { extensionFor } from './mime'
 
-/** Longest take (FR-031): 10 minutes. */
+/** Release-1 longest take: 10 minutes. Release 2 takes the cap from the plan; this stays the fallback. */
 export const RECORD_LIMIT_MS = 10 * 60_000
+
+/**
+ * The plan's `takes.max_minutes` as milliseconds (release 2, FR-005). When the plan is unknown (offline, not loaded)
+ * or the value isn't a positive number, the release-1 10 minutes apply so recording always works.
+ * `null` from the service means unlimited; the studio still stops at the browser's storage limit.
+ */
+export function recordLimitMs(minutes: unknown): number {
+  if (minutes === null) return Number.POSITIVE_INFINITY
+  return typeof minutes === 'number' && minutes > 0 ? minutes * 60_000 : RECORD_LIMIT_MS
+}
 /** Below this much free browser storage the studio warns before recording (G8). */
 export const LOW_STORAGE_BYTES = 200 * 1024 * 1024
 /** Stop a running take once it would use this share of the free space left at the start (G8). */
@@ -37,8 +47,8 @@ export function levelSegments(level: number, n = LEVEL_SEGMENTS): ('lo' | 'hi' |
 }
 
 /** Why a running take must stop now, if it must. */
-export function mustStop(elapsedMs: number, bytes: number, freeAtStart: number | null): StopReason | null {
-  if (elapsedMs >= RECORD_LIMIT_MS) return 'limit'
+export function mustStop(elapsedMs: number, bytes: number, freeAtStart: number | null, limitMs = RECORD_LIMIT_MS): StopReason | null {
+  if (elapsedMs >= limitMs) return 'limit'
   if (freeAtStart !== null && bytes >= freeAtStart * QUOTA_SAFETY) return 'quota'
   return null
 }
@@ -52,6 +62,8 @@ export function freeBytes(estimate: { quota?: number; usage?: number } | null | 
 /** File name for a downloaded original: "افتتاحية الحلقة - المحاولة 2.webm". */
 export function takeFileName(title: string, number: number, mime: string, word = 'take'): string {
   const safe = title.replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim() || 'tilw'
+  // Drive-only takes (release 2) have no number on this device; their title already names the take.
+  if (number <= 0) return `${safe}.${extensionFor(mime)}`
   return `${safe} - ${word} ${number}.${extensionFor(mime)}`
 }
 

@@ -2,7 +2,11 @@
  * Service ports. The UI and stores depend only on these interfaces (constitution III).
  * Phase 1: services/mock. Later: services/http (Laravel). Contracts: specs/001-studio-frontend/contracts/ports.md
  */
-import type { Invitation, LegacyScript, ReadingPosition, ReadingSettings, Script, ScriptPatch, ScriptSummary, User, WaitlistEntry } from './types'
+import type {
+  Device, Invitation, LegacyScript, MyPlan, PendingEmail, Plan, ReadingPosition, ReadingSettings, RemoteTake, RemoteTakeInput,
+  Script, ScriptPatch, ScriptSummary, ScriptVersion, ScriptVersionSummary, StorageStatus, SyncMode, UpgradePeriod, UpgradeRequest,
+  UploadToken, User, WaitlistEntry,
+} from './types'
 
 export interface AuthPort {
   me(): Promise<User | null>
@@ -14,6 +18,10 @@ export interface AuthPort {
   resetPassword(input: { token: string; password: string }): Promise<User>
   checkInvite(token: string): Promise<{ email: string }>
   acceptInvite(input: { token: string; name: string; password: string }): Promise<User>
+  /** Release 2: confirms an email change from the emailed link. Public. */
+  confirmEmail(token: string): Promise<{ email: string }>
+  /** One-time notice from the last sign-in (`deletion_cancelled`), cleared when read. */
+  lastNotice(): 'deletion_cancelled' | null
 }
 
 export interface WaitlistPort {
@@ -31,6 +39,11 @@ export interface ScriptsPort {
   duplicate(id: string): Promise<Script>
   remove(id: string): Promise<void>
   savePosition(id: string, position: ReadingPosition): Promise<void>
+  /** Release 2 (US5): newest first, without text. */
+  listVersions(id: string): Promise<ScriptVersionSummary[]>
+  getVersion(id: string, versionId: string): Promise<ScriptVersion>
+  /** Versioned save: the current text is kept as a `restore` version. `conflict` when `baseVersion` is stale. */
+  restoreVersion(id: string, versionId: string, baseVersion: number): Promise<Script>
 }
 
 export interface AccountPort {
@@ -38,7 +51,59 @@ export interface AccountPort {
   updateReading(settings: ReadingSettings): Promise<User>
   exportData(input: { password: string }): Promise<Blob>
   changePassword(input: { current: string; next: string }): Promise<void>
-  deleteAccount(input: { password: string }): Promise<void>
+  /** Release 2: schedules deletion in 14 days and signs out everywhere. Signing in before then cancels it. */
+  deleteAccount(input: { password: string }): Promise<{ deletionDueAt: string }>
+  requestEmailChange(input: { email: string; password: string }): Promise<PendingEmail>
+  pendingEmailChange(): Promise<PendingEmail | null>
+  cancelEmailChange(): Promise<void>
+  resendEmailChange(): Promise<void>
+  listDevices(): Promise<Device[]>
+  revokeDevice(id: string): Promise<void>
+}
+
+/** Release 2 (US1, US2): plans as data, the person's effective limits, upgrade requests. */
+export interface PlanPort {
+  /** Public: active plans with prices and limits. */
+  listPlans(): Promise<Plan[]>
+  myPlan(): Promise<MyPlan>
+  requestUpgrade(input: { plan: string; period: UpgradePeriod }): Promise<{ request: UpgradeRequest; whatsappUrl: string | null }>
+  cancelRequest(): Promise<void>
+}
+
+/** A Drive resumable upload in progress. */
+export interface DriveSession {
+  url: string
+}
+
+/** Browser → Google Drive file transfer (services/drive/uploader.ts; the mock uses a fake Drive). */
+export interface DriveUploader {
+  /** Opens a resumable session for `file` in `folderId`. */
+  start(file: Blob, meta: { name: string; mimeType: string }, folderId: string, token: string): Promise<DriveSession>
+  /** Sends the rest of the file from the offset Google reports; resolves with the Drive file id. */
+  resume(session: DriveSession, file: Blob, token: string, onProgress: (sent: number, total: number) => void, signal?: AbortSignal): Promise<{ fileId: string }>
+  download(fileId: string, token: string): Promise<Blob>
+  remove(fileId: string, token: string): Promise<void>
+}
+
+/** Release 2 (US3): linked storage. Take bytes never go through Tilw: only metadata and short-lived tokens. */
+export interface StoragePort {
+  status(): Promise<StorageStatus>
+  /** Google consent URL; the browser navigates there and comes back to /app/settings/storage?linked=1|error=… */
+  connectUrl(client: 'web'): Promise<string>
+  unlink(): Promise<void>
+  setSyncMode(mode: SyncMode): Promise<{ mode: SyncMode }>
+  uploadToken(scriptId?: string | null): Promise<UploadToken>
+  uploader(): DriveUploader
+}
+
+/** Release 2 (US3): the service's records of takes backed up to Drive, from every device. */
+export interface RemoteTakesPort {
+  list(scriptId?: string): Promise<RemoteTake[]>
+  /** Idempotent on `clientId`. Checks takes.max_minutes and storage.providers. */
+  register(input: RemoteTakeInput): Promise<RemoteTake>
+  update(id: string, patch: Partial<Pick<RemoteTake, 'title' | 'starred' | 'providerFileId'>> & { state?: 'backed_up' | 'unreachable' }): Promise<RemoteTake>
+  /** `remote: true` also deletes the Drive file. */
+  remove(id: string, opts: { remote: boolean }): Promise<void>
 }
 
 /**
@@ -70,4 +135,7 @@ export interface Services {
   account: AccountPort
   admin: AdminPort
   legacy: LegacyPort
+  plans: PlanPort
+  storage: StoragePort
+  remoteTakes: RemoteTakesPort
 }

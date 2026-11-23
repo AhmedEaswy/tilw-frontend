@@ -55,3 +55,48 @@ test.describe('accessibility (axe, WCAG 2.2 AA)', () => {
     })
   }
 })
+
+// Release 2 (US4, T046) — the landing plans poster reads prices from the service, with a build-time fallback.
+test.describe('landing plans', () => {
+  test('shows the service prices and switches monthly / yearly', async ({ page }) => {
+    await page.goto('/')
+    const poster = page.locator('.pl-poster')
+    await expect(poster.locator('.pl-big', { hasText: 'Tilw Pro' })).toBeVisible()
+    await expect(poster.getByText('$77')).toBeVisible()
+    await expect(poster.getByText('وفّر 20٪')).toBeVisible()
+    await poster.getByRole('radio', { name: 'شهري' }).click()
+    await expect(poster.getByText('$8')).toBeVisible()
+    await expect(page.getByText('Tilw Plus')).toHaveCount(0)
+  })
+
+  test('a price changed in the service shows after a reload; the baked-in prices cover an outage', async ({ page }) => {
+    await signIn(page)
+    await page.goto('/')
+    await page.evaluate(() => {
+      const s = JSON.parse(localStorage.getItem('tilw:mock:v1') ?? 'null')
+      if (!s) return
+      s.plans.find((p: { key: string }) => p.key === 'pro').priceYearlyCents = 9900
+      localStorage.setItem('tilw:mock:v1', JSON.stringify(s))
+    })
+    await page.reload()
+    await expect(page.locator('.pl-poster').getByText('$99')).toBeVisible()
+
+    await page.evaluate(() => localStorage.setItem('tilw:mock:knobs', JSON.stringify({ plansDown: true })))
+    await page.reload()
+    await expect(page.locator('.pl-poster').getByText('$77')).toBeVisible()
+  })
+
+  test('Get Tilw Pro goes through sign-in to the upgrade sheet', async ({ page }) => {
+    await page.goto('/')
+    await page.getByRole('button', { name: 'احصل على Tilw Pro' }).click()
+    await expect(page).toHaveURL(/\/signin\?next=/)
+    await page.getByLabel('البريد الإلكتروني').fill('layan@example.com')
+    await page.getByLabel('كلمة المرور', { exact: true }).fill('password123')
+    await page.getByRole('button', { name: 'تسجيل الدخول' }).click()
+    await expect(page.getByRole('dialog', { name: 'الترقية إلى Tilw Pro' })).toBeVisible()
+
+    await page.goto('/')
+    await page.getByRole('button', { name: 'احصل على Tilw Pro' }).click()
+    await expect(page.getByRole('dialog', { name: 'الترقية إلى Tilw Pro' })).toBeVisible()
+  })
+})

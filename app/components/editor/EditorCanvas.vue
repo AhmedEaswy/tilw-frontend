@@ -18,6 +18,8 @@ const props = defineProps<{
   activeMatch: number
   words: number
   paragraphs: number
+  /** Release 2 (R2-3): text, title and marks can't be changed. */
+  readOnly?: boolean
 }>()
 const emit = defineEmits<{
   'update:title': [v: string]
@@ -160,12 +162,13 @@ defineExpose({ select, focus: () => area.value?.focus() })
       :value="title"
       :aria-label="t('library.titleLabel')"
       :maxlength="120"
+      :readonly="readOnly"
       dir="auto"
       @input="emit('update:title', ($event.target as HTMLInputElement).value)"
     >
     <div ref="sheet" class="sheet">
       <MarksToolbar
-        v-if="barShown && barAt"
+        v-if="barShown && barAt && !readOnly"
         ref="bar"
         :selection="range"
         :marks="marks"
@@ -182,7 +185,9 @@ defineExpose({ select, focus: () => area.value?.focus() })
         :value="body"
         :aria-label="t('editor.bodyLabel')"
         :placeholder="t('editor.bodyPlaceholder')"
-        spellcheck="true"
+        :spellcheck="!readOnly"
+        :readonly="readOnly"
+        :aria-readonly="readOnly || undefined"
         @input="emit('update:body', ($event.target as HTMLTextAreaElement).value); track()"
         @keyup="track"
         @click="track"

@@ -12,6 +12,8 @@ const props = defineProps<{
   kind: 'audio' | 'video'
   stream: MediaStream | null
   elapsedMs: number
+  /** Release 2: the plan's take length (Infinity = no cap). */
+  limitMs?: number
   level: number
   saving: boolean
   paragraphs: string[]
@@ -25,7 +27,9 @@ const props = defineProps<{
   smooth: boolean
 }>()
 const emit = defineEmits<{ stop: [] }>()
-const { t } = useI18n()
+const { t, locale } = useI18n()
+const limit = computed(() => props.limitMs ?? RECORD_LIMIT_MS)
+const limitMinutes = computed(() => Math.round(limit.value / 60_000))
 
 const video = ref<HTMLVideoElement>()
 watch([video, () => props.stream], ([el, s]) => {
@@ -35,8 +39,8 @@ watch([video, () => props.stream], ([el, s]) => {
   }
 }, { immediate: true })
 
-const remaining = computed(() => RECORD_LIMIT_MS - props.elapsedMs)
-const nearLimit = computed(() => remaining.value <= 60_000)
+const remaining = computed(() => limit.value - props.elapsedMs)
+const nearLimit = computed(() => Number.isFinite(limit.value) && remaining.value <= 60_000)
 
 const stopBtn = ref<HTMLButtonElement>()
 onMounted(() => stopBtn.value?.focus())
@@ -82,7 +86,7 @@ onMounted(() => stopBtn.value?.focus())
       </div>
       <div class="acts">
         <p class="cap" :class="{ warn: nearLimit }" aria-live="polite">
-          {{ nearLimit ? t('studio.remaining', { time: formatDuration(Math.max(0, remaining)) }) : t('studio.maxTen') }}
+          {{ nearLimit ? t('studio.remaining', { time: formatDuration(Math.max(0, remaining)) }) : (Number.isFinite(limit) ? t('studio.maxMinutes', { n: limitMinutes, unit: unitFor(limitMinutes, 'minute', locale) }) : '') }}
         </p>
         <button ref="stopBtn" type="button" class="stop" :disabled="saving" @click="emit('stop')">
           <UiGlyph name="stop" :size="20" />

@@ -4,6 +4,10 @@ UI and stores depend only on these interfaces. `services/mock/*` is the in-brows
 adapter for the Laravel API (routes in the right-hand column; contract: `backend/specs/001-backend-api/contracts/openapi.yaml`).
 Switch with `NUXT_PUBLIC_SERVICES_MODE=http` and `NUXT_PUBLIC_API_BASE_URL=http://localhost:8000`.
 
+> **Release 2:** `PlanPort`, `StoragePort`, `RemoteTakesPort`, the history / email-change / device methods, the changed
+> `deleteAccount` and the error kinds `limit_reached`, `storage_full`, `storage_not_linked` are specified in
+> [`../../003-accounts-plans-storage/contracts/ports.md`](../../003-accounts-plans-storage/contracts/ports.md).
+
 All methods return `Promise<T>` and reject with `PortError`:
 
 ```ts

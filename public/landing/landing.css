@@ -398,47 +398,8 @@ input[type=range]{width:100%;accent-color:var(--rust-2)}
 .pl-head{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:end;margin-bottom:28px}
 .pl-head h2{margin:0;font-size:clamp(34px,4.4vw,56px);font-weight:600;line-height:1.25;text-wrap:balance}
 .pl-head p{margin:0;color:var(--pl-muted);font-size:17px;line-height:32px}
-.pl-poster{position:relative;border-radius:32px;overflow:hidden;display:grid;grid-template-columns:1fr 1fr;color:#F3EEE9;background:linear-gradient(112deg,#293d49 0 49.6%,#944d33 50%);isolation:isolate;box-shadow:0 30px 70px rgba(0,0,0,.2)}
-.pl-half{padding:48px 44px;display:flex;flex-direction:column;gap:18px;min-width:0;position:relative}
-.pl-half>*{position:relative;z-index:1}
-.pl-kick{font-size:13px;font-weight:600;opacity:.85}
-.pl-big{font-size:clamp(44px,5.6vw,84px);font-weight:700;line-height:1.05}
-.pl-free ul{list-style:none;margin:0;padding:0;display:grid;gap:10px}
-.pl-free li{display:flex;gap:10px;align-items:flex-start;background:rgba(0,0,0,.14);border:1px solid rgba(247,242,233,.14);border-radius:14px;padding:9px 14px;font-size:15.5px;line-height:28px;animation:plUp .5s cubic-bezier(.3,.8,.2,1) backwards;animation-delay:calc(var(--i)*100ms + .25s)}
-@keyframes plUp{from{transform:translateY(10px)}}
-.pl-ck{width:18px;height:18px;flex:0 0 auto;margin-top:5px;background:#F7F2E9;-webkit-mask:url(/assets/check.svg) center/contain no-repeat;mask:url(/assets/check.svg) center/contain no-repeat}
-.pl-btn{display:inline-flex;align-items:center;gap:8px;align-self:flex-start;margin-top:auto;border-radius:12px;padding:12px 22px;font-weight:600;font-size:16px;text-decoration:none;transition:transform .15s,background .2s}
-.pl-btn:hover{transform:translateY(-2px)}
-.pl-btn-light{background:#F7F2E9;color:#7c3c25}
-.pl-btn-light:hover{background:#fff}
-.pl-btn-cue{background:#f2b28b;color:#1A2E35;animation:plPulse 2.6s infinite}
-.pl-btn-cue:hover{background:#F7C9AC}
-@keyframes plPulse{0%{box-shadow:0 0 0 0 rgba(242,178,139,.55)}70%{box-shadow:0 0 0 14px rgba(242,178,139,0)}100%{box-shadow:0 0 0 0 rgba(242,178,139,0)}}
-.pl-arrow{width:16px;height:16px;transform:scaleX(-1)}
-.pl-plus .pl-big{background:linear-gradient(90deg,#f7f2e9 20%,#f2b28b 50%,#f7f2e9 80%);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:plSheen 3.2s linear infinite}
-@keyframes plSheen{to{background-position:-200% 0}}
-.pl-d{margin:0;color:#cad4d5;font-size:16px;line-height:30px}
-.pl-plus small{color:#cad4d5;font-size:13px;line-height:24px}
-.pl-ai{position:relative;border-radius:14px;padding:16px 18px;overflow:hidden;background:linear-gradient(#202f38,#273945);border:1px solid rgba(0,0,0,.45);box-shadow:inset 0 3px 12px rgba(0,0,0,.3),0 14px 30px rgba(0,0,0,.25)}
-.pl-lab{display:flex;align-items:center;gap:8px;font-size:13px;line-height:24px;color:#cad4d5}
-.pl-spark{width:16px;height:16px;color:#f2b28b}
-/* always two lines tall, so the card never changes height when the words move to the second line */
-.pl-words{position:relative;display:flex;flex-wrap:wrap;align-content:flex-start;gap:0 .32em;font-size:22px;line-height:1.55;font-weight:500;margin:10px 0 8px;height:3.1em}
-.pl-words span{display:inline-block;will-change:transform}
-.pl-words .br{flex-basis:100%;height:0}
-.pl-words.split span.l2{color:#f2b28b}
-.pl-scan{position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,transparent,rgba(242,178,139,.28),transparent);transform:translateX(110%)}
-.pl-scan.go{animation:plScan .8s ease-in-out}
-@keyframes plScan{from{transform:translateX(110%)}to{transform:translateX(-110%)}}
-.pl-note{display:flex;align-items:center;gap:8px;font-size:13px;line-height:24px;color:#cad4d5}
-.pl-apply{margin-inline-start:auto;border:0;border-radius:9px;padding:4px 14px;font:600 13px "IBM Plex Sans Arabic","Segoe UI",sans-serif;background:#f2b28b;color:#1A2E35;transition:transform .12s,opacity .3s}
-.pl-apply.down{transform:scale(.92)}.pl-apply.done{opacity:.5}
-.pl-dots{position:absolute;inset:0;pointer-events:none;z-index:0;overflow:hidden}
-.pl-dots i{position:absolute;bottom:-10px;width:var(--s);height:var(--s);border-radius:50%;background:#f2b28b;opacity:0;animation:plRise var(--t) linear infinite;animation-delay:var(--d)}
-@keyframes plRise{0%{transform:translateY(0);opacity:0}10%{opacity:.8}100%{transform:translateY(-560px);opacity:0}}
-.pl-btn:focus-visible,.pl-apply:focus-visible{outline:2px solid #f2b28b;outline-offset:3px}
-@media (max-width:900px){.pl-head,.pl-poster{grid-template-columns:1fr}.pl-head{gap:14px}.pl-poster{background:linear-gradient(180deg,#944d33 0 50%,#293d49 50%)}.pl-half{padding:36px 22px}}
-@media (prefers-reduced-motion:reduce){.pl-sec *{animation:none!important;transition:none!important}}
+/* Plans poster rules live in app/components/plans/plans-poster.css (shared with the in-app upgrade sheet). */
+@media (max-width:900px){.pl-head{grid-template-columns:1fr;gap:14px}}
 
 .a-dl .prog{overflow:visible;position:relative}
 .a-dl .prog i{position:relative;width:0;transform:none;border-radius:3px;background:linear-gradient(90deg,#f2b28b,rgba(242,178,139,.55));animation:dlFill 4s ease-in-out infinite}

@@ -1,6 +1,6 @@
 /**
  * MediaRecorder wrapper (US6, T070). Picks the best container the browser supports, collects chunks in
- * memory, and stops on its own at 10 minutes, when browser storage would run out, or when the stream's
+ * memory, and stops on its own at the plan's take length (release 2; 10 minutes when unknown), when browser storage would run out, or when the stream's
  * tracks end (device unplugged). `stop()` resolves with the finished file in every case, so a partial take
  * is still saved (G8).
  */
@@ -22,6 +22,7 @@ export function useRecorder(opts: { onAutoStop?: (take: FinishedTake) => void } 
   let chunks: Blob[] = []
   let startedAt = 0
   let freeAtStart: number | null = null
+  let limitMs = RECORD_LIMIT_MS
   let timer: ReturnType<typeof setInterval> | undefined
   /** Callers waiting for the file, and the reason the first one gave. */
   let waiters: ((t: FinishedTake) => void)[] = []
@@ -29,7 +30,7 @@ export function useRecorder(opts: { onAutoStop?: (take: FinishedTake) => void } 
   let mime = ''
 
   /** Start recording `stream`. Resolves false when the browser can't record this kind. */
-  async function start(stream: MediaStream, kind: MediaKind, free: number | null) {
+  async function start(stream: MediaStream, kind: MediaKind, free: number | null, maxMs = RECORD_LIMIT_MS) {
     if (recording.value) return true
     mime = pickRecorderMime(kind)
     if (typeof MediaRecorder === 'undefined') return false
@@ -43,6 +44,7 @@ export function useRecorder(opts: { onAutoStop?: (take: FinishedTake) => void } 
     bytes.value = 0
     elapsedMs.value = 0
     freeAtStart = free
+    limitMs = maxMs
 
     recorder.ondataavailable = (e) => {
       if (e.data.size) {
@@ -58,7 +60,7 @@ export function useRecorder(opts: { onAutoStop?: (take: FinishedTake) => void } 
     recording.value = true
     timer = setInterval(() => {
       elapsedMs.value = performance.now() - startedAt
-      const why = mustStop(elapsedMs.value, bytes.value, freeAtStart)
+      const why = mustStop(elapsedMs.value, bytes.value, freeAtStart, limitMs)
       if (why) void autoStop(why)
     }, 250)
     return true
@@ -77,7 +79,7 @@ export function useRecorder(opts: { onAutoStop?: (take: FinishedTake) => void } 
     if (timer) clearInterval(timer)
     timer = undefined
     recorder?.stream.getTracks().forEach(t => t.removeEventListener('ended', onTrackEnded))
-    const durationMs = Math.min(RECORD_LIMIT_MS, performance.now() - startedAt)
+    const durationMs = Math.min(limitMs, performance.now() - startedAt)
     elapsedMs.value = durationMs
     recording.value = false
     const take: FinishedTake = { blob: new Blob(chunks, { type: mime }), mimeType: mime, durationMs, reason: stopReason ?? 'interrupted' }

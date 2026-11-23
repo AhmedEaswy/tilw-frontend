@@ -3,18 +3,33 @@
  * (services/mock), so the screens do not change. Route table: specs/001-studio-frontend/contracts/ports.md.
  */
 import type { Services } from '../ports'
-import { PortError, isPortError, type Invitation, type Script, type ScriptSummary, type User, type WaitlistEntry } from '../types'
+import { createDriveUploader } from '../drive/uploader'
+import {
+  PortError, isPortError, type Device, type Invitation, type MyPlan, type PendingEmail, type Plan, type RemoteTake, type Script,
+  type ScriptSummary, type ScriptVersion, type ScriptVersionSummary, type StorageStatus, type SyncMode, type UpgradeRequest,
+  type UploadToken, type User, type WaitlistEntry,
+} from '../types'
 import { createHttpClient, type HttpClientOptions } from './client'
 
 const seg = encodeURIComponent
 
 export function createHttpServices(opts: HttpClientOptions): { services: Services; client: ReturnType<typeof createHttpClient> } {
   const api = createHttpClient(opts)
+  let notice: 'deletion_cancelled' | null = null
+  const drive = createDriveUploader({ fetch: opts.fetch })
+
+  /** POST /login answers the release-1 profile plus `notice` when the sign-in cancelled a scheduled deletion. */
+  async function signIn(input: { email: string; password: string }): Promise<User> {
+    const res = await api.post<User & { notice?: string | null }>('/login', input)
+    const { notice: n, ...user } = res ?? ({} as User & { notice?: string | null })
+    notice = n === 'deletion_cancelled' ? n : null
+    return user as User
+  }
 
   const services: Services = {
     auth: {
       me: () => api.get<User | null>('/api/user'),
-      signIn: input => api.post<User>('/login', input),
+      signIn,
       signOut: async () => {
         try {
           await api.post('/logout')
@@ -28,6 +43,12 @@ export function createHttpServices(opts: HttpClientOptions): { services: Service
       resetPassword: input => api.post<User>('/reset-password', input),
       checkInvite: token => api.get<{ email: string }>(`/invitations/${seg(token)}`),
       acceptInvite: ({ token, ...rest }) => api.post<User>(`/invitations/${seg(token)}/accept`, rest),
+      confirmEmail: token => api.post<{ email: string }>('/email/confirm', { token }),
+      lastNotice: () => {
+        const n = notice
+        notice = null
+        return n
+      },
     },
 
     waitlist: {
@@ -44,6 +65,10 @@ export function createHttpServices(opts: HttpClientOptions): { services: Service
       duplicate: id => api.post<Script>(`/api/scripts/${seg(id)}/duplicate`),
       remove: id => api.del<void>(`/api/scripts/${seg(id)}`),
       savePosition: (id, position) => api.put<void>(`/api/scripts/${seg(id)}/position`, position),
+      listVersions: id => api.get<ScriptVersionSummary[]>(`/api/scripts/${seg(id)}/versions`),
+      getVersion: (id, versionId) => api.get<ScriptVersion>(`/api/scripts/${seg(id)}/versions/${seg(versionId)}`),
+      restoreVersion: (id, versionId, baseVersion) =>
+        api.post<Script>(`/api/scripts/${seg(id)}/versions/${seg(versionId)}/restore`, undefined, { headers: { 'If-Match': String(baseVersion) } }),
     },
 
     account: {
@@ -51,7 +76,13 @@ export function createHttpServices(opts: HttpClientOptions): { services: Service
       updateReading: settings => api.put<User>('/api/user/reading', settings),
       exportData: input => api.post<Blob>('/api/user/export', input, { as: 'blob' }),
       changePassword: input => api.put<void>('/api/user/password', input),
-      deleteAccount: input => api.del<void>('/api/user', input),
+      deleteAccount: input => api.del<{ deletionDueAt: string }>('/api/user', input),
+      requestEmailChange: input => api.post<PendingEmail>('/api/user/email', input),
+      pendingEmailChange: () => api.get<PendingEmail | null>('/api/user/email'),
+      cancelEmailChange: () => api.del<void>('/api/user/email'),
+      resendEmailChange: () => api.post<void>('/api/user/email/resend', undefined, { as: 'none' }),
+      listDevices: () => api.get<Device[]>('/api/user/devices'),
+      revokeDevice: id => api.del<void>(`/api/user/devices/${seg(id)}`),
     },
 
     admin: {
@@ -65,6 +96,29 @@ export function createHttpServices(opts: HttpClientOptions): { services: Service
     // Device-only: the old app's browser keys are not defined for the real service, so there is nothing to offer.
     legacy: {
       scan: async () => [],
+    },
+
+    plans: {
+      listPlans: () => api.get<Plan[]>('/api/plans'),
+      myPlan: () => api.get<MyPlan>('/api/user/plan'),
+      requestUpgrade: input => api.post<{ request: UpgradeRequest; whatsappUrl: string | null }>('/api/user/subscription-requests', input),
+      cancelRequest: () => api.del<void>('/api/user/subscription-requests/current'),
+    },
+
+    storage: {
+      status: () => api.get<StorageStatus>('/api/storage'),
+      connectUrl: async client => (await api.get<{ url: string }>(`/api/storage/google/connect?client=${seg(client)}`)).url,
+      unlink: () => api.del<void>('/api/storage'),
+      setSyncMode: mode => api.put<{ mode: SyncMode }>('/api/user/sync', { mode }),
+      uploadToken: scriptId => api.post<UploadToken>('/api/storage/token', { scriptId: scriptId ?? null }),
+      uploader: () => drive,
+    },
+
+    remoteTakes: {
+      list: scriptId => api.get<RemoteTake[]>(`/api/takes${scriptId ? `?scriptId=${seg(scriptId)}` : ''}`),
+      register: input => api.post<RemoteTake>('/api/takes', input),
+      update: (id, patch) => api.patch<RemoteTake>(`/api/takes/${seg(id)}`, patch),
+      remove: (id, { remote }) => api.del<void>(`/api/takes/${seg(id)}${remote ? '?remote=1' : ''}`),
     },
   }
 

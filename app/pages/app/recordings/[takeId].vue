@@ -4,19 +4,26 @@
  * browser, shows length and container, lists the script's other takes, downloads the original file and
  * confirms (6:48 / 6:60 / 6:76). Star as best take and delete (G8) have no frames yet and use the same
  * side panel with a confirm dialog for delete.
+ * Release 2 (R2-7 `264:676`, R2-8 `264:732`): Storage status chip, "نسخ إلى Google Drive", a take that is only in
+ * Drive plays and downloads from Drive, and deleting a take that is in both places asks where to delete it.
  */
+import { takePlace } from '~/utils/storage'
 import type { TakeMeta } from '~/services/takes'
 
 definePageMeta({ layout: 'reader' })
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const route = useRoute()
 const takes = useTakesStore()
 const num = useTakeNumber()
 const { show } = useToast()
 
 const id = computed(() => String(route.params.takeId))
-const take = computed<TakeMeta | null>(() => takes.list.find(x => x.id === id.value) ?? null)
-const siblings = computed(() => (take.value ? takes.forScript(take.value.scriptId) : []))
+const take = computed<TakeMeta | null>(() => takes.find(id.value))
+const siblings = computed(() => (take.value && !take.value.driveOnly ? takes.forScript(take.value.scriptId) : []))
+const storage = useStorageStore()
+const uploads = useUploadsStore()
+const place = computed(() => (take.value ? takePlace(take.value, uploads.entries[take.value.id]).place : 'device'))
+const canBackUp = computed(() => place.value === 'device' && storage.linked && storage.syncMode !== 'off')
 const status = ref<'loading' | 'ready' | 'missing' | 'error'>('loading')
 useHead({ title: () => `${take.value?.scriptTitle ?? t('nav.recordings')} · tilwprompter` })
 
@@ -31,16 +38,18 @@ async function open() {
   downloaded.value = false
   try {
     if (!takes.loaded) await takes.load()
+    if (!takes.remoteLoaded) await takes.loadRemote().catch(() => {})
     if (!take.value) {
       status.value = 'missing'
       return
     }
-    const full = await useTakesRepo().get(id.value)
-    if (!full) {
+    // A Drive-only take streams from Drive (research §8); a device take reads from this browser.
+    const blob = await takes.blobFor(id.value)
+    if (!blob) {
       status.value = 'missing'
       return
     }
-    src.value = URL.createObjectURL(full.blob)
+    src.value = URL.createObjectURL(blob)
     status.value = 'ready'
   } catch {
     status.value = 'error'
@@ -82,16 +91,19 @@ async function toggleStar() {
 const confirmDelete = ref(false)
 const deleting = ref(false)
 const player = ref<{ pause: () => void }>()
-async function remove() {
+async function remove(everywhere = true) {
   if (!take.value) return
   deleting.value = true
   const gone = take.value
   try {
     player.value?.pause()
     release()
-    await takes.remove(gone.id)
+    await takes.removeTake(gone.id, everywhere)
     confirmDelete.value = false
-    show(t('recordings.deleted', { n: num(gone.number) }))
+    show(gone.driveOnly ? t('uploads.deletedDrive') : t('recordings.deleted', { n: num(gone.number) }))
+    // Deleted from this device only: it is still in Drive, so show it there.
+    const stays = !everywhere && gone.remote?.id ? takes.find(`r_${gone.remote.id}`) : null
+    if (stays) return void navigateTo(`/app/recordings/${stays.id}`, { replace: true })
     const next = takes.forScript(gone.scriptId)[0]
     await navigateTo(next ? `/app/recordings/${next.id}` : '/app/recordings', { replace: true })
   } catch {
@@ -105,10 +117,16 @@ const container = computed(() => (take.value ? containerLabel(take.value.mimeTyp
 const kindLabel = computed(() => (take.value?.kind === 'video' ? t('recordings.video') : t('recordings.audio')))
 const subtitle = computed(() => {
   if (!take.value) return ''
+  if (take.value.driveOnly) return t('uploads.place.driveOnly')
   return [t('recordings.take', { n: num(take.value.number) }), take.value.label].filter(Boolean).join('  ·  ')
 })
 const endedNote = computed(() => {
   const e = take.value?.endedBy
+  if (e === 'limit') {
+    // Release 2: the cap is the plan's, so say the length the take actually stopped at.
+    const n = Math.max(1, Math.round((take.value?.durationMs ?? 0) / 60_000))
+    return t('recordings.ended.limitN', { time: `${n} ${unitFor(n, 'minute', locale.value)}` })
+  }
   return e ? t(`recordings.ended.${e}`) : ''
 })
 </script>
@@ -145,10 +163,12 @@ const endedNote = computed(() => {
                 <div><dt>{{ t('recordings.duration') }}</dt><dd class="lat">{{ formatDuration(take.durationMs) }}</dd></div>
                 <div><dt>{{ t('recordings.format') }}</dt><dd>{{ container }} · {{ kindLabel }}</dd></div>
               </dl>
-              <h3>{{ t('recordings.savedHere') }}</h3>
-              <p class="lede">{{ endedNote || t('recordings.keepCopy') }}</p>
+              <TakeStorageStatus :take="take" actions detailed />
+              <h3>{{ take.driveOnly ? t('uploads.driveOnlyTitle') : place === 'drive' ? t('uploads.bothTitle') : t('recordings.savedHere') }}</h3>
+              <p class="lede">{{ take.driveOnly ? t('uploads.driveOnlyLede') : endedNote || (place === 'drive' ? t('uploads.bothLede') : t('recordings.keepCopy')) }}</p>
               <UiButton block icon="download" :loading="busy" @click="download">{{ t('recordings.downloadOriginal') }}</UiButton>
-              <UiButton block tone="secondary" :to="`/app/scripts/${take.scriptId}/record`">{{ t('recordings.recordAnother') }}</UiButton>
+              <UiButton v-if="canBackUp" block tone="secondary" icon="up" @click="uploads.enqueue(take.id)">{{ t('uploads.copyLong') }}</UiButton>
+              <UiButton v-if="take.scriptId !== 'none'" block tone="secondary" :to="`/app/scripts/${take.scriptId}/record`">{{ t('recordings.recordAnother') }}</UiButton>
             </template>
             <!-- 6:48 / 6:76 after the download starts -->
             <template v-else>
@@ -187,19 +207,13 @@ const endedNote = computed(() => {
           </div>
         </div>
 
-        <footer class="foot">
+        <footer v-if="take.scriptId !== 'none'" class="foot">
           <NuxtLink :to="`/app/scripts/${take.scriptId}`" class="link">{{ t('studio.backToScript') }}</NuxtLink>
         </footer>
       </template>
     </main>
 
-    <UiDialog v-model:open="confirmDelete" :title="t('recordings.deleteTitle')">
-      <p>{{ t('recordings.deleteLede') }}</p>
-      <template #actions>
-        <UiButton tone="danger" :loading="deleting" @click="remove">{{ t('recordings.deleteConfirm') }}</UiButton>
-        <UiButton tone="secondary" @click="confirmDelete = false">{{ t('library.back') }}</UiButton>
-      </template>
-    </UiDialog>
+    <TakeDeleteDialog v-if="take" v-model:open="confirmDelete" :take="take" :busy="deleting" @confirm="remove" />
   </div>
 </template>
 

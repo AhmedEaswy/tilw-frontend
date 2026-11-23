@@ -63,18 +63,58 @@ test('changes the password and signs in with the new one', async ({ page }) => {
 
   await page.goto('/app/settings')
   await page.getByRole('button', { name: 'تسجيل الخروج' }).click()
+  await expect(page).toHaveURL(/\/signin/) // signed out before signing in again
   await signIn(page, 'newpassword1')
 })
 
-test('deletes the account and signs out', async ({ page }) => {
+test('deleting schedules the account for 14 days; signing in cancels it (release 2)', async ({ page }) => {
   await signIn(page)
   await page.goto('/app/settings/delete')
   await expect(page.getByText(/يبقى: التسجيلات/)).toBeVisible()
   await page.getByLabel('أكد كلمة المرور').fill('password123')
-  await page.getByRole('button', { name: 'حذف الحساب نهائياً' }).click()
-  await expect(page.getByRole('heading', { name: 'حُذف حسابك' })).toBeVisible()
+  await page.getByRole('button', { name: 'حذف الحساب', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'سيُحذف حسابك بعد 14 يوماً' })).toBeVisible()
+  await expect(page.getByText('سجّل الدخول قبل هذا التاريخ ويُلغى الحذف', { exact: false })).toBeVisible()
   await page.getByRole('button', { name: 'إلى الصفحة الرئيسية' }).click()
   await expect(page).toHaveURL(/\/$/)
   await page.goto('/app/scripts')
   await expect(page).toHaveURL(/\/signin/)
+
+  await signIn(page)
+  await expect(page.getByText('أُلغي حذف حسابك. أهلاً بعودتك.')).toBeVisible()
+})
+
+test('changes the email through a confirmation link (release 2)', async ({ page }) => {
+  await signIn(page)
+  await page.goto('/app/settings/account')
+  await page.getByRole('button', { name: 'تغيير البريد' }).click()
+  await page.getByLabel('البريد الجديد').fill('layan.new@example.com')
+  await page.getByLabel('كلمة المرور الحالية').first().fill('password123')
+  await page.getByRole('button', { name: 'إرسال رابط التأكيد' }).click()
+  await expect(page.getByText('بانتظار التأكيد على')).toBeVisible()
+  await expect(page.getByText('layan.new@example.com').first()).toBeVisible()
+
+  const link = await page.evaluate(() => JSON.parse(localStorage.getItem('tilw:mock:v1')!).outbox.find((m: { kind: string }) => m.kind === 'email').link as string)
+  await page.goto(new URL(link).pathname + new URL(link).search)
+  await expect(page.getByRole('heading', { name: 'تأكد بريدك الجديد' })).toBeVisible()
+  await page.goto(new URL(link).pathname + new URL(link).search)
+  await expect(page.getByRole('heading', { name: 'هذا الرابط لا يعمل' })).toBeVisible()
+})
+
+test('lists devices and signs a phone out (release 2)', async ({ page }) => {
+  await signIn(page)
+  await page.goto('/privacy') // no service calls here, so the app can't overwrite the edit below
+  await page.evaluate(() => {
+    const s = JSON.parse(localStorage.getItem('tilw:mock:v1')!)
+    const at = new Date().toISOString()
+    s.devices.u_layan = [...(s.devices.u_layan ?? []), { id: 'dev_e2e', name: 'iPhone 15', platform: 'ios', createdAt: at, lastUsedAt: at, current: false }]
+    localStorage.setItem('tilw:mock:v1', JSON.stringify(s))
+  })
+  await page.goto('/app/settings/account')
+  await expect(page.getByText('هذا المتصفح')).toBeVisible()
+  await expect(page.getByText('iPhone 15')).toBeVisible()
+  await page.getByRole('button', { name: 'تسجيل الخروج' }).click()
+  await page.getByRole('dialog', { name: 'تسجيل الخروج من iPhone 15؟' }).getByRole('button', { name: 'تسجيل الخروج' }).click()
+  await expect(page.getByText('سُجّل الخروج من iPhone 15.')).toBeVisible()
+  await expect(page.locator('.dev')).toHaveCount(1)
 })

@@ -155,6 +155,59 @@ describe.skipIf(!url || !password)('HTTP adapter against the real backend', () =
     await s.admin.withdraw(again.id)
   })
 
+  // ---------- release 2 (T062): plans, upgrade request, history, storage, devices, email change ----------
+
+  it('reads the plan catalogue and my plan with limits and usage', async () => {
+    const plans = await s.plans.listPlans()
+    expect(plans.map(p => p.key)).toEqual(expect.arrayContaining(['free', 'pro']))
+    expect(plans.every(p => p.currency === 'USD')).toBe(true)
+    const my = await s.plans.myPlan()
+    expect(my.limits.find(l => l.key === 'scripts.max_active')).toBeTruthy()
+    expect(typeof my.limits.find(l => l.key === 'scripts.max_active')!.usage).toBe('number')
+  })
+
+  it('creates an upgrade request with a reference, returns it again, and cancels it', async () => {
+    const before = (await s.plans.myPlan()).pendingRequest
+    const a = await s.plans.requestUpgrade({ plan: 'pro', period: 'monthly' })
+    expect(a.request.reference).toMatch(/^TLW-[A-Z0-9]{4}$/)
+    const b = await s.plans.requestUpgrade({ plan: 'pro', period: 'yearly' })
+    expect(b.request.reference).toBe(a.request.reference)
+    expect(b.request.period).toBe('yearly')
+    if (!before) {
+      await s.plans.cancelRequest()
+      expect((await s.plans.myPlan()).pendingRequest).toBeNull()
+    }
+  })
+
+  it('lists versions of a script and refuses an unknown one; scripts carry readOnly', async () => {
+    const sc = await s.scripts.create({ title: 'live r2 history', body: 'one' })
+    created.push(sc.id)
+    expect(typeof sc.readOnly).toBe('boolean')
+    await s.scripts.update(sc.id, { body: 'two' }, sc.version)
+    const versions = await s.scripts.listVersions(sc.id)
+    expect(versions.length).toBeGreaterThanOrEqual(1)
+    expect(versions[0]!.reason).toBe('edit')
+    expect((await s.scripts.getVersion(sc.id, versions[0]!.id)).body).toBe('one')
+    expect(await code(s.scripts.getVersion(sc.id, 'nope'))).toBe('not_found')
+  })
+
+  it('reports storage status; sync needs a linked Drive', async () => {
+    const st = await s.storage.status()
+    expect(['none', 'linked', 'revoked']).toContain(st.state)
+    if (st.state === 'none') {
+      expect(await code(s.storage.setSyncMode('manual'))).toBe('storage_not_linked')
+      expect(await code(s.storage.uploadToken())).toBe('storage_not_linked')
+    }
+    expect(Array.isArray(await s.remoteTakes.list())).toBe(true)
+  })
+
+  it('lists this session among devices and has no pending email change', async () => {
+    const devices = await s.account.listDevices()
+    expect(devices.some(d => d.current)).toBe(true)
+    expect(await s.account.pendingEmailChange()).toBeNull()
+    expect(await code(s.account.requestEmailChange({ email: 'new-live@example.com', password: 'wrong-password' }))).toBe('invalid_credentials')
+  })
+
   it('signs out, after which the library is not available', async () => {
     await s.auth.signOut()
     expect(await s.auth.me()).toBeNull()

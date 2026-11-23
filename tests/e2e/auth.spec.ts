@@ -84,6 +84,7 @@ test('accepting an invitation creates the account and opens the library', async 
 
 test('sign out from settings', async ({ page }) => {
   await signIn(page)
+  await expect(page).toHaveURL(/\/app\/scripts$/) // let the sign-in finish before leaving the page
   await page.goto('/app/settings')
   await page.getByRole('button', { name: 'تسجيل الخروج' }).click()
   await expect(page).toHaveURL(/\/signin$/)

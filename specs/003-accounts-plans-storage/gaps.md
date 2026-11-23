@@ -46,3 +46,23 @@ Not drawn: phone layouts, dark theme and English. They follow the matching relea
 Notes:
 - "Pending-deletion banner": signing in cancels deletion on the service (backend 002, US7), so a signed-in person never sees a pending deletion; it is the one-time "deletion cancelled" notice instead.
 - Prices in frames are the starting values; real values come from the service.
+
+## Found while building (2026-11-23)
+
+- **History preview** shows the version's title and paragraphs as plain text; delivery marks are not drawn in the
+  preview yet (they are restored with the text). A marks-aware read-only view can reuse `ReaderSurface` later.
+- **`/confirm-email` is client-rendered** (`ssr: false`, not prerendered): a prerendered page hydrates with the
+  prerender's route, so the token in the query was not visible on the first load. Hosts need the same SPA fallback
+  (`200.html`) the `/app/**` routes already use.
+- **WhatsApp sales number**: when the backend has none configured, `whatsappUrl` is null and the sheet shows the
+  reference with a copy control (verified against the local backend). Set the number before launch.
+- **Single upload owner without Web Locks**: the tab that starts the queue owns it (no BroadcastChannel leader
+  election, research §7). Every evergreen browser has Web Locks; revisit only if that changes.
+- **Plan in the account card** reads "الخطة: المجانية" / "Plan: Free"; R2-1 draws only the plan name. Confirm the label.
+- **Landing scripts (release 1)**: `landing/hero.js` and `landing/sync.js` keep timers running after leaving `/`, which
+  logs `null` errors on the next page. Not changed here.
+- **e2e environment (release 1)**: `npx serve --single` (serve 14.2.8) answers every route with the root `index.html`,
+  so prerendered pages such as `/signin` load the landing. The suite needs a static server that serves real files first
+  and falls back to `200.html`. With that server, 15 desktop and 21 phone release-1 specs fail on `HEAD` (before
+  release 2) for reasons outside this feature (404 status, axe title/lang on SPA routes, strict-mode locators, URL
+  encoding); release 2 adds no new failures and fixes two sign-in races in `auth.spec.ts` and `settings.spec.ts`.

@@ -30,6 +30,7 @@ export interface RequestOptions {
 const CODES: readonly PortErrorCode[] = [
   'invalid_credentials', 'validation', 'unauthenticated', 'token_invalid', 'token_expired',
   'conflict', 'not_found', 'rate_limited', 'network', 'unknown',
+  'limit_reached', 'storage_full', 'storage_not_linked',
 ]
 
 function browserCookie(name: string): string | null {
@@ -43,7 +44,7 @@ function browserCookie(name: string): string | null {
 
 /** Maps a failed response to a PortError. Exported for tests. */
 export async function toPortError(res: Response): Promise<PortError> {
-  let body: { code?: unknown; fields?: unknown; current?: unknown } | null = null
+  let body: { code?: unknown; fields?: unknown; current?: unknown; limit?: unknown } | null = null
   try {
     body = await res.json()
   } catch {
@@ -54,9 +55,15 @@ export async function toPortError(res: Response): Promise<PortError> {
     : res.status === 429 ? 'rate_limited'
       : res.status === 419 || res.status === 401 ? 'unauthenticated'
         : res.status === 404 ? 'not_found'
-          : 'unknown'
+          : res.status === 507 ? 'storage_full'
+            : 'unknown'
   const fields = body && body.fields && typeof body.fields === 'object' ? (body.fields as Record<string, string>) : undefined
-  return new PortError(code, fields, body?.current)
+  // Release 2: 403 limit_reached carries { key, value, usage }.
+  const raw = body?.limit as { key?: unknown; value?: unknown; usage?: unknown } | undefined
+  const limit = code === 'limit_reached' && raw && typeof raw.key === 'string'
+    ? { key: raw.key, value: (raw.value ?? null) as number | boolean | string[] | null, usage: typeof raw.usage === 'number' ? raw.usage : null }
+    : undefined
+  return new PortError(code, fields, body?.current, limit)
 }
 
 export function createHttpClient(opts: HttpClientOptions) {
