@@ -11,6 +11,11 @@ test.use({
   acceptDownloads: true,
 })
 
+/** "تعذّر النسخ · Drive ممتلئ": the status shows the state and the reason as two lines (R2-7). */
+function failedFull(page: Page) {
+  return page.getByRole('status').filter({ hasText: 'تعذّر النسخ' }).filter({ hasText: 'Drive ممتلئ' }).first()
+}
+
 async function recordTake(page: Page) {
   await page.goto('/app/scripts/s_opening/record')
   await page.getByRole('button', { name: 'تفعيل الكاميرا والميكروفون' }).click()
@@ -63,12 +68,12 @@ test('a full Drive fails the copy with the reason and Retry; the take still play
   await knobs(page, { driveMode: 'full' })
   await page.reload()
   await page.getByRole('button', { name: 'نسخ إلى Drive' }).first().click()
-  await expect(page.getByText('تعذّر النسخ · Drive ممتلئ').first()).toBeVisible()
+  await expect(failedFull(page)).toBeVisible()
   await expect(page.getByRole('link', { name: 'عرض المساحة' }).first()).toBeVisible()
 
   await knobs(page, { driveMode: 'ok' })
   await page.reload()
-  await expect(page.getByText('تعذّر النسخ · Drive ممتلئ').first()).toBeVisible() // the failure is remembered
+  await expect(failedFull(page)).toBeVisible() // the failure is remembered
   await page.getByRole('button', { name: 'أعد المحاولة' }).first().click()
   await expect(page.getByRole('status').filter({ hasText: 'في Google Drive' }).first()).toBeVisible()
 })
