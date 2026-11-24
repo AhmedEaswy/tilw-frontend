@@ -248,6 +248,18 @@ export type PortErrorCode =
   | 'storage_not_linked'
   /** Feature 004 (phone link): the other side of the link isn't connected, so nothing was delivered. */
   | 'partner_offline'
+  /** Feature 005 (AI): the provider refused the person's own key; credits were not used. */
+  | 'own_key_refused'
+  /** Feature 005 (AI): the provider failed or the formatter changed words; credits were refunded. */
+  | 'ai_unavailable'
+
+export interface PortErrorInfo {
+  balance?: number
+  cost?: number
+  reason?: string
+  /** Seconds, from `Retry-After`. */
+  retryAfter?: number
+}
 
 export class PortError extends Error {
   constructor(
@@ -257,6 +269,8 @@ export class PortError extends Error {
     public current?: unknown,
     /** For `limit_reached`: which limit, its value and the current usage. */
     public limit?: LimitInfo,
+    /** Feature 005: extra answer fields (credits limit: balance and cost; ai_unavailable: reason; Retry-After). */
+    public info?: PortErrorInfo,
   ) {
     super(code)
     this.name = 'PortError'
@@ -413,4 +427,154 @@ export const LINK_RULES = {
   wrongCodes: 5,
   wrongWindowMinutes: 15,
   blockMinutes: 60,
+} as const
+
+// ---------------------------------------------------------------------------------------------------------------
+// Feature 005: AI writing tools (backend 004-ai-writing-tools). Shapes as the API sends them; see
+// specs/005-ai-writing-tools/data-model.md. Audio and transcribed text never reach the Tilw API.
+// ---------------------------------------------------------------------------------------------------------------
+
+export type AiProvider = 'anthropic' | 'openai'
+export type PaidWith = 'credits' | 'own_key'
+export type SpeechLanguage = 'ar' | 'en' | 'auto'
+export type SpeechPurpose = 'text' | 'captions'
+export type AiCapability = 'format' | 'transcribe' | 'captions'
+
+export interface OwnKeyState {
+  provider: AiProvider
+  last4: string
+  usable: boolean
+  /** `byok.allowed` when the plan turned own keys off. */
+  reason: string | null
+}
+
+export interface FormatEstimate {
+  words: number
+  credits: number
+  balance: number
+  /** What a call without `useCredits` would use. */
+  paidWith: PaidWith
+  ownKey: OwnKeyState | null
+  enough: boolean
+}
+
+export interface FormatSuggestion {
+  id: string
+  scriptId: string
+  baseVersion: number
+  body: string
+  marks: DeliveryMark[]
+  words: number
+  credits: number
+  paidWith: PaidWith
+  balance: number
+  expiresAt: string
+  createdAt: string
+}
+
+export type CreditKind = 'monthly' | 'plan_change' | 'grant' | 'charge' | 'refund' | 'correction' | 'own_key' | 'overrun'
+
+export interface CreditEntry {
+  id: string
+  kind: CreditKind
+  amount: number
+  capability: AiCapability | null
+  status: 'pending' | 'succeeded' | 'failed' | null
+  refundOf: string | null
+  endsAt: string | null
+  reason: string | null
+  createdAt: string
+}
+
+export interface Credits {
+  /** Below zero after an overrun; every charge is refused until it covers the cost. */
+  balance: number
+  monthly: number
+  monthlyLeft: number
+  granted: number
+  /** `YYYY-MM` */
+  month: string
+  renewsAt: string
+  entries: CreditEntry[]
+}
+
+export interface OwnKey {
+  capability: 'text'
+  provider: AiProvider
+  last4: string
+  checkOk: boolean
+  checkedAt: string
+  usable: boolean
+  reason: string | null
+}
+
+export interface TranscriptionEstimate {
+  credits: number
+  balance: number
+  enough: boolean
+  ownKeyApplies: false
+}
+
+export type TranscriptionState = 'issued' | 'used' | 'failed' | 'expired'
+
+export interface Transcription {
+  id: string
+  purpose: SpeechPurpose
+  language: SpeechLanguage
+  seconds: number
+  credits: number
+  state: TranscriptionState
+  durationSeconds: number | null
+  tokenExpiresAt: string
+  refundableAt: string
+  createdAt: string
+}
+
+export interface SpeechUpload {
+  provider: 'deepgram' | 'fake'
+  method: 'POST'
+  url: string
+  headers: Record<string, string>
+  expiresAt: string
+}
+
+export interface TranscriptionPermission extends Transcription {
+  upload: SpeechUpload
+  balance: number
+}
+
+/** One recognised word, times in seconds. */
+export interface SpeechWord {
+  word: string
+  start: number
+  end: number
+}
+
+/** What the browser got back from the speech provider. Only `requestId` is ever sent to Tilw. */
+export interface SpeechResult {
+  requestId: string
+  transcript: string
+  /** Detected language when `auto` was asked for. */
+  language: string | null
+  duration: number | null
+  words: SpeechWord[]
+  /** Indexes into `words` where a new utterance starts (after the first). */
+  utteranceBreaks: number[]
+}
+
+export interface CaptionCue {
+  start: number
+  end: number
+  lines: string[]
+}
+
+/** Backend 004 starting values (config/tilw.php `ai`). */
+export const AI_RULES = {
+  wordsPerCredit: 1000,
+  secondsPerCredit: 60,
+  audioMaxBytes: 200 * 1024 * 1024,
+  audioMaxMinutes: 60,
+  suggestionHours: 24,
+  ownKeyMin: 20,
+  ownKeyMax: 300,
 } as const

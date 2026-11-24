@@ -8,6 +8,8 @@ import type {
   UploadToken, User, WaitlistEntry,
   ConnectionState, LinkAck, LinkAuth, LinkCommand, LinkEvent, LinkParty, Pairing, PairingCode, PhoneLink, PhoneLinkWithCode,
   PresenceMember, RealtimeSettings, StudioState,
+  AiProvider, Credits, FormatEstimate, FormatSuggestion, OwnKey, SpeechLanguage, SpeechPurpose, SpeechResult, SpeechUpload,
+  Transcription, TranscriptionEstimate, TranscriptionPermission,
 } from './types'
 
 export interface AuthPort {
@@ -178,6 +180,42 @@ export interface RealtimePort {
   connect(auth: LinkAuth, settings: RealtimeSettings): RealtimeConnection
 }
 
+/**
+ * Feature 005: AI writing tools (backend 004). Contract: specs/005-ai-writing-tools/contracts/ports.md.
+ * Never carries audio or transcribed text: only lengths, sizes, types and the provider's request id.
+ */
+export interface AiPort {
+  /** What formatting this script costs, and how it would be paid. */
+  formatEstimate(scriptId: string): Promise<FormatEstimate>
+  /** Charges, formats and stores the suggestion (replacing any older one). Can take up to about 60 s. */
+  format(scriptId: string, opts?: { useCredits?: boolean }): Promise<FormatSuggestion>
+  /** The waiting suggestion, or null when there is none (or it expired). */
+  suggestion(scriptId: string): Promise<FormatSuggestion | null>
+  /** Credits stay spent. */
+  discard(scriptId: string): Promise<void>
+  /** Versioned save against the suggestion's base version; `conflict` + the script when it changed since. */
+  apply(scriptId: string): Promise<Script>
+  credits(): Promise<Credits>
+  keys(): Promise<OwnKey[]>
+  /** Checked with the provider first; `own_key_refused` and not saved when the provider refuses it. */
+  saveKey(input: { provider: AiProvider; key: string }): Promise<OwnKey>
+  deleteKey(): Promise<void>
+  checkKey(): Promise<OwnKey>
+  transcriptionEstimate(input: { seconds: number; bytes: number; mimeType: string }): Promise<TranscriptionEstimate>
+  /** Pays for a short-lived permission to send this audio straight to the speech provider. */
+  startTranscription(input: { seconds: number; bytes: number; mimeType: string; language?: SpeechLanguage; purpose?: SpeechPurpose }): Promise<TranscriptionPermission>
+  transcription(id: string): Promise<Transcription>
+  /** Reports the provider's request id; the service settles on the real length. */
+  complete(id: string, requestId: string): Promise<Transcription>
+  /** Notes a failure on the device. Refunds nothing by itself. */
+  fail(id: string, reason?: string): Promise<Transcription>
+}
+
+/** Feature 005: browser → speech provider (backend device-flows §1). The only code that talks to the provider. */
+export interface SpeechPort {
+  send(upload: SpeechUpload, audio: Blob, opts: { seconds: number; purpose: SpeechPurpose; language: SpeechLanguage; signal?: AbortSignal }): Promise<SpeechResult>
+}
+
 export interface Services {
   auth: AuthPort
   waitlist: WaitlistPort
@@ -191,4 +229,6 @@ export interface Services {
   links: LinkPort
   relay: LinkRelayPort
   realtime: RealtimePort
+  ai: AiPort
+  speech: SpeechPort
 }

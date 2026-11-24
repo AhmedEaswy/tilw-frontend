@@ -20,7 +20,8 @@ const valueText = computed(() => {
   if (type === 'list') return Array.isArray(value) && value.length ? value.map(v => (te(`limits.providers.${v}`) ? t(`limits.providers.${v}`) : v)).join('، ') : t('limits.notIncluded')
   if (value === null) return typeof usage === 'number' ? t('limits.usedOfUnlimited', { n: usage }) : t('limits.unlimited')
   const n = value as number
-  if (key === 'takes.max_minutes') return `${n} ${unitFor(n, 'minute', locale.value)}`
+  if (key === 'takes.max_minutes' || key === 'ai.audio_max_minutes') return `${n} ${unitFor(n, 'minute', locale.value)}`
+  if (key === 'ai.credits_monthly') return t('ai.credits.perMonth', { n })
   if (key === 'history.days') return t('limits.days', { n })
   if (typeof usage === 'number') return t('limits.usedOf', { n: usage, max: n })
   return String(n)

@@ -53,6 +53,7 @@ function invite() {
 }
 function resetAll() {
   mock.db.reset()
+  mock.knobs.ai.reset()
   auth.setUser(null)
   refresh()
   show('Mock data reset to the seed')
@@ -159,6 +160,46 @@ async function appAsksToRead() {
 }
 onBeforeUnmount(() => app.value?.stop())
 
+// ---------- feature 005: AI writing tools ----------
+const aiKnobs = reactive({ ...mock.knobs.ai.knobs() })
+watch(aiKnobs, k => mock.knobs.ai.setKnobs({ ...k }), { deep: true })
+const aiBalance = ref<number | null>(null)
+const balanceEdit = ref('0')
+function readBalance() {
+  aiBalance.value = userId.value ? mock.knobs.ai.balance(userId.value) : null
+}
+function aiGrant() {
+  const id = needUser()
+  if (!id) return
+  mock.knobs.ai.grant(id, 50)
+  readBalance()
+  show('Granted 50 credits')
+}
+function aiSetBalance() {
+  const id = needUser()
+  if (!id) return
+  mock.knobs.ai.setBalance(id, Number(balanceEdit.value) || 0)
+  readBalance()
+  show(`Balance set to ${balanceEdit.value}`)
+}
+const aiScriptId = ref('s_opening')
+function aiBump() {
+  const id = needUser()
+  if (!id) return
+  mock.knobs.bumpScript(id, aiScriptId.value)
+  show(`Edited ${aiScriptId.value} as another device`)
+}
+function aiExpire() {
+  mock.knobs.ai.expireSuggestion(aiScriptId.value)
+  show(`Suggestion for ${aiScriptId.value} expired`)
+}
+function aiSettle() {
+  mock.knobs.ai.settleExpired()
+  readBalance()
+  show('Expired permissions settled')
+}
+onMounted(readBalance)
+
 async function endOpenLink() {
   const link = (await mock.services.links.list().catch(() => [])).find(l => l.state !== 'ended')
   if (!link) return show('No open phone link for the signed-in account')
@@ -221,6 +262,41 @@ async function endOpenLink() {
         App: {{ appState.paired ? 'paired' : 'not paired' }} · reads: {{ appState.player === 'remote' ? 'yes' : 'no' }} ·
         paragraph {{ appState.paragraph + 1 }} · {{ appState.playing ? 'playing' : 'paused' }} · {{ appState.wpm }} wpm
       </p>
+    </section>
+
+    <section>
+      <h2>AI writing tools (feature 005)</h2>
+      <p>Balance: <b data-testid="mock-ai-balance">{{ aiBalance ?? '—' }}</b> <button type="button" class="link" @click="readBalance">refresh</button></p>
+      <div class="knobs">
+        <label>Formatting
+          <select v-model="aiKnobs.format" aria-label="AI formatting">
+            <option value="ok">ok</option>
+            <option value="slow">slow (4 s)</option>
+            <option value="unavailable">unavailable</option>
+            <option value="changed_words">changed words</option>
+          </select>
+        </label>
+        <label>Speech provider
+          <select v-model="aiKnobs.speech" aria-label="Speech provider">
+            <option value="ok">ok</option>
+            <option value="failed">failed (refunded)</option>
+            <option value="empty">no words</option>
+            <option value="overrun">overrun (3× longer)</option>
+          </select>
+        </label>
+        <label class="ck"><input v-model="aiKnobs.keyRefused" type="checkbox"> Own key refused</label>
+      </div>
+      <div class="row">
+        <UiButton size="sm" tone="secondary" @click="aiGrant">Grant 50 credits</UiButton>
+        <label>Set balance <input v-model="balanceEdit" type="number" aria-label="Set balance"></label>
+        <UiButton size="sm" tone="secondary" @click="aiSetBalance">Set</UiButton>
+        <UiButton size="sm" tone="ghost" @click="aiSettle">Settle expired permissions</UiButton>
+      </div>
+      <div class="row">
+        <label>Script id <input v-model="aiScriptId" aria-label="AI script id"></label>
+        <UiButton size="sm" tone="secondary" @click="aiBump">Edit from another device</UiButton>
+        <UiButton size="sm" tone="ghost" @click="aiExpire">Expire suggestion</UiButton>
+      </div>
     </section>
 
     <section>

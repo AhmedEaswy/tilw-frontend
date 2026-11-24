@@ -18,10 +18,11 @@ export interface LimitCopy {
 }
 
 /** Limit kinds the app knows how to show. Others stay hidden on Plan & usage (spec US1 #5). */
-export const KNOWN_LIMITS = ['scripts.max_active', 'scripts.max_words', 'takes.max_minutes', 'storage.auto_sync', 'history.versions', 'history.days', 'phone_link.allowed'] as const
-
-/** Shown later, once their features ship (AI credits and own keys: backend feature 004). */
-export const FUTURE_LIMITS = ['ai.credits_monthly', 'byok.allowed'] as const
+export const KNOWN_LIMITS = [
+  'scripts.max_active', 'scripts.max_words', 'takes.max_minutes', 'storage.auto_sync', 'history.versions', 'history.days', 'phone_link.allowed',
+  // Feature 005 (backend 004): AI credits, own keys, longest audio.
+  'ai.credits_monthly', 'byok.allowed', 'ai.audio_max_minutes',
+] as const
 
 const num = (v: unknown) => (typeof v === 'number' ? v : 0)
 
@@ -41,6 +42,12 @@ export function describeLimit(limit: LimitInfo | undefined | null): LimitCopy {
       return { title: 'limits.dialog.providersTitle', text: 'limits.dialog.providersText', params: {}, action: 'none', upgrade: true }
     case 'phone_link.allowed':
       return { title: 'link.lockedTitle', text: 'link.lockedText', params: {}, action: 'none', upgrade: true }
+    case 'ai.credits_monthly':
+      return { title: 'limits.dialog.creditsTitle', text: 'limits.dialog.creditsText', params: { value }, action: 'none', upgrade: true }
+    case 'byok.allowed':
+      return { title: 'limits.dialog.byokTitle', text: 'limits.dialog.byokText', params: {}, action: 'none', upgrade: true }
+    case 'ai.audio_max_minutes':
+      return { title: 'limits.dialog.audioTitle', text: 'limits.dialog.audioText', params: { value }, action: 'none', upgrade: true }
     default:
       return { title: 'limits.dialog.genericTitle', text: 'limits.dialog.genericText', params: {}, action: 'none', upgrade: true }
   }

@@ -45,11 +45,12 @@ function lines(p: Plan | undefined, which: 'free' | 'pro'): { text: string; soon
   const days = value(p, 'history.days')
   if (typeof versions === 'number') out.push({ text: t('plansPoster.historyN', { n: versions }) })
   else if (typeof days === 'number') out.push({ text: t('plansPoster.historyDays', { n: days }) })
+  // Feature 005: AI credits are real now (backend 004).
+  const credits = value(p, 'ai.credits_monthly')
+  if (typeof credits === 'number' && credits > 0) out.push({ text: t('plansPoster.aiCredits', { n: credits }) })
   if (which === 'free') {
     out.push({ text: t('plansPoster.basics') })
     out.push({ text: t('plansPoster.phone') })
-  } else {
-    out.push({ text: t('plansPoster.aiSoon'), soon: true })
   }
   return out
 }

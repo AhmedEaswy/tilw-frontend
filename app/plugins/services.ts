@@ -86,6 +86,9 @@ export default defineNuxtPlugin((nuxtApp) => {
     links: guard(base.links),
     relay: base.relay,
     realtime: base.realtime,
+    // Feature 005: AI routes behave like any account port; the speech port talks to the provider only.
+    ai: guard(base.ai),
+    speech: base.speech,
   }
 
   return {

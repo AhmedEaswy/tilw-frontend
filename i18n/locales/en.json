@@ -114,7 +114,9 @@
     "limitReached": "This would go over a limit of your plan.",
     "storageFull": "There isn't enough space in Google Drive.",
     "storageNotLinked": "Google Drive isn't linked. Link it in Storage settings.",
-    "partnerOffline": "The other device isn't connected right now."
+    "partnerOffline": "The other device isn't connected right now.",
+    "ownKeyRefused": "The provider refused your own key. No credits were used.",
+    "aiUnavailable": "AI is unavailable right now. Your credits were refunded."
   },
   "placeholder": {
     "title": "{screen}",
@@ -583,7 +585,8 @@
         "max_minutes": "Take length"
       },
       "ai": {
-        "credits_monthly": "Monthly AI credits"
+        "credits_monthly": "Monthly AI credits",
+        "audio_max_minutes": "Longest audio to transcribe"
       },
       "storage": {
         "auto_sync": "Automatic copy to Google Drive",
@@ -595,6 +598,9 @@
       },
       "phone_link": {
         "allowed": "Phone link"
+      },
+      "byok": {
+        "allowed": "Your own AI key"
       }
     },
     "providers": {
@@ -615,7 +621,13 @@
       "genericText": "Your current plan doesn't allow this. Upgrade to Pro to raise the limit.",
       "proHint": "With Tilw Pro: unlimited active scripts, longer takes and automatic copies to Google Drive.",
       "ok": "OK",
-      "archive": "Archive a script"
+      "archive": "Archive a script",
+      "creditsTitle": "Not enough AI credits",
+      "creditsText": "Your plan gives you {value} credits a month. Credits renew on the 1st.",
+      "byokTitle": "Your plan doesn't include own keys",
+      "byokText": "Upgrade to use your own key for formatting.",
+      "audioTitle": "The audio is longer than your plan allows",
+      "audioText": "Your plan allows audio up to {value} minutes."
     }
   },
   "plan": {
@@ -698,8 +710,8 @@
     "historyDays": "Script history kept for {n} days",
     "basics": "Write, rehearse, record and download the original",
     "phone": "Control the prompter from your phone",
-    "aiSoon": "Monthly credits for line-break suggestions (coming soon)",
-    "note": "Your subscription starts once the payment is confirmed on WhatsApp. Prices are in US dollars."
+    "note": "Your subscription starts once the payment is confirmed on WhatsApp. Prices are in US dollars.",
+    "aiCredits": "{n} AI credits a month"
   },
   "storage": {
     "title": "Storage",
@@ -1009,6 +1021,261 @@
       "saving": "Saving the take…",
       "saved": "Take saved",
       "failed": "The take wasn't saved. Download it from the studio."
+    }
+  },
+  "ai": {
+    "common": {
+      "credits": "{n} credit | {n} credits",
+      "ownKeyNoSpeech": "Own keys don't apply to speech: transcription uses Tilw credits.",
+      "privacy": "The audio goes from your browser straight to the speech provider, not to Tilw.",
+      "creditsLink": "Credits and your own key",
+      "upgrade": "Upgrade to Pro",
+      "close": "Close",
+      "cancel": "Cancel",
+      "retry": "Try again",
+      "language": "Spoken language",
+      "lang": {
+        "auto": "Auto",
+        "ar": "Arabic",
+        "en": "English"
+      }
+    },
+    "tools": {
+      "group": "AI",
+      "format": "Format for reading",
+      "formatHint": "{cost} · you have {balance}",
+      "formatOwnKey": "With your own key · no credits",
+      "waiting": "A suggestion is waiting",
+      "formatting": "Formatting…",
+      "dictate": "Dictate",
+      "dictateHint": "Record your voice; the text goes where the cursor is"
+    },
+    "format": {
+      "title": "Format for reading",
+      "previewTitle": "Preview",
+      "lede": "Splits the text into short paragraphs and adds pauses, emphasis and delivery notes. Your words stay your words: not one word changes.",
+      "cost": "Cost",
+      "costRule": "1 credit per 1,000 words · this script has {words} words",
+      "balanceNow": "Your balance: {n}",
+      "paidCredits": "Paid with Tilw credits",
+      "paidOwnKey": "With your own key ({provider} ••••{last4}). No credits are used.",
+      "keyNotUsed": "Your own key isn't used on your plan, so credits pay.",
+      "keyFailing": "Your key failed its last check, so credits pay until you check it again.",
+      "go": "Format · {cost}",
+      "goOwnKey": "Format with my key",
+      "note": "The suggestion waits 24 hours. You can close this panel while it formats.",
+      "empty": "Write something first.",
+      "readOnly": "This script is read-only on your plan, so it can't be formatted.",
+      "working": "Formatting…",
+      "workingNote": "This can take up to a minute. You can close this panel: the suggestion will wait for you for 24 hours.",
+      "original": "Original",
+      "formatted": "Formatted",
+      "same": "Your own words in the same order · expires {when}",
+      "apply": "Apply",
+      "discard": "Discard",
+      "applyNote": "Applying keeps your current text in History as an \"AI change\". Discarding keeps the credits spent.",
+      "applied": "Formatting applied. The previous text is in History.",
+      "discarded": "Suggestion discarded; your script didn't change. The credits stay spent.",
+      "formatAgain": "Format again",
+      "useCredits": "Use Tilw credits this time · {cost}",
+      "checkKey": "Check my key",
+      "ready": "The suggestion is ready.",
+      "spent": "{cost} used · you have {balance}",
+      "spentOwnKey": "With your own key · no credits used",
+      "pause": "Pause {s} s",
+      "noteMark": "Note: {note}"
+    },
+    "errors": {
+      "credits": {
+        "title": "Not enough credits",
+        "text": "This needs {cost} and you have {balance}. Credits renew on {date}."
+      },
+      "negative": {
+        "title": "Your balance is negative: {balance}",
+        "text": "Your last audio was longer than declared and was charged in full. Credit-paid tools are paused until your balance covers their cost, at the latest when credits renew on {date}."
+      },
+      "byok": {
+        "title": "Your plan doesn't include own keys",
+        "text": "Your current plan doesn't allow saving or using your own key."
+      },
+      "audio_limit": {
+        "title": "The audio is longer than your plan allows",
+        "text": "Your plan allows audio up to {minutes} minutes. No credits were used."
+      },
+      "read_only": {
+        "title": "This script is read-only",
+        "text": "On your current plan this script can't be edited."
+      },
+      "key_refused": {
+        "title": "The provider refused your key",
+        "text": "No credits were used. The key may have been revoked or run out of quota."
+      },
+      "changed_words": {
+        "title": "The formatter tried to change your words, so we stopped it",
+        "text": "Your script didn't change, and your credits were refunded."
+      },
+      "unavailable": {
+        "title": "AI is unavailable right now",
+        "text": "Your credits were refunded. Try again.",
+        "textWait": "Your credits were refunded. Try again in {wait} seconds."
+      },
+      "rate_limited": {
+        "title": "Too many requests",
+        "text": "Wait a little and try again.",
+        "textWait": "Wait {wait} seconds and try again."
+      },
+      "gone": {
+        "title": "This suggestion is no longer available",
+        "text": "It expired or was applied somewhere else."
+      },
+      "conflict": {
+        "title": "The script changed since the suggestion was made",
+        "text": "We didn't apply it, so nothing was overwritten. Format again or discard the suggestion."
+      },
+      "upload_failed": {
+        "title": "The audio didn't reach the provider",
+        "text": "If the upload really failed, your credits come back once the provider confirms it (about 10 minutes). No text was inserted."
+      },
+      "provider_failed": {
+        "title": "Transcription failed",
+        "text": "The provider recorded the request as failed, so your credits were refunded."
+      },
+      "nothing_heard": {
+        "title": "We didn't hear any words",
+        "text": "Nothing was inserted. Try again, a little louder or closer to the microphone."
+      },
+      "network": {
+        "title": "Couldn't connect",
+        "text": "Check your internet and try again."
+      },
+      "other": {
+        "title": "Something went wrong",
+        "text": "Try again."
+      }
+    },
+    "speech": {
+      "dictateTitle": "Dictate",
+      "recordingNote": "Speak naturally. Recording stops at {minutes} minutes.",
+      "recordingLive": "Recording",
+      "stop": "Stop",
+      "starting": "Starting the microphone…",
+      "micDeniedTitle": "Microphone not allowed",
+      "micDenied": "Allow the microphone in your browser's address bar, then try again. Writing works as usual.",
+      "micMissing": "No microphone was found on this device.",
+      "confirmTitle": "Turn speech into text",
+      "length": "Length",
+      "cost": "Cost",
+      "balance": "Your balance",
+      "file": "File",
+      "go": "Transcribe · {cost}",
+      "discardRecording": "Discard recording",
+      "working": "Transcribing",
+      "steps": {
+        "permission": "Getting permission",
+        "sending": "Sending the audio to the speech provider",
+        "settling": "Writing the text"
+      },
+      "inserted": "The text was inserted at the cursor.",
+      "autoStopped": "Recording stopped at the limit.",
+      "notEnough": "Your balance doesn't cover this length.",
+      "importTitle": "New script from audio",
+      "newFromAudio": "New from audio",
+      "pick": "Choose an audio file",
+      "pickHint": "Up to {minutes} minutes and 200 MB · 1 credit per minute",
+      "pickButton": "Choose file",
+      "reading": "Reading the file…",
+      "resultTitle": "The text is ready",
+      "resultMeta": "{words} words. The text reaches Tilw only if you save it.",
+      "save": "Save as new script",
+      "saved": "Saved \"{title}\".",
+      "refusedTitle": "This file can't be transcribed",
+      "refused": {
+        "type": "This isn't an audio file. Choose an audio file.",
+        "size": "The file is larger than {maxMb} MB.",
+        "length": "The file is longer than {maxMinutes} minutes. Choose a shorter one or split it.",
+        "unknown_length": "We couldn't read the file's length. Try another format such as MP3 or M4A.",
+        "empty": "The file is empty."
+      },
+      "noCharge": "No credits were used.",
+      "otherFile": "Choose another file",
+      "untitled": "Script from audio"
+    },
+    "captions": {
+      "action": "Captions",
+      "title": "Captions for this take",
+      "take": "Take",
+      "go": "Make captions · {cost}",
+      "formats": "You get SRT and VTT files. The audio goes from your browser straight to the provider.",
+      "preparing": "Preparing the take's audio",
+      "building": "Building the caption files on your device",
+      "readyTitle": "Captions are ready",
+      "readyText": "{n} cues · each up to 2 lines of 42 characters. Upload the file with your video where you publish it.",
+      "srt": "Download SRT",
+      "vtt": "Download VTT",
+      "missing": "Couldn't read the take's audio."
+    },
+    "credits": {
+      "title": "AI & credits",
+      "lede": "Your credits this month, what used them, and your own key for formatting",
+      "balance": "Your balance",
+      "fromPlan": "From your plan this month",
+      "fromPlanValue": "{left} of {monthly}",
+      "granted": "Granted by the Tilw team",
+      "renews": "Renews on",
+      "rule": "1 credit formats up to 1,000 words or transcribes 1 minute of speech. Unused credits don't roll over.",
+      "month": "This month",
+      "none": "Nothing yet this month.",
+      "kind": {
+        "monthly": "Monthly credits",
+        "plan_change": "Plan change",
+        "grant": "Grant from the Tilw team",
+        "charge": "Charge",
+        "refund": "Refund",
+        "correction": "Correction by the Tilw team",
+        "own_key": "With your own key",
+        "overrun": "Audio longer than declared"
+      },
+      "cap": {
+        "format": "Formatting",
+        "transcribe": "Transcription",
+        "captions": "Captions"
+      },
+      "status": {
+        "pending": "In progress",
+        "succeeded": "Done",
+        "failed": "Failed"
+      },
+      "refundOf": "for the charge at {when}",
+      "grantEnds": "ends {date}",
+      "noCredits": "no credits",
+      "settingsHint": "Balance: {n} · renews on {date}",
+      "settingsHintLoading": "Credits and your own key",
+      "perMonth": "{n} a month",
+      "planLink": "Credits and your own key"
+    },
+    "key": {
+      "title": "Your own key for formatting",
+      "lede": "Use your Anthropic or OpenAI key and formatting won't use credits. Tilw checks it with the provider and stores it encrypted; it is never shown in full again.",
+      "provider": "Provider",
+      "field": "Key",
+      "save": "Check and save",
+      "saved": "Your key was checked and saved.",
+      "works": "Works",
+      "failing": "Refused by the provider",
+      "checked": "Last checked {when}",
+      "noCredits": "Formatting uses no credits.",
+      "check": "Check again",
+      "replace": "Replace",
+      "delete": "Delete",
+      "checkOk": "The key works.",
+      "checkFail": "The provider refused the key.",
+      "deleteTitle": "Delete your key?",
+      "deleteText": "It is erased at once, and formatting uses credits again.",
+      "deleted": "Your key was deleted.",
+      "lockedText": "Your current plan doesn't allow own keys.",
+      "notUsed": "Not used on your current plan.",
+      "speechNote": "Own keys are for formatting only. Speech always uses Tilw credits.",
+      "invalid": "A key is 20 to 300 characters."
     }
   }
 }
