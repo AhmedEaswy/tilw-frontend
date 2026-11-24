@@ -20,7 +20,8 @@ const plan = usePlanStore()
 const link = useLinkStore()
 
 // ---------- release 2: plan-based take length (R2-6) ----------
-const limitMs = computed(() => recordLimitMs(plan.limit('takes.max_minutes')))
+// Start waits until the plan is read (or the read failed: then the last known limit applies).
+const limitMs = computed(() => recordLimitMs(plan.knownLimit('takes.max_minutes')))
 const limitMinutes = computed(() => Math.round(limitMs.value / 60_000))
 const proMinutes = computed(() => {
   const v = plan.plans.find(p => p.key === 'pro')?.limits.find(l => l.key === 'takes.max_minutes')?.value
@@ -113,7 +114,7 @@ watch(phase, p => (p === 'setup' ? uploads.resume() : uploads.pause()))
 onBeforeUnmount(() => uploads.resume())
 
 function startCountdown() {
-  if (!live.value) return
+  if (!live.value || !plan.settled) return
   const sec = settings.value.countdownSec
   if (!sec) return beginTake()
   countdown.value = sec
@@ -459,7 +460,7 @@ const firstLine = computed(() => reader.paragraphs[0] ?? '')
             <h2 v-if="!live" :class="{ problem }">{{ heading }}</h2>
             <p class="lede">{{ lede }}</p>
             <template v-if="live">
-              <UiButton block :disabled="reader.status !== 'ready' || !reader.paragraphs.length" @click="startCountdown">{{ t('studio.start') }}</UiButton>
+              <UiButton block :loading="!plan.settled" :disabled="reader.status !== 'ready' || !reader.paragraphs.length || !plan.settled" @click="startCountdown">{{ t('studio.start') }}</UiButton>
               <button type="button" class="link" @click="closePreview">{{ t('studio.closePreview') }}</button>
             </template>
             <template v-else-if="problem === 'denied'">

@@ -3,7 +3,8 @@ import { createUploadQueue, idbQueueStore, type QueueProgress, type UploadQueue 
 
 /**
  * Release 2 (US3): live state of take uploads to Drive, mirrored from the upload queue (services/drive/queue.ts),
- * which one tab owns while every tab sees the same progress. Starts with sign-in and stops with sign-out.
+ * which one tab owns while every tab sees the same progress. Starts with sign-in and stops with sign-out, on every
+ * layout (plugins/uploads.client.ts).
  */
 let queue: UploadQueue | null = null
 
@@ -47,6 +48,10 @@ export const useUploadsStore = defineStore('uploads', () => {
     await queue.start(userId)
     const list = await queue.entries()
     entries.value = Object.fromEntries(list.map(e => [e.takeId, { takeId: e.takeId, state: e.state, sent: e.offset, total: e.total, error: e.error }]))
+    // Auto sync: takes recorded while the queue wasn't running (or before a reload) still go to Drive.
+    const storage = useStorageStore()
+    if (!storage.status) await storage.load().catch(() => {})
+    if (storage.linked && storage.syncMode === 'auto') await queue.backfill()
   }
 
   function stop() {
@@ -61,6 +66,8 @@ export const useUploadsStore = defineStore('uploads', () => {
   const cancel = (takeId: string) => q()?.cancel(takeId)
   const pause = () => q()?.pause()
   const resume = () => q()?.resume()
+  /** Drive was unlinked: stop uploading and keep the entries as failed until the person links again. */
+  const unlinked = () => q()?.unlinked()
 
-  return { entries, start, stop, enqueue, retry, cancel, pause, resume }
+  return { entries, start, stop, enqueue, retry, cancel, pause, resume, unlinked }
 })

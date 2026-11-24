@@ -124,7 +124,13 @@ export function createHttpClient(opts: HttpClientOptions) {
     if (o.as === 'none' || res.status === 204) return undefined as T
     if (o.as === 'blob') return (await res.blob()) as T
     const text = await res.text()
-    return (text ? JSON.parse(text) : null) as T
+    if (!text) return null as T
+    try {
+      return JSON.parse(text) as T
+    } catch {
+      // A 2xx that isn't JSON (an HTML page from a proxy or a misrouted base URL) is not an answer from the service.
+      throw new PortError('unknown')
+    }
   }
 
   return {
