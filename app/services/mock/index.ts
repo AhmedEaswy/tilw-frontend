@@ -28,6 +28,7 @@ import { createFakeDrive, DRIVE_OTHER_BYTES, DRIVE_TOTAL_BYTES, idbBlobStore, me
 import { allLimits, limitValue, periodEnd, publicPlan, requestReference, type LimitContext, type RawLimit } from './plans'
 import { LEGACY_SCRIPTS, mockPhone } from './seed'
 import { createMockLinks } from './link'
+import { createMockAi } from './ai'
 import { broadcastBus, createMockHub, createMockRealtime, type MockHub } from './realtime'
 
 const RESET_TTL = 60 * 60_000
@@ -260,7 +261,41 @@ export function createMockServices(kv: KV, opts: MockOptions = {}) {
     },
   })
 
+  // ---------- feature 005: AI writing tools ----------
+  const aiMock = createMockAi({
+    kv,
+    now,
+    call,
+    sleep,
+    sessionUserId: () => sessionUser()?.id ?? null,
+    limit: (userId, key) => limit(userId, key),
+    script: (userId, scriptId) => {
+      const s = userScripts(userId).find(x => x.id === scriptId)
+      return s ? clone(withReadOnly(s, readOnlyIds(userId))) : null
+    },
+    // A suggestion's apply is a versioned save against its base version that keeps an `ai` history version.
+    applyFormatted: (userId, scriptId, body, marks, baseVersion) => {
+      const s = userScripts(userId).find(x => x.id === scriptId)
+      if (!s) throw new PortError('not_found')
+      if (s.version !== baseVersion) throw new PortError('conflict', undefined, clone(withReadOnly(s, readOnlyIds(userId))))
+      if (readOnlyIds(userId).has(s.id)) {
+        throw limitError('scripts.max_active', limit(userId, 'scripts.max_active'), usage(userId, 'scripts.max_active'))
+      }
+      checkWords(userId, body)
+      return db.write(() => {
+        snapshot(userId, s, 'ai')
+        s.body = body
+        s.marks = clone(marks)
+        s.version += 1
+        s.updatedAt = new Date().toISOString()
+        return clone(withReadOnly(s, readOnlyIds(userId)))
+      })
+    },
+  })
+
   const services: Services = {
+    ai: aiMock.ai,
+    speech: aiMock.speech,
     links: phone.links,
     relay: phone.relay,
     realtime: createMockRealtime(hub, phone.server),
@@ -414,6 +449,14 @@ export function createMockServices(kv: KV, opts: MockOptions = {}) {
       update: (id, patch, baseVersion) => call(() => {
         const u = currentUser()
         const s = findScript(id)
+        // As the backend: opening a script only records when; it never changes the version and never conflicts
+        // (feature 005: a waiting suggestion made from that version can still be applied later).
+        if (Object.keys(patch).every(k => k === 'lastOpenedAt')) {
+          return db.write(() => {
+            if (patch.lastOpenedAt !== undefined) s.lastOpenedAt = patch.lastOpenedAt
+            return clone(withReadOnly(s, readOnlyIds(u.id)))
+          })
+        }
         if (db.knobs.forceConflictOnNextSave && patch.body !== undefined) {
           db.setKnobs({ forceConflictOnNextSave: false })
           // Simulate an edit made on another device.
@@ -754,6 +797,18 @@ export function createMockServices(kv: KV, opts: MockOptions = {}) {
   /** /__mock controls for release 2 (dev only). */
   const knobs = {
     now,
+    /** Feature 005: AI knobs, grants and balance. */
+    ai: aiMock.controls,
+    /** Feature 005: an edit from another device (the apply conflict). */
+    bumpScript(userId: string, scriptId: string) {
+      const s = userScripts(userId).find(x => x.id === scriptId)
+      if (!s) return
+      db.write(() => {
+        s.body = s.body.replace(/^[^\n]*/, m => `${m} (عُدّل على جهاز آخر)`)
+        s.version += 1
+        s.updatedAt = new Date().toISOString()
+      })
+    },
     setPlan(userId: string, key: string) {
       db.write((s) => {
         const t = now()

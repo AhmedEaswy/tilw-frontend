@@ -3,6 +3,7 @@
  * Script editor (6:19 desktop, 6:21 phone, 6:86 en) with conflict flow (6:72 → 6:73). T050–T055.
  */
 import type { DeliveryMark } from '~/services/types'
+import { creditsForWords } from '~/services/ai/audio'
 
 definePageMeta({ layout: 'app', phoneMinimal: true })
 const { t } = useI18n()
@@ -131,6 +132,42 @@ const readOnlyText = computed(() => {
     : t('limits.readOnlyTextShort')
 })
 const historyOpen = ref(false)
+
+// ----- feature 005: format for reading (A1 `293:150`, A2) -----
+const ai = useAiStore()
+const { credits } = useAiText()
+const formatOpen = ref(false)
+onMounted(() => {
+  if (ai.balance === null) ai.refreshCredits()
+  if (!ai.keyLoaded) void ai.loadKey().catch(() => {})
+})
+// A suggestion made earlier (here or on another device) waits for 24 hours (US1 #9).
+watch(() => [editor.status, id.value] as const, ([st, sid]) => {
+  if (st === 'ready') void ai.loadSuggestion(sid).catch(() => {})
+}, { immediate: true })
+// ----- feature 005: dictation (A3), inserted at the cursor as one undo step -----
+const dictateOpen = ref(false)
+const canDictate = ref(false)
+onMounted(() => (canDictate.value = typeof MediaRecorder !== 'undefined' && !!navigator.mediaDevices?.getUserMedia))
+function insertSpoken(text: string) {
+  const clean = text.trim()
+  if (!clean || editor.readOnly) return
+  const { start, end } = selection.value
+  const before = editor.body.slice(0, start)
+  const after = editor.body.slice(end)
+  const pre = before && !/\s$/.test(before) ? ' ' : ''
+  const post = after && !/^\s/.test(after) ? ' ' : ''
+  editor.setContent({ body: before + pre + clean + post + after })
+  const caret = before.length + pre.length + clean.length
+  nextTick(() => canvas.value?.select(caret, caret))
+  show(t('ai.speech.inserted'), 'success')
+}
+const formatState = computed(() => (ai.formatting[id.value] ? 'working' : ai.suggestions[id.value] ? 'waiting' : 'idle'))
+const formatHint = computed(() => {
+  if (ai.key?.usable) return t('ai.tools.formatOwnKey')
+  const cost = credits(creditsForWords(editor.words))
+  return ai.balance === null ? cost : t('ai.tools.formatHint', { cost, balance: ai.balance })
+})
 </script>
 
 <template>
@@ -222,6 +259,11 @@ const historyOpen = ref(false)
           :marks-count="editor.marks.length"
           :has-selection="hasSelection"
           :read-only="editor.readOnly"
+          :format-hint="formatHint"
+          :format-state="formatState"
+          :can-dictate="canDictate"
+          @format="formatOpen = true"
+          @dictate="dictateOpen = true"
           @history="historyOpen = true"
           @marks="openMarks"
           @undo="editor.undo()"
@@ -239,6 +281,8 @@ const historyOpen = ref(false)
       </div>
 
       <HistoryDrawer v-if="historyOpen && editor.script" :script-id="id" @close="historyOpen = false" />
+      <DictateDialog v-if="dictateOpen" v-model:open="dictateOpen" @insert="insertSpoken" />
+      <FormatDrawer v-if="formatOpen && editor.script" :script-id="id" :direction="direction" @close="formatOpen = false" />
 
       <MarksDialog
         v-model:open="marksOpen"
