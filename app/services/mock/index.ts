@@ -449,6 +449,14 @@ export function createMockServices(kv: KV, opts: MockOptions = {}) {
       update: (id, patch, baseVersion) => call(() => {
         const u = currentUser()
         const s = findScript(id)
+        // As the backend: opening a script only records when; it never changes the version and never conflicts
+        // (feature 005: a waiting suggestion made from that version can still be applied later).
+        if (Object.keys(patch).every(k => k === 'lastOpenedAt')) {
+          return db.write(() => {
+            if (patch.lastOpenedAt !== undefined) s.lastOpenedAt = patch.lastOpenedAt
+            return clone(withReadOnly(s, readOnlyIds(u.id)))
+          })
+        }
         if (db.knobs.forceConflictOnNextSave && patch.body !== undefined) {
           db.setKnobs({ forceConflictOnNextSave: false })
           // Simulate an edit made on another device.

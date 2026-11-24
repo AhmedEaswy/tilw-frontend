@@ -38,10 +38,10 @@ description: "Task list for Web app — AI writing tools (release 2)"
 
 ## Phase 3: User Story 1 — Format my script for reading aloud (P1) 🎯 MVP
 
-- [ ] T014 [P] [US1] e2e `tests/e2e/ai-format.spec.ts`: cost shown, format, preview has the same words, apply → editor text, History "AI change", balance 18; discard leaves the script; changed words message; conflict on apply (`ai.bumpScript` mock control); empty script disabled; axe on the drawer.
-- [ ] T015 [US1] `app/components/ai/MarkedPreview.vue`: paragraphs with pause, emphasis and note marks in the reader's look (A2 preview), direction per script.
-- [ ] T016 [US1] `app/components/ai/FormatDrawer.vue` (A2): cost state (credits / own key / not enough / negative / read-only / empty), formatting progress (polite live region; may close), preview with Show original, Apply / Discard, conflict (Format again / Discard), every error of `describeAiError` with its actions (Use Tilw credits this time, Check my key, AI & credits, Upgrade).
-- [ ] T017 [US1] `WritingTools.vue` + editor page (A1): "Format for reading" item with cost hint and "suggestion waiting" chip; editor loads the waiting suggestion on open; pending edits saved before format and apply; apply adopts the returned script like a restore.
+- [X] T014 [P] [US1] e2e `tests/e2e/ai-format.spec.ts`: cost shown, format, preview has the same words, apply → editor text, History "AI change", balance 18; discard leaves the script; changed words message; conflict on apply (`ai.bumpScript` mock control); empty script disabled; axe on the drawer.
+- [X] T015 [US1] `app/components/ai/MarkedPreview.vue`: paragraphs with pause, emphasis and note marks in the reader's look (A2 preview), direction per script.
+- [X] T016 [US1] `app/components/ai/FormatDrawer.vue` (A2): cost state (credits / own key / not enough / negative / read-only / empty), formatting progress (polite live region; may close), preview with Show original, Apply / Discard, conflict (Format again / Discard), every error of `describeAiError` with its actions (Use Tilw credits this time, Check my key, AI & credits, Upgrade).
+- [X] T017 [US1] `WritingTools.vue` + editor page (A1): "Format for reading" item with cost hint and "suggestion waiting" chip; editor loads the waiting suggestion on open; pending edits saved before format and apply; apply adopts the returned script like a restore.
 
 ## Phase 4: User Story 2 — See my credits and where they went (P1)
 

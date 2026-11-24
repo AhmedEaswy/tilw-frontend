@@ -19,3 +19,4 @@ Plan & usage gains two rows in the existing limit style and Settings one row in 
 ## Gaps found while building
 
 - **G-A1 Messages as one board (2026-11-24)**: the drawer's error and blocking states share one layout (a card with a coloured start edge, title, text, actions), so they are drawn once as a board (`294:416`) instead of five full editor frames. The dialogs (A3–A5) are boards of dialog cards over a scrim for the same reason.
+- **G-A2 Opening a script bumped its version in the mock (2026-11-24, US1)**: the editor records `lastOpenedAt` on every load. The backend keeps the version for that patch (ScriptController: "opening a script only records when"), but the mock bumped it, so a waiting suggestion always answered `conflict` after a reload in the mock. Fixed in the mock only: a patch with just `lastOpenedAt` keeps the version.

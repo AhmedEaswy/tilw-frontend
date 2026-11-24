@@ -16,9 +16,12 @@ const props = defineProps<{
   hasSelection: boolean
   /** Release 2 (R2-3): marks and undo are dimmed; search, download and History stay. */
   readOnly?: boolean
+  /** Feature 005 (A1 `293:150`): the cost line under "Format for reading", or the waiting/working state. */
+  formatHint?: string
+  formatState?: 'idle' | 'waiting' | 'working'
 }>()
 const query = defineModel<string>('query', { required: true })
-const emit = defineEmits<{ marks: []; undo: []; redo: []; download: []; next: []; prev: []; history: [] }>()
+const emit = defineEmits<{ marks: []; undo: []; redo: []; download: []; next: []; prev: []; history: []; format: [] }>()
 
 const { t, locale } = useI18n()
 const searchOpen = ref(false)
@@ -57,6 +60,16 @@ defineExpose({ openSearch: () => !searchOpen.value && toggleSearch() })
     <hr>
     <h3>{{ t('editor.tools') }}</h3>
     <ul>
+      <!-- Feature 005 (A1): AI tools first. -->
+      <li class="ai">
+        <button type="button" aria-describedby="format-hint" data-testid="tools-format" @click="emit('format')">
+          <UiGlyph name="edit" :size="18" />{{ t('ai.tools.format') }}
+        </button>
+        <p id="format-hint" class="hint" :class="{ live: formatState && formatState !== 'idle' }">
+          {{ formatState === 'working' ? t('ai.tools.formatting') : formatState === 'waiting' ? t('ai.tools.waiting') : formatHint }}
+        </p>
+      </li>
+      <li class="sep" aria-hidden="true" />
       <li>
         <button type="button" :aria-expanded="searchOpen" @click="toggleSearch"><UiGlyph name="search" :size="18" />{{ t('editor.search') }}</button>
         <div v-if="searchOpen" class="find">
@@ -170,6 +183,15 @@ li > button:hover,
 li > button :deep(.ui-glyph),
 .pair > :deep(.ui-glyph) {
   color: var(--tilw-text-ink);
+}
+.hint.live {
+  color: var(--tilw-action-primary);
+  font-weight: 500;
+}
+.sep {
+  block-size: 1px;
+  margin-block: 6px;
+  background: var(--tilw-border-subtle);
 }
 .hint {
   margin: -4px 0 6px;

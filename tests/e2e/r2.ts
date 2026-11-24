@@ -56,3 +56,22 @@ export const setFreeLimit = (page: Page, key: string, value: unknown) =>
 export const grantPro = (page: Page) =>
   mockState(page, `const now = Date.now() + (JSON.parse(localStorage.getItem('tilw:mock:knobs') || '{}').clockOffsetMs || 0);
     s.subscriptions.push({ id: 'sub_e2e', userId: 'u_layan', plan: 'pro', period: 'yearly', startsAt: now - 1000, endsAt: now + 365 * ${DAY} })`)
+
+/**
+ * Feature 005: change the AI mock's knobs (formatting, speech, own key refused) and, when given, set the balance
+ * through /__mock (it writes a correction entry). Knobs are read on every call, so they apply at once.
+ */
+export async function aiKnobs(page: Page, patch: Record<string, unknown>, balance?: number) {
+  await page.evaluate((p) => {
+    const cur = JSON.parse(localStorage.getItem('tilw:mock:ai:v1') ?? '{}')
+    cur.knobs = { ...cur.knobs, ...p }
+    localStorage.setItem('tilw:mock:ai:v1', JSON.stringify(cur))
+  }, patch)
+  if (balance === undefined) return
+  const back = page.url()
+  await page.goto('/__mock')
+  await page.getByLabel('Set balance').fill(String(balance))
+  await page.getByRole('button', { name: 'Set', exact: true }).click()
+  await expect(page.getByTestId('mock-ai-balance')).toHaveText(String(balance))
+  await page.goto(back)
+}
