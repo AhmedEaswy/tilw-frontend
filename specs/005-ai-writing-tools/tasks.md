@@ -17,7 +17,7 @@ description: "Task list for Web app — AI writing tools (release 2)"
 
 ## Phase 1: Setup
 
-- [ ] T001 Draw frames A1–A7 on a new Figma page `09 · Release 2 · AI writing tools`, from page `01 · Design system` and matching pages 07–08 (Arabic desktop light first, then phone A7). Record each node id in `specs/005-ai-writing-tools/gaps.md`. **No screen task (T020 onward) starts before its frame exists** (constitution II).
+- [X] T001 Draw frames A1–A7 on a new Figma page `09 · Release 2 · AI writing tools`, from page `01 · Design system` and matching pages 07–08 (Arabic desktop light first, then phone A7). Record each node id in `specs/005-ai-writing-tools/gaps.md`. **No screen task (T020 onward) starts before its frame exists** (constitution II). *(Drawn on page `292:100`; node ids in gaps.md.)*
 - [ ] T002 [P] Add the i18n group `ai.*` (format, credits, key, speech, captions, errors) and `limits.dialog.credits*`, `limits.dialog.byok*`, `limits.dialog.audio*` to `i18n/locales/ar.json` and `i18n/locales/en.json` (each story fills its keys).
 
 ## Phase 2: Foundation (blocks all stories)
