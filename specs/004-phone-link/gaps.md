@@ -8,11 +8,11 @@ Figma: `t9xEIr22yKOj7o2Ft32hxb`, page **`08 · Release 2 · Phone link`** (`276:
 |---|---|---|---|
 | L1 | Connect phone panel (side drawer on desktop, bottom sheet on phones; the reading-settings drawer layout) | waiting with QR + code + countdown; code expired; connected (remote name, kind, previews, end); phone offline; ended with reason; locked by plan; open in another tab; unavailable | `276:158` waiting · `276:218` connected · `276:278` locked (copies of reading settings `6:28` with the drawer content replaced) |
 | L2 | Link indicator in the rehearse/record masthead | off, waiting, connected, offline, request badge | inside each L1 frame, masthead pill: `277:511` waiting, and the connected and off pills in `276:218` / `276:278` |
-| L3 | Request popover | second phone wants control; role swap asked; role swap from the studio | — |
+| L3 | Request popover | second phone wants control; role swap asked; role swap from the studio | section `288:603`: `288:604` second phone, `288:683` the app asks to read |
 | L4 | Remote page: start | code entry, pairing, invalid code, too many tries | `278:164` enter code · `278:218` code doesn't work |
 | L5 | Remote page: controls | rehearsal state with previews; previews off; recording (countdown, time, saving, saved); command result line (done, refused, not delivered); studio offline | `278:273` controls · `278:331` studio offline (in section `278:386`); recording in section `286:424`: `286:425` countdown, `286:488` recording, `286:551` saving, `286:614` saved |
 | L6 | Remote page: end screens | waiting for the studio to accept; declined / lapsed; replaced; ended with reason; left | section `284:276`: `284:277` waiting, `284:326` declined, `284:370` replaced, `284:414` ended (idle), `284:458` left (Arabic phone; English follows) |
-| L7 | Studio as remote (roles swapped with the Tilw app) | RemoteControls inside the studio frame | — |
+| L7 | Studio as remote (roles swapped with the Tilw app) | RemoteControls inside the studio frame | `288:762` |
 | L8 | Settings → Phone links | list with open and ended links; empty state | — |
 
 Plan & usage only gains one more row of the existing limit style, so it needs no new frame.
