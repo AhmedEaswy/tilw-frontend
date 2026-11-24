@@ -19,7 +19,7 @@ export interface AiPort {
   deleteKey(): Promise<void>                                         // DELETE /api/ai/keys/text
   checkKey(): Promise<OwnKey>                                        // POST /api/ai/keys/text/check
   // Transcription (US3, US5)
-  transcriptionEstimate(input: { seconds: number; bytes: number; mimeType: string }): Promise<TranscriptionEstimate>
+  transcriptionEstimate(input: { seconds: number; bytes: number; mimeType: string; purpose?: SpeechPurpose }): Promise<TranscriptionEstimate>  // video only for captions
   startTranscription(input: { seconds: number; bytes: number; mimeType: string; language?: SpeechLanguage; purpose?: SpeechPurpose }): Promise<TranscriptionPermission>
   transcription(id: string): Promise<Transcription>
   complete(id: string, requestId: string): Promise<Transcription>   // 422 fields.requestId = not_this_permission

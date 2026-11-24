@@ -180,8 +180,8 @@ export function createHttpServices(opts: HttpClientOptions & { realtime?: Realti
       saveKey: input => api.put<OwnKey>('/api/ai/keys/text', input),
       deleteKey: () => api.del<void>('/api/ai/keys/text'),
       checkKey: () => api.post<OwnKey>('/api/ai/keys/text/check'),
-      transcriptionEstimate: ({ seconds, bytes, mimeType }) =>
-        api.get<TranscriptionEstimate>(`/api/ai/transcriptions/estimate?seconds=${seconds}&bytes=${bytes}&mimeType=${seg(mimeType)}`),
+      transcriptionEstimate: ({ seconds, bytes, mimeType, purpose }) =>
+        api.get<TranscriptionEstimate>(`/api/ai/transcriptions/estimate?seconds=${seconds}&bytes=${bytes}&mimeType=${seg(mimeType)}${purpose ? `&purpose=${seg(purpose)}` : ''}`),
       startTranscription: input => api.post<TranscriptionPermission>('/api/ai/transcriptions', input),
       transcription: id => api.get<Transcription>(`/api/ai/transcriptions/${seg(id)}`),
       complete: (id, requestId) => api.post<Transcription>(`/api/ai/transcriptions/${seg(id)}/complete`, { requestId }),

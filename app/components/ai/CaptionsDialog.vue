@@ -7,6 +7,7 @@
 import type { TakeMeta } from '~/services/takes'
 import type { TranscribeRun } from '~/services/ai/transcribe'
 import { buildCues, toSrt, toVtt } from '~/services/ai/captions'
+import { checkAudio } from '~/services/ai/audio'
 import type { CaptionCue } from '~/services/types'
 
 const open = defineModel<boolean>('open', { required: true })
@@ -18,6 +19,7 @@ const { show } = useToast()
 
 const blob = shallowRef<Blob | null>(null)
 const phase = ref<'loading' | 'missing' | 'cost' | 'ready' | 'refused'>('loading')
+const refused = ref('')
 const cues = ref<CaptionCue[]>([])
 const busy = ref(false)
 const maxMinutes = () => {
@@ -39,7 +41,14 @@ watch(open, async (v) => {
     phase.value = 'missing'
     return
   }
-  phase.value = seconds.value > maxMinutes() * 60 ? 'refused' : 'cost'
+  // The same checks as any audio (type, 200 MB, length) before anything is spent.
+  const problem = checkAudio({ type: blob.value.type || props.take.mimeType, size: blob.value.size }, seconds.value, maxMinutes(), 'captions')
+  if (problem) {
+    refused.value = t(`ai.speech.refused.${problem.reason}`, { maxMb: 'maxMb' in problem ? problem.maxMb : 200, maxMinutes: 'maxMinutes' in problem ? problem.maxMinutes : maxMinutes() })
+    phase.value = 'refused'
+    return
+  }
+  phase.value = 'cost'
 }, { immediate: true })
 
 function done(run: TranscribeRun) {
@@ -59,7 +68,7 @@ function save(kind: 'srt' | 'vtt') {
     <div class="cap">
       <p v-if="phase === 'loading'" class="muted" aria-busy="true">{{ t('ai.captions.preparing') }}</p>
       <AiMessage v-else-if="phase === 'missing'" :title="t('ai.captions.missing')" tone="error" />
-      <AiMessage v-else-if="phase === 'refused'" :title="t('ai.errors.audio_limit.title')" :text="t('ai.errors.audio_limit.text', { minutes: maxMinutes() })" tone="error" />
+      <AiMessage v-else-if="phase === 'refused'" :title="t('ai.speech.refusedTitle')" :text="`${refused} ${t('ai.speech.noCharge')}`" tone="error" data-testid="captions-refused" />
       <template v-else-if="phase === 'cost' && blob">
         <TranscribePanel
           :blob="blob"

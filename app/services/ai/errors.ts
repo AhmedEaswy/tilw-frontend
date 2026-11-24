@@ -19,6 +19,7 @@ export type AiErrorKind =
   | 'conflict' // the script changed since the suggestion was made
   | 'upload_failed' // the audio didn't reach the provider after the permission was paid
   | 'network'
+  | 'save_failed' // the editor's pending edits couldn't be saved first (format and apply wait)
   | 'other'
 
 export interface AiErrorCopy {

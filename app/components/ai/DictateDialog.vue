@@ -29,6 +29,8 @@ async function begin() {
   phase.value = 'starting'
   take.value = null
   const ok = await dictation.start()
+  // Closed while the permission prompt was up: the run was cancelled and its tracks stopped.
+  if (!open.value) return
   if (ok) {
     phase.value = 'recording'
     return

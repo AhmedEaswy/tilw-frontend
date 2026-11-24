@@ -5,6 +5,11 @@
  *
  * An upload or provider failure calls `fail` (which refunds nothing by itself: the service settles from the
  * provider's record) and throws `UploadFailed`. The permission is never used after `upload.expiresAt`.
+ *
+ * Once the provider has answered, the text is paid for and is never thrown away. `complete` is retried with backoff
+ * on network errors, 503s and `not_this_permission` (the provider's request log can lag a few seconds behind its
+ * answer). When it still fails, the run returns the text with `transcription: null`: the service settles the
+ * permission later from the provider's tagged record.
  */
 import type { AiPort, SpeechPort } from '../ports'
 import { PortError, isPortError, type SpeechLanguage, type SpeechPurpose, type SpeechResult, type Transcription, type TranscriptionPermission } from '../types'
@@ -13,8 +18,18 @@ export type TranscribeStep = 'permission' | 'sending' | 'settling' | 'done'
 
 export interface TranscribeRun {
   permission: TranscriptionPermission
-  transcription: Transcription
+  /** null when settling didn't go through now; the service settles it later from the provider's record. */
+  transcription: Transcription | null
   result: SpeechResult
+}
+
+/** Waits between `complete` attempts. */
+export const COMPLETE_RETRY_MS = [1000, 2000, 4000, 8000]
+
+function retryable(e: unknown): boolean {
+  if (!isPortError(e)) return false
+  if (e.code === 'network' || e.code === 'ai_unavailable' || e.code === 'unknown') return true
+  return e.code === 'validation' && e.fields?.requestId === 'not_this_permission'
 }
 
 /** The audio didn't reach the provider, or the provider failed, after the permission was paid. */
@@ -40,8 +55,12 @@ export async function runTranscription(o: {
   onStep?: (s: TranscribeStep) => void
   signal?: AbortSignal
   now?: () => number
+  retryMs?: number[]
+  sleep?: (ms: number) => Promise<void>
 }): Promise<TranscribeRun> {
   const now = o.now ?? Date.now
+  const delays = o.retryMs ?? COMPLETE_RETRY_MS
+  const sleep = o.sleep ?? ((ms: number) => new Promise<void>(r => setTimeout(r, ms)))
   o.onStep?.('permission')
   const permission = await o.ai.startTranscription({
     seconds: o.seconds,
@@ -60,7 +79,23 @@ export async function runTranscription(o: {
     throw new UploadFailed(e, permission)
   }
   o.onStep?.('settling')
-  const transcription = await o.ai.complete(permission.id, result.requestId)
+  let transcription: Transcription | null = null
+  if (result.requestId) {
+    for (let i = 0; ; i++) {
+      try {
+        transcription = await o.ai.complete(permission.id, result.requestId)
+        break
+      } catch (e) {
+        // Already settled (the expiry job got there first): its record is the answer.
+        if (isPortError(e, 'conflict')) {
+          transcription = (e.current as Transcription | undefined) ?? null
+          break
+        }
+        if (!retryable(e) || i >= delays.length) break
+        await sleep(delays[i]!)
+      }
+    }
+  }
   o.onStep?.('done')
   return { permission, transcription, result }
 }

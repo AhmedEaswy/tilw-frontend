@@ -201,7 +201,8 @@ export interface AiPort {
   saveKey(input: { provider: AiProvider; key: string }): Promise<OwnKey>
   deleteKey(): Promise<void>
   checkKey(): Promise<OwnKey>
-  transcriptionEstimate(input: { seconds: number; bytes: number; mimeType: string }): Promise<TranscriptionEstimate>
+  /** `purpose` matters for the type check: video is allowed only for captions. */
+  transcriptionEstimate(input: { seconds: number; bytes: number; mimeType: string; purpose?: SpeechPurpose }): Promise<TranscriptionEstimate>
   /** Pays for a short-lived permission to send this audio straight to the speech provider. */
   startTranscription(input: { seconds: number; bytes: number; mimeType: string; language?: SpeechLanguage; purpose?: SpeechPurpose }): Promise<TranscriptionPermission>
   transcription(id: string): Promise<Transcription>

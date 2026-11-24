@@ -1083,7 +1083,11 @@
       "spent": "{cost} used · you have {balance}",
       "spentOwnKey": "With your own key · no credits used",
       "pause": "Pause {s} s",
-      "noteMark": "Note: {note}"
+      "noteMark": "Note: {note}",
+      "saveFailed": {
+        "title": "Your latest edits aren't saved",
+        "text": "We stopped so your edits aren't lost and older text isn't formatted. Check your connection and save, then try again."
+      }
     },
     "errors": {
       "credits": {
@@ -1198,7 +1202,8 @@
       },
       "noCharge": "No credits were used.",
       "otherFile": "Choose another file",
-      "untitled": "Script from audio"
+      "untitled": "Script from audio",
+      "settleLater": "Here's your text. Your credits will be settled shortly from the provider's record."
     },
     "captions": {
       "action": "Captions",

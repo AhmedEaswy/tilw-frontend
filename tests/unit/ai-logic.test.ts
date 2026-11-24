@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from 'vitest'
 import { checkAudio, clockLabel, creditsForSeconds, creditsForWords, declaredSeconds, isAllowedAudioType } from '~/services/ai/audio'
 import { parseDeepgram, tidyTranscript } from '~/services/ai/deepgram'
 import { canPay, describeAiError } from '~/services/ai/errors'
-import { fakeSpeech } from '~/services/ai/speech'
+import { createSpeech, fakeSpeech } from '~/services/ai/speech'
+import { toPortError } from '~/services/http/client'
 import { runTranscription, UploadFailed } from '~/services/ai/transcribe'
 import { fakeFormat, sameWords } from '~/services/mock/ai'
 import type { AiPort, SpeechPort } from '~/services/ports'
@@ -22,7 +23,7 @@ describe('costs and audio checks', () => {
 
   it('refuses the wrong type, too big, too long or unreadable audio before any call', () => {
     expect(isAllowedAudioType('audio/webm;codecs=opus')).toBe(true)
-    expect(isAllowedAudioType('video/mp4')).toBe(true)
+    expect(isAllowedAudioType('video/mp4', 'captions')).toBe(true)
     expect(isAllowedAudioType('image/png')).toBe(false)
     expect(checkAudio({ type: 'text/plain', size: 10 }, 10)).toEqual({ reason: 'type' })
     expect(checkAudio({ type: 'audio/mpeg', size: 201 * 1024 * 1024 }, 10)).toEqual({ reason: 'size', maxMb: 200 })
@@ -139,5 +140,71 @@ describe('the mock formatter', () => {
     expect(out.marks.map(m => m.type).sort()).toEqual(expect.arrayContaining(['note', 'pause', 'emphasis']))
     const note = out.marks.find(m => m.type === 'note')!
     expect(out.body.slice(note.start, note.end)).toBe('كل حكاية تبدأ بسؤال صغير.')
+  })
+})
+
+// ---------- review fixes (PR #5) ----------
+
+describe('review fixes', () => {
+  it('allows video only for captions, as the backend does', () => {
+    expect(isAllowedAudioType('video/webm')).toBe(false)
+    expect(isAllowedAudioType('video/webm;codecs=vp9', 'captions')).toBe(true)
+    expect(checkAudio({ type: 'video/mp4', size: 10 }, 5)).toEqual({ reason: 'type' })
+    expect(checkAudio({ type: 'video/mp4', size: 10 }, 5, 60, 'captions')).toBeNull()
+    expect(checkAudio({ type: 'video/mp4', size: 201 * 1024 * 1024 }, 5, 60, 'captions')).toEqual({ reason: 'size', maxMb: 200 })
+  })
+
+  const perm = {
+    id: 'tr1', purpose: 'text' as const, language: 'auto' as const, seconds: 30, credits: 1, state: 'issued' as const, durationSeconds: null,
+    tokenExpiresAt: '2999-01-01T00:00:00Z', refundableAt: '2999-01-01T00:00:00Z', createdAt: '', balance: 19,
+    upload: { provider: 'fake' as const, method: 'POST' as const, url: 'https://x.test', headers: {}, expiresAt: '2999-01-01T00:00:00Z' },
+  }
+  const blob = new Blob(['abc'], { type: 'audio/webm' })
+  const speech: SpeechPort = { send: async () => fakeSpeech(30) }
+  function aiWith(complete: ReturnType<typeof vi.fn>) {
+    return { startTranscription: vi.fn(async () => perm), complete, fail: vi.fn(async () => perm) } as unknown as AiPort
+  }
+  const run = (ai: AiPort, sp: SpeechPort = speech) => runTranscription({ ai, speech: sp, blob, seconds: 30, language: 'auto', purpose: 'text', retryMs: [1, 1, 1], sleep: async () => {} })
+
+  it('retries complete on network, 503 and not_this_permission, then settles', async () => {
+    const complete = vi.fn()
+      .mockRejectedValueOnce(new PortError('network'))
+      .mockRejectedValueOnce(new PortError('ai_unavailable'))
+      .mockRejectedValueOnce(new PortError('validation', { requestId: 'not_this_permission' }))
+      .mockResolvedValueOnce({ ...perm, state: 'used' })
+    const r = await run(aiWith(complete))
+    expect(complete).toHaveBeenCalledTimes(4)
+    expect(r.transcription?.state).toBe('used')
+  })
+
+  it('keeps the paid text when settling keeps failing, and stops at once on other errors', async () => {
+    const always = vi.fn().mockRejectedValue(new PortError('network'))
+    const r = await run(aiWith(always))
+    expect(always).toHaveBeenCalledTimes(4) // one try and three retries
+    expect(r.transcription).toBeNull()
+    expect(r.result.transcript).toMatch(/^كل حكاية/)
+    const other = vi.fn().mockRejectedValue(new PortError('not_found'))
+    expect((await run(aiWith(other))).transcription).toBeNull()
+    expect(other).toHaveBeenCalledTimes(1)
+    const settled = vi.fn().mockRejectedValue(new PortError('conflict', undefined, { ...perm, state: 'used' }))
+    expect((await run(aiWith(settled))).transcription?.state).toBe('used')
+  })
+
+  it('does not call complete without a request id', async () => {
+    const complete = vi.fn()
+    const r = await run(aiWith(complete), { send: async () => ({ ...fakeSpeech(30), requestId: '' }) })
+    expect(complete).not.toHaveBeenCalled()
+    expect(r.transcription).toBeNull()
+  })
+
+  it('falls back to the dg-request-id header when the body has no request id', async () => {
+    const f = (async () => new Response(JSON.stringify({ results: { channels: [{ alternatives: [{ transcript: 'hi' }] }] } }), { status: 200, headers: { 'dg-request-id': 'req-h1' } })) as unknown as typeof fetch
+    const r = await createSpeech({ fetch: f }).send({ provider: 'deepgram', method: 'POST', url: 'https://dg.test', headers: {}, expiresAt: '2999-01-01T00:00:00Z' }, blob, { seconds: 1, purpose: 'text', language: 'auto' })
+    expect(r.requestId).toBe('req-h1')
+  })
+
+  it('reads a bare 503 as unknown, and ai_unavailable only when the body says so', async () => {
+    expect((await toPortError(new Response('<html>', { status: 503 }))).code).toBe('unknown')
+    expect((await toPortError(new Response(JSON.stringify({ code: 'ai_unavailable', reason: 'timeout' }), { status: 503 }))).code).toBe('ai_unavailable')
   })
 })

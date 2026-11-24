@@ -56,8 +56,7 @@ export async function toPortError(res: Response): Promise<PortError> {
       : res.status === 419 || res.status === 401 ? 'unauthenticated'
         : res.status === 404 ? 'not_found'
           : res.status === 507 ? 'storage_full'
-            : res.status === 503 ? 'ai_unavailable'
-              : 'unknown'
+            : 'unknown'
   const fields = body && body.fields && typeof body.fields === 'object' ? (body.fields as Record<string, string>) : undefined
   // Release 2: 403 limit_reached carries { key, value, usage }.
   const raw = body?.limit as { key?: unknown; value?: unknown; usage?: unknown } | undefined

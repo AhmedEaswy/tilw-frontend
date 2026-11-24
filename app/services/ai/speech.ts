@@ -68,7 +68,10 @@ export function createSpeech(opts: { fetch?: typeof fetch; now?: () => number } 
       } catch {
         throw new PortError('ai_unavailable', undefined, undefined, undefined, { reason: 'bad_answer' })
       }
-      return parseDeepgram(json)
+      const result = parseDeepgram(json)
+      // Deepgram also sends the request id as a header; use it when the body has none.
+      if (!result.requestId) result.requestId = res.headers?.get?.('dg-request-id') ?? ''
+      return result
     },
   }
 }

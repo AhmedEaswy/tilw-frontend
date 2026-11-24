@@ -1,6 +1,6 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
-import { aiKnobs, mockState, signIn } from './r2'
+import { aiKnobs, mockState, setFreeLimit, signIn } from './r2'
 
 // Feature 005 US1 (T014): format for reading, from the cost line to apply or discard (quickstart 1).
 
@@ -111,4 +111,32 @@ test('disables Format when the balance is short, and for an empty script', async
   await page.getByTestId('tools-format').click()
   await expect(page.getByTestId('format-drawer').getByText('اكتب شيئاً أولاً.')).toBeVisible()
   await expect(page.getByTestId('format-go')).toBeDisabled()
+})
+
+test('waits when the pending edits can\'t be saved, and keeps them (review fix)', async ({ page }) => {
+  await signIn(page)
+  await page.goto('/app/scripts/s_letter')
+  const body = page.getByLabel('نص الحلقة')
+  const before = await body.inputValue()
+  // The plan allows exactly this many words, so the next added word can't be saved (limit_reached).
+  await setFreeLimit(page, 'scripts.max_words', before.split(/\s+/).filter(Boolean).length)
+  await page.getByTestId('tools-format').click()
+  await page.getByTestId('format-go').click()
+  await expect(page.getByTestId('format-preview')).toBeVisible()
+  await page.getByTestId('format-drawer').getByRole('button', { name: 'إغلاق' }).click()
+
+  await body.click()
+  await body.press('Control+End')
+  await body.pressSequentially(' زيادة')
+  await expect(page.getByRole('dialog').filter({ hasText: 'النص أطول من حد خطتك' })).toBeVisible({ timeout: 5000 })
+  await page.keyboard.press('Escape')
+
+  await page.getByTestId('tools-format').click()
+  await page.getByTestId('format-apply').click()
+  await expect(page.getByTestId('format-error')).toContainText('لم يُحفظ آخر تعديل')
+  await expect(body).toHaveValue(/زيادة$/)
+  // The refused save shows the plan-limit dialog again, over the drawer.
+  await page.getByRole('dialog', { name: 'النص أطول من حد خطتك' }).getByRole('button', { name: 'رجوع' }).click()
+  await page.getByTestId('format-error').getByRole('button', { name: 'رجوع' }).click()
+  await expect(page.getByTestId('format-preview')).toBeVisible()
 })

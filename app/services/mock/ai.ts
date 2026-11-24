@@ -332,12 +332,13 @@ export function createMockAi(d: MockAiDeps) {
   }
 
   // ---------- transcriptions ----------
-  function validateAudio(userId: string, input: { seconds: number; bytes: number; mimeType: string }) {
+  function validateAudio(userId: string, input: { seconds: number; bytes: number; mimeType: string; purpose?: SpeechPurpose }) {
     const fields: Record<string, string> = {}
     if (!Number.isInteger(input.seconds) || input.seconds < 1) fields.seconds = 'min'
     if (!Number.isInteger(input.bytes) || input.bytes < 1) fields.bytes = 'min'
     else if (input.bytes > AI_RULES.audioMaxBytes) fields.bytes = 'max'
-    if (!isAllowedAudioType(input.mimeType || '')) fields.mimeType = 'audio'
+    // As the backend: video only for captions.
+    if (!isAllowedAudioType(input.mimeType || '', input.purpose ?? 'text')) fields.mimeType = 'audio'
     if (Object.keys(fields).length) throw new PortError('validation', fields)
     const max = intLimit(userId, 'ai.audio_max_minutes', AI_RULES.audioMaxMinutes)
     if (input.seconds > max * 60) throw new PortError('limit_reached', undefined, undefined, { key: 'ai.audio_max_minutes', value: max, usage: null })

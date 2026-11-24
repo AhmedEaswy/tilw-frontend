@@ -90,7 +90,7 @@ async function save() {
   <UiDialog v-model:open="open" :title="title" :dismissible="!busy" data-testid="audio-import">
     <div class="ai-imp">
       <!-- Kept mounted in every phase: "Choose another file" reopens it after a refusal. -->
-      <input ref="input" class="visually-hidden" type="file" accept="audio/*,video/webm,video/mp4,video/quicktime" :aria-label="t('ai.speech.pick')" tabindex="-1" data-testid="audio-file" @change="onPick">
+      <input ref="input" class="visually-hidden" type="file" accept="audio/*" :aria-label="t('ai.speech.pick')" tabindex="-1" data-testid="audio-file" @change="onPick">
       <template v-if="phase === 'pick' || phase === 'reading'">
         <button type="button" class="drop" :aria-busy="phase === 'reading' || undefined" @click="input?.click()">
           <UiGlyph name="file" :size="28" />

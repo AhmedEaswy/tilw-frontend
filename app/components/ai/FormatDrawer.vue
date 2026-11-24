@@ -101,17 +101,39 @@ function providerName(p: string) {
   return p === 'openai' ? 'OpenAI' : 'Anthropic'
 }
 
+/**
+ * Pending edits are saved first (US1 #5). Anything short of a clean save stops here: Apply would drop the unsaved
+ * edits (adoptRestored clears the draft and undo), and Format would charge for the older saved text.
+ */
+async function savedFirst(): Promise<boolean> {
+  if (editor.dirty || editor.saveState !== 'saved') await editor.save()
+  if (editor.saveState === 'conflict') {
+    emit('close') // the release-1 conflict screen takes over
+    return false
+  }
+  if (editor.dirty || editor.saveState !== 'saved') {
+    const copy = { kind: 'save_failed' as const, title: t('ai.format.saveFailed.title'), text: t('ai.format.saveFailed.text') }
+    error.value = copy
+    view.value = 'error'
+    live.value = copy.title
+    return false
+  }
+  return true
+}
+/** Back from the save message: to the waiting suggestion, or to the cost. */
+function back() {
+  error.value = null
+  if (suggestion.value) view.value = 'preview'
+  else void loadCost()
+}
+
 async function format(useCredits = false) {
   if (busy.value) return
   busy.value = true
   error.value = null
   try {
-    // The suggestion is made from the saved text: save pending edits first.
-    if (editor.dirty) await editor.save()
-    if (editor.saveState === 'conflict') {
-      emit('close')
-      return
-    }
+    // The suggestion is made from the saved text.
+    if (!(await savedFirst())) return
     view.value = 'working'
     live.value = t('ai.format.working')
     await ai.format(props.scriptId, { useCredits })
@@ -128,11 +150,7 @@ async function apply() {
   if (busy.value) return
   busy.value = true
   try {
-    if (editor.dirty) await editor.save()
-    if (editor.saveState === 'conflict') {
-      emit('close')
-      return
-    }
+    if (!(await savedFirst())) return
     const s = await ai.apply(props.scriptId)
     editor.adoptRestored(s)
     show(t('ai.format.applied'), 'success', 6000)
@@ -158,7 +176,7 @@ async function discard() {
   }
 }
 
-const errorTone = computed(() => (['credits', 'negative', 'conflict', 'gone', 'rate_limited', 'read_only'].includes(error.value?.kind ?? '') ? 'warning' : 'error'))
+const errorTone = computed(() => (['credits', 'negative', 'conflict', 'gone', 'rate_limited', 'read_only', 'save_failed'].includes(error.value?.kind ?? '') ? 'warning' : 'error'))
 const keyRefusedCost = computed(() => credits(estimate.value?.credits ?? Math.max(1, Math.ceil(words.value / 1000))))
 const expires = computed(() => (suggestion.value ? dateTime(suggestion.value.expiresAt) : ''))
 const title = computed(() => (view.value === 'preview' ? t('ai.format.previewTitle') : t('ai.format.title')))
@@ -251,6 +269,9 @@ const goLabel = computed(() => (estimate.value?.paidWith === 'own_key' ? t('ai.f
             <template v-else-if="error.kind === 'credits' || error.kind === 'negative'">
               <UiButton v-if="!plan.isPro" @click="upgrade.open()">{{ t('ai.common.upgrade') }}</UiButton>
               <UiButton tone="secondary" to="/app/settings/ai">{{ t('ai.common.creditsLink') }}</UiButton>
+            </template>
+            <template v-else-if="error.kind === 'save_failed'">
+              <UiButton tone="secondary" @click="back">{{ t('library.back') }}</UiButton>
             </template>
             <template v-else-if="error.kind === 'read_only'">
               <UiButton tone="secondary" @click="emit('close')">{{ t('ai.common.close') }}</UiButton>

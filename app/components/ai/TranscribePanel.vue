@@ -31,6 +31,7 @@ const plan = usePlanStore()
 const upgrade = useUpgrade()
 const services = useServices()
 const { credits, errorCopy, copyFor } = useAiText()
+const { show } = useToast()
 
 const LANG_KEY = 'tilw:ai:language'
 const language = ref<SpeechLanguage>((import.meta.client && (localStorage.getItem(LANG_KEY) as SpeechLanguage | null)) || 'auto')
@@ -51,7 +52,7 @@ async function loadEstimate() {
   error.value = null
   phase.value = 'cost'
   try {
-    estimate.value = await services.ai.transcriptionEstimate({ seconds: seconds.value, bytes: props.blob.size, mimeType: props.blob.type || 'audio/webm' })
+    estimate.value = await services.ai.transcriptionEstimate({ seconds: seconds.value, bytes: props.blob.size, mimeType: props.blob.type || 'audio/webm', purpose: props.purpose })
     ai.setBalance(estimate.value.balance)
   } catch (e) {
     error.value = errorCopy(e)
@@ -85,15 +86,17 @@ async function go() {
       },
     })
     ai.refreshCredits()
-    if (run.transcription.state === 'failed') {
+    const nothing = props.purpose === 'captions' ? !run.result.words.length : !run.result.transcript.trim()
+    if (run.transcription?.state === 'failed' && nothing) {
       fail(copyFor('provider_failed'))
       return
     }
-    const nothing = props.purpose === 'captions' ? !run.result.words.length : !run.result.transcript.trim()
     if (nothing) {
       fail(copyFor('nothing_heard'))
       return
     }
+    // Paid text is never thrown away: when settling didn't go through, the service settles it later.
+    if (!run.transcription) show(t('ai.speech.settleLater'), 'info', 6000)
     emit('done', run)
   } catch (e) {
     ai.refreshCredits()
