@@ -43,6 +43,7 @@ const negative = computed(() => (ai.credits ? copyFor('negative', { balance: ai.
       <AiMessage v-if="ai.credits.balance < 0 && negative" :title="negative.title" :text="negative.text" data-testid="credits-negative" />
       <div class="grid">
         <CreditsCard :credits="ai.credits" />
+        <OwnKeyCard />
       </div>
       <h2>{{ t('ai.credits.month') }}</h2>
       <CreditEntries :entries="ai.credits.entries" />

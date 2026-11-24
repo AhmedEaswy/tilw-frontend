@@ -56,8 +56,8 @@ description: "Task list for Web app — AI writing tools (release 2)"
 
 ## Phase 6: User Story 4 — Use my own AI key (P2)
 
-- [ ] T023 [P] [US4] e2e `tests/e2e/ai-key.spec.ts`: save → masked, key field cleared, never in storage; format uses own key (no credits, own-key entry); refused on save; refused on use → Use Tilw credits this time; delete → credits again; locked when `byok.allowed` is off; axe.
-- [ ] T024 [US4] `app/components/ai/OwnKeyCard.vue` (A6 key states) on AI & credits: provider choice, password-type field, save/check/replace/delete (confirm), locked by plan, "not used on your plan".
+- [X] T023 [P] [US4] e2e `tests/e2e/ai-key.spec.ts`: save → masked, key field cleared, never in storage; format uses own key (no credits, own-key entry); refused on save; refused on use → Use Tilw credits this time; delete → credits again; locked when `byok.allowed` is off; axe.
+- [X] T024 [US4] `app/components/ai/OwnKeyCard.vue` (A6 key states) on AI & credits: provider choice, password-type field, save/check/replace/delete (confirm), locked by plan, "not used on your plan".
 
 ## Phase 7: User Story 5 — Captions from a take (P3)
 
