@@ -6,6 +6,7 @@
 import type { MockBackend } from '~/services/mock'
 import type { MockKnobs } from '~/services/mock/db'
 import { SEED_PASSWORD } from '~/services/mock/seed'
+import type { MockApp, MockAppState } from '~/services/mock/app'
 import type { LinkEndReason } from '~/services/types'
 
 definePageMeta({ layout: false })
@@ -139,6 +140,25 @@ const linkOffline = ref(mock.knobs.linkOffline())
 watch(linkOffline, v => mock.knobs.setLinkOffline(v))
 const endReason = ref<LinkEndReason>('signed_out')
 const END_REASONS: LinkEndReason[] = ['owner', 'remote', 'idle', 'script_deleted', 'signed_out', 'device_revoked', 'email_changed', 'account_deleted', 'limit']
+// US4: a stand-in Tilw app paired with the studio's code; it runs while this page stays open.
+const appCode = ref('')
+const app = shallowRef<MockApp | null>(null)
+const appState = ref<MockAppState | null>(null)
+async function pairApp() {
+  try {
+    app.value?.stop()
+    app.value = await mock.knobs.pairMockApp(appCode.value.replace(/\D/g, ''))
+    app.value.subscribe(s => (appState.value = s))
+    show('The mock Tilw app is paired')
+  } catch (e) {
+    show(`Pairing failed: ${(e as Error).message}`)
+  }
+}
+async function appAsksToRead() {
+  await app.value?.askToRead().catch(e => show(`Refused: ${(e as Error).message}`))
+}
+onBeforeUnmount(() => app.value?.stop())
+
 async function endOpenLink() {
   const link = (await mock.services.links.list().catch(() => [])).find(l => l.state !== 'ended')
   if (!link) return show('No open phone link for the signed-in account')
@@ -191,6 +211,16 @@ async function endOpenLink() {
         </label>
         <UiButton size="sm" @click="endOpenLink">End the open link</UiButton>
       </div>
+      <h3>Tilw app (mock)</h3>
+      <div class="row">
+        <label>Studio code <input v-model="appCode" inputmode="numeric" aria-label="Studio code for the mock app"></label>
+        <UiButton size="sm" @click="pairApp">Pair the mock Tilw app</UiButton>
+        <UiButton size="sm" tone="secondary" :disabled="!appState?.paired" @click="appAsksToRead">The app asks to read</UiButton>
+      </div>
+      <p v-if="appState" data-mock-app>
+        App: {{ appState.paired ? 'paired' : 'not paired' }} · reads: {{ appState.player === 'remote' ? 'yes' : 'no' }} ·
+        paragraph {{ appState.paragraph + 1 }} · {{ appState.playing ? 'playing' : 'paused' }} · {{ appState.wpm }} wpm
+      </p>
     </section>
 
     <section>

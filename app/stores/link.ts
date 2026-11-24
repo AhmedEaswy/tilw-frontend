@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { createLinkHost, linkStatus, type HostState, type LinkHost, type LinkPlayer } from '~/services/link/host'
+import type { CommandType } from '~/services/types'
 
 /**
  * Feature 004 (phone link), studio side: mirrors services/link/host.ts for the panel, the masthead indicator and the
@@ -29,6 +30,8 @@ export const useLinkStore = defineStore('link', () => {
   const link = computed(() => state.value?.link ?? null)
   const code = computed(() => state.value?.code ?? null)
   const pendingRemote = computed(() => state.value?.pendingRemote ?? null)
+  /** US4: the Tilw app reads and this studio is the remote (Figma L7). */
+  const studioIsRemote = computed(() => state.value?.phase === 'open' && state.value.link?.player === 'remote')
 
   return {
     state,
@@ -36,6 +39,7 @@ export const useLinkStore = defineStore('link', () => {
     link,
     code,
     pendingRemote,
+    studioIsRemote,
     open: (scriptId: string) => {
       // FR-004: when the plan is known to exclude phone link, show the locked state and never start a link.
       if (usePlanStore().limit('phone_link.allowed') === false) return h().lock()
@@ -48,6 +52,9 @@ export const useLinkStore = defineStore('link', () => {
     acceptRemote: () => h().acceptRemote(),
     declineRemote: () => h().declineRemote(),
     moveHere: (scriptId: string) => h().moveHere(scriptId),
+    requestRoles: (player: 'host' | 'remote') => h().requestRoles(player),
+    answerRoles: (accept: boolean) => h().answerRoles(accept),
+    send: (type: CommandType, extra?: { paragraph?: number; wpm?: number }) => h().send(type, extra),
     setPlayer: (p: LinkPlayer | null) => h().setPlayer(p),
     clearPlayer: (p: LinkPlayer) => host?.clearPlayer(p),
     changed: () => host?.changed(),

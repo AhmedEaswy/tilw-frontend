@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright'
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type BrowserContext, type Page } from '@playwright/test'
 import { knobs, setFreeLimit, signIn } from './r2'
 
 // Feature 004, US1 (T022): pair a phone and drive rehearsal (quickstart scenarios 1–3, 10).
@@ -125,4 +125,105 @@ test('the phone rides out a dropped studio, a reload of its own, and ends after 
   await phone.goto('/remote')
   await expect(phone.getByRole('heading', { name: 'انتهى الربط' })).toBeVisible()
   await expect(phone.getByRole('button', { name: 'إدخال رمز جديد' })).toBeVisible()
+})
+
+// US4 (T041): manage the link from the studio (quickstart scenarios 7, 8 and 11).
+async function pairNewPhone(page: Page, context: BrowserContext, panel: ReturnType<Page['getByRole']>) {
+  const code = (await panel.locator('.code').first().textContent())!.replace(/\D/g, '')
+  const phone = await freshPhone(context)
+  await phone.getByLabel('رمز من 6 أرقام').fill(code)
+  await phone.getByRole('button', { name: 'اتصال' }).click()
+  return phone
+}
+
+/** Another phone in the same browser: the mock lives in shared storage, so drop the pairing the last phone kept. */
+async function freshPhone(context: BrowserContext) {
+  const phone = await context.newPage()
+  await phone.addInitScript(() => localStorage.removeItem('tilw:remote:v1'))
+  await phone.goto('/remote')
+  return phone
+}
+
+test('a second phone takes over after Accept; another is declined', async ({ page, context }) => {
+  await signIn(page)
+  const panel = await openPanel(page)
+  const first = await pairNewPhone(page, context, panel)
+  await expect(first.getByText('متصل بالاستوديو')).toBeVisible()
+
+  await panel.getByRole('button', { name: 'رمز جديد' }).click()
+  const second = await pairNewPhone(page, context, panel)
+  await expect(second.getByRole('heading', { name: 'بانتظار موافقة الاستوديو' })).toBeVisible()
+  await panel.getByRole('button', { name: 'قبول' }).click()
+  await expect(first.getByText('تولّى هاتف آخر التحكم.')).toBeVisible()
+  await expect(second.getByText('متصل بالاستوديو')).toBeVisible()
+
+  await panel.getByRole('button', { name: 'رمز جديد' }).click()
+  const third = await pairNewPhone(page, context, panel)
+  await expect(third.getByRole('heading', { name: 'بانتظار موافقة الاستوديو' })).toBeVisible()
+  await panel.getByRole('button', { name: 'رفض' }).click()
+  await expect(third.getByText('لم يقبل الاستوديو هذا الهاتف.')).toBeVisible()
+})
+
+test('the request popover answers a second phone while the panel is closed', async ({ page, context }) => {
+  await signIn(page)
+  const panel = await openPanel(page)
+  const first = await pairNewPhone(page, context, panel)
+  await expect(first.getByText('متصل بالاستوديو')).toBeVisible()
+  await panel.getByRole('button', { name: 'رمز جديد' }).click()
+  const code = (await panel.locator('.code').first().textContent())!.replace(/\D/g, '')
+  await panel.getByRole('button', { name: 'تم' }).click()
+  const second = await freshPhone(context)
+  await second.getByLabel('رمز من 6 أرقام').fill(code)
+  await second.getByRole('button', { name: 'اتصال' }).click()
+  const pop = page.locator('[data-link-request]')
+  await expect(pop).toContainText('يريد التحكم في هذا الاستوديو.')
+  await pop.getByRole('button', { name: 'قبول' }).click()
+  await expect(second.getByText('متصل بالاستوديو')).toBeVisible()
+  await expect(first.getByText('تولّى هاتف آخر التحكم.')).toBeVisible()
+})
+
+test('previews off: the phone shows only the title and position', async ({ page, context }) => {
+  await signIn(page)
+  const panel = await openPanel(page)
+  const phone = await pairNewPhone(page, context, panel)
+  await expect(phone.getByText(/الفقرة 1 من/)).toBeVisible()
+  await panel.getByRole('switch', { name: 'عرض بداية الفقرة على الهاتف' }).click()
+  await expect(phone.getByText('عرض النص على الهاتف متوقف.')).toBeVisible()
+  await expect(phone.getByText(/الفقرة 1 من/)).toBeVisible()
+})
+
+test('with the Tilw app paired, swapping roles makes the studio the remote', async ({ page, context }) => {
+  await signIn(page)
+  const panel = await openPanel(page)
+  const code = (await panel.locator('.code').first().textContent())!.replace(/\D/g, '')
+  const app = await context.newPage()
+  await app.goto('/__mock')
+  await app.getByLabel('Studio code for the mock app').fill(code)
+  await app.getByRole('button', { name: 'Pair the mock Tilw app' }).click()
+  await expect(app.locator('[data-mock-app]')).toContainText('paired')
+
+  await panel.getByRole('button', { name: 'اجعل التطبيق يقرأ' }).click()
+  await expect(app.locator('[data-mock-app]')).toContainText('reads: yes')
+  await panel.getByRole('button', { name: 'تم' }).click()
+  const studioRemote = page.locator('[data-studio-remote]')
+  await expect(studioRemote).toContainText('تطبيق Tilw يقرأ الآن')
+  await studioRemote.getByRole('button', { name: 'الفقرة التالية' }).click()
+  await expect(app.locator('[data-mock-app]')).toContainText('paragraph 2')
+  await expect(studioRemote.getByText(/الفقرة 2 من 3/)).toBeVisible()
+
+  await studioRemote.getByRole('button', { name: 'القراءة هنا مجدداً' }).click()
+  await expect(app.locator('[data-mock-app]')).toContainText('reads: no')
+  await expect(studioRemote).toHaveCount(0)
+})
+
+test('a second studio tab offers Move here', async ({ page, context }) => {
+  await signIn(page)
+  await openPanel(page)
+  const other = await context.newPage()
+  await other.goto(REHEARSE)
+  await other.getByRole('button', { name: 'ربط الهاتف' }).first().click()
+  const panel2 = other.getByRole('dialog', { name: 'ربط الهاتف' })
+  await expect(panel2.getByText('ربط الهاتف مفتوح في تبويب آخر لهذا الاستوديو.')).toBeVisible()
+  await panel2.getByRole('button', { name: 'انقله إلى هنا' }).click()
+  await expect(panel2.getByText('ربط الهاتف مفتوح في تبويب آخر لهذا الاستوديو.')).toHaveCount(0)
 })

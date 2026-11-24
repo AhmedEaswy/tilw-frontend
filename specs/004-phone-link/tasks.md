@@ -189,14 +189,14 @@ description: "Task list for Web app — phone link (release 2)"
 
 ### Tests
 
-- [ ] T039 [P] [US4] Extend `tests/unit/link-store.test.ts`:
+- [X] T039 [P] [US4] Extend `tests/unit/link-store.test.ts` *(in `tests/unit/link-us4.test.ts`)*:
   - `remote.requested` gives `pendingRemote`; accept and decline call the port;
   - previews off stops sending previews in `snapshot` (the store strips them too) and handles `link.updated`;
   - role request and answer, with `roles.changed` switching the studio to remote mode, where `RemoteControls` receives `state`;
   - swap isn't offered for a browser remote or during a take;
   - end → `ended`.
-- [ ] T040 [P] [US4] `tests/unit/host-tab.test.ts`: a second tab sees the lock held and shows `otherTab`; "move here" hands the link over, and a command is applied in exactly one tab.
-- [ ] T041 [P] [US4] `tests/e2e/link.spec.ts` (US4 block):
+- [X] T040 [P] [US4] `tests/unit/host-tab.test.ts` *(in `tests/unit/link-us4.test.ts`)*: a second tab sees the lock held and shows `otherTab`; "move here" hands the link over, and a command is applied in exactly one tab.
+- [X] T041 [P] [US4] `tests/e2e/link.spec.ts` (US4 block):
   - a second phone pairs and the studio accepts: the first phone shows "Another phone took over";
   - decline, or the 2-minute lapse on the clock knob, gives "The studio didn't accept";
   - previews off: the phone shows only the title and position;
@@ -205,15 +205,15 @@ description: "Task list for Web app — phone link (release 2)"
 
 ### Implementation
 
-- [ ] T042 [US4] Create `app/components/link/LinkRequest.vue`: a non-modal popover anchored to the indicator, for a second phone or a role swap, with Accept and Decline and the time left. During countdown and recording it isn't shown; the indicator gets a badge and the request waits in the panel (research R13) [L3].
-- [ ] T043 [US4] Panel controls in `ConnectPanel.vue`:
+- [X] T042 [US4] Create `app/components/link/LinkRequest.vue`: a non-modal popover anchored to the indicator, for a second phone or a role swap, with Accept and Decline and the time left. During countdown and recording it isn't shown; the indicator gets a badge and the request waits in the panel (research R13) [L3].
+- [X] T043 [US4] Panel controls in `ConnectPanel.vue`:
   - the **Previews** switch (`links.update`);
   - pending phone accept and decline;
   - **Swap roles**, only when the remote's kind is `app` and no take is running;
   - **End link** with the ended state and its reason [L1].
-- [ ] T044 [US4] Remote side: the waiting-for-accept, replaced and declined/lapsed screens, previews disappearing on `link.updated`, and **Leave** (`relay.leave`, forget the pairing), in `app/stores/remote.ts` and `app/pages/remote.vue` [L6].
-- [ ] T045 [US4] Studio as remote: when `player === 'remote'`, the rehearse and record pages show `RemoteControls` fed by the link store (state from the app, commands through `relay.command` with `{ kind: 'session' }`), instead of applying commands. The page's own reader stays paused [L7].
-- [ ] T046 [US4] "Open in another tab" state with **Move here** in `ConnectPanel.vue` and `LinkIndicator.vue`, using `useHostTab` [L1].
+- [X] T044 [US4] Remote side: the waiting-for-accept, replaced and declined/lapsed screens, previews disappearing on `link.updated`, and **Leave** (`relay.leave`, forget the pairing), in `app/stores/remote.ts` and `app/pages/remote.vue` [L6].
+- [X] T045 [US4] Studio as remote: when `player === 'remote'`, the rehearse and record pages show `RemoteControls` fed by the link store (state from the app, commands through `relay.command` with `{ kind: 'session' }`), instead of applying commands. The page's own reader stays paused [L7].
+- [X] T046 [US4] "Open in another tab" state with **Move here** in `ConnectPanel.vue` and `LinkIndicator.vue`, using `useHostTab` [L1].
 
 **Checkpoint**: US4 tests pass.
 

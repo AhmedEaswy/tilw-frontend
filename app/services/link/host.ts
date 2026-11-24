@@ -7,10 +7,13 @@
  *   the page's own controls, then answers it. With no player for this script the command is refused (`unsupported`).
  * - Sends the player's state: in full when the phone joins, then coalesced to at most one every `coalesceMs`.
  * - Has no access to the recorder: nothing here can stop a take (research R14, SC-005).
+ * - US4: with roles swapped (the Tilw app reads, `link.player === 'remote'`), the studio is the remote: it shows the
+ *   app's state and sends commands, with the same done / refused / not delivered results as the phone (Figma L7).
  */
 import type { LinkPort, LinkRelayPort, RealtimeConnection, RealtimePort } from '../ports'
+import type { CommandResult } from './remote'
 import {
-  isPortError, type ConnectionState, type LinkAuth, type LinkCommand, type LinkEndReason, type LinkEvent, type LinkParty,
+  LINK_RULES, isPortError, type CommandType, type ConnectionState, type LinkAuth, type LinkCommand, type LinkEndReason, type LinkEvent, type LinkParty,
   type LinkRemote, type PairingCode, type PhoneLink, type PresenceMember, type RefusalReason, type StudioState,
 } from '../types'
 
@@ -49,6 +52,11 @@ export interface HostState {
   error: unknown
   /** Set when a start was refused with limit_reached. */
   limitError: unknown
+  /** US4, roles swapped: the app's reading state, newest by seq. */
+  appState: StudioState | null
+  /** US4, roles swapped: commands from the studio waiting for the app's answer, and the last result. */
+  sent: Record<string, CommandType>
+  lastResult: CommandResult | null
 }
 
 export interface HostDeps {
@@ -81,6 +89,7 @@ export function createLinkHost(deps: HostDeps) {
   const state: HostState = {
     phase: 'idle', link: null, code: null, endReason: null, pendingRemote: null, roleRequest: null,
     partnerPresent: false, partnerSince: null, connection: 'disconnected', error: null, limitError: null,
+    appState: null, sent: {}, lastResult: null,
   }
   const listeners = new Set<(s: HostState) => void>()
   const emit = () => listeners.forEach(cb => cb(state))
@@ -97,8 +106,11 @@ export function createLinkHost(deps: HostDeps) {
   let holdingTab = false
   let offRelease: (() => void) | null = null
   let keepAlive: ReturnType<typeof setInterval> | null = null
+  const ackTimers = new Map<string, ReturnType<typeof setTimeout>>()
 
   function teardown() {
+    ackTimers.forEach(t => clearTimeout(t))
+    ackTimers.clear()
     if (timer) clearTimeout(timer)
     timer = null
     if (keepAlive) clearInterval(keepAlive)
@@ -215,7 +227,26 @@ export function createLinkHost(deps: HostDeps) {
       case 'link.updated': return set({ link: state.link ? { ...state.link, previews: e.data.previews } : null })
       case 'roles.requested': return set({ roleRequest: e.data })
       case 'roles.declined': return set({ roleRequest: null })
-      case 'roles.changed': return set({ roleRequest: null, link: state.link ? { ...state.link, player: e.data.player } : null })
+      case 'roles.changed':
+        set({ roleRequest: null, appState: null, sent: {}, lastResult: null, link: state.link ? { ...state.link, player: e.data.player } : null })
+        // Reading here again: the app needs our state now.
+        if (e.data.player === 'host') void sendState(true)
+        return
+      case 'state':
+        if (state.link?.player !== 'remote') return
+        if (state.appState && e.data.seq <= state.appState.seq) return
+        return set({ appState: e.data })
+      case 'ack': {
+        const type = state.sent[e.data.commandId]
+        if (!type) return // too late: already shown as not delivered
+        clearTimeout(ackTimers.get(e.data.commandId))
+        ackTimers.delete(e.data.commandId)
+        const { [e.data.commandId]: _done, ...rest } = state.sent
+        return set({
+          sent: rest,
+          lastResult: e.data.result === 'applied' ? { type, outcome: 'applied' } : { type, outcome: 'refused', reason: e.data.reason ?? 'unsupported' },
+        })
+      }
       case 'link.ended': return endLocal(e.data.reason)
       default:
     }
@@ -225,7 +256,8 @@ export function createLinkHost(deps: HostDeps) {
     const link = state.link
     if (!link) return
     let answer: { result: 'applied' } | { result: 'refused'; reason: RefusalReason }
-    if (!player || player.scriptId !== link.scriptId) answer = { result: 'refused', reason: 'unsupported' }
+    // With roles swapped the app reads; a command meant for it must never move this page.
+    if (link.player !== 'host' || !player || player.scriptId !== link.scriptId) answer = { result: 'refused', reason: 'unsupported' }
     else {
       try {
         answer = player.apply(cmd)
@@ -244,7 +276,7 @@ export function createLinkHost(deps: HostDeps) {
   async function sendState(full = false) {
     if (timer) { clearTimeout(timer); timer = null }
     const link = state.link
-    if (!link || state.phase !== 'open' || !player || player.scriptId !== link.scriptId) return
+    if (!link || state.phase !== 'open' || link.player !== 'host' || !player || player.scriptId !== link.scriptId) return
     if (!full && !state.partnerPresent) return
     const snap = player.snapshot()
     const payload: StudioState = { ...snap, seq: nextSeq() }
@@ -373,6 +405,44 @@ export function createLinkHost(deps: HostDeps) {
       await deps.links.declineRemote(state.link.id, id).catch(() => {})
     },
 
+    /** US4: ask the Tilw app to swap roles (`remote` = the app reads), or answer the app's request. */
+    async requestRoles(nextPlayer: LinkParty) {
+      if (!state.link || state.phase !== 'open') return
+      try {
+        await deps.relay.requestRoles(SESSION, state.link.id, nextPlayer)
+        set({ error: null })
+      } catch (e) {
+        set({ error: e })
+      }
+    },
+    async answerRoles(accept: boolean) {
+      if (!state.link || !state.roleRequest) return
+      set({ roleRequest: null })
+      await deps.relay.answerRoles(SESSION, state.link.id, accept).catch((e) => { set({ error: e }) })
+    },
+
+    /** US4, roles swapped: a command from the studio's remote controls to the app. */
+    async send(type: CommandType, extra: { paragraph?: number; wpm?: number } = {}) {
+      const link = state.link
+      if (!link || state.phase !== 'open' || link.player !== 'remote') return
+      const id = crypto.randomUUID()
+      set({ sent: { ...state.sent, [id]: type }, lastResult: { type, outcome: 'sending' } })
+      const notDelivered = () => {
+        if (!state.sent[id]) return
+        ackTimers.delete(id)
+        const { [id]: _gone, ...rest } = state.sent
+        set({ sent: rest, lastResult: { type, outcome: 'notDelivered' } })
+      }
+      ackTimers.set(id, setTimeout(notDelivered, LINK_RULES.ackTimeoutMs))
+      try {
+        await deps.relay.command(SESSION, link.id, { id, type, ...extra })
+      } catch (e) {
+        clearTimeout(ackTimers.get(id))
+        if (isPortError(e, 'partner_offline')) set({ partnerPresent: false })
+        notDelivered()
+      }
+    },
+
     /** Another studio tab holds the link: take it over here. */
     async moveHere(scriptId: string) {
       if (!deps.tab) return
@@ -388,6 +458,7 @@ export function createLinkHost(deps: HostDeps) {
       set({
         phase: 'idle', link: null, code: null, endReason: null, pendingRemote: null, roleRequest: null,
         partnerPresent: false, partnerSince: null, connection: 'disconnected', error: null, limitError: null,
+        appState: null, sent: {}, lastResult: null,
       })
     },
   }

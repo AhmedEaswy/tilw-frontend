@@ -256,6 +256,25 @@ function closeLink() {
 useEventListener(document, 'keydown', (e: KeyboardEvent) => {
   if (e.key === 'Escape' && linkOpen.value) closeLink()
 })
+// Requests wait in the panel during a countdown or a take (research R13); the setup page is the only one showing them.
+const requestQuiet = computed(() => phase.value !== 'setup')
+// ---------- feature 004 US4: requests (Figma L3) and the studio as remote (L7) ----------
+const linkRequest = computed(() => {
+  if (linkOpen.value || requestQuiet.value) return null
+  if (link.pendingRemote) return { kind: 'remote' as const, name: link.pendingRemote.name, expiresAt: null }
+  const rr = link.state?.roleRequest
+  return rr ? { kind: 'roles' as const, player: rr.player, expiresAt: rr.expiresAt } : null
+})
+const linkBadge = computed(() => !!link.pendingRemote || !!link.state?.roleRequest)
+function acceptRequest() {
+  if (linkRequest.value?.kind === 'remote') void link.acceptRemote()
+  else void link.answerRoles(true)
+}
+function declineRequest() {
+  if (linkRequest.value?.kind === 'remote') void link.declineRemote()
+  else void link.answerRoles(false)
+}
+
 const scriptReady = computed(() => reader.status === 'ready' && reader.paragraphs.length > 0)
 const player = useLinkPlayer(() => ({
   scriptId: id.value,
@@ -359,20 +378,33 @@ const firstLine = computed(() => reader.paragraphs[0] ?? '')
       <NuxtLink to="/app/scripts" class="brand" :aria-label="t('nav.scripts')"><BrandSignature :width="143" /></NuxtLink>
       <p class="mast-title">{{ t('studio.title') }}</p>
       <h1 class="phone-title">{{ t('studio.setup') }}</h1>
-      <LinkIndicator
-        ref="linkBtn"
-        class="link-ind"
-        :status="link.status"
-        :badge="!!link.pendingRemote"
-        :expanded="linkOpen"
-        @open="linkOpen ? closeLink() : openLink()"
-      />
+      <div class="link-ind">
+        <LinkIndicator
+          ref="linkBtn"
+          :status="link.status"
+          :badge="linkBadge"
+          :expanded="linkOpen"
+          @open="linkOpen ? closeLink() : openLink()"
+        />
+        <LinkRequest
+          v-if="linkRequest"
+          :kind="linkRequest.kind"
+          :name="linkRequest.kind === 'remote' ? linkRequest.name : undefined"
+          :player="linkRequest.kind === 'roles' ? linkRequest.player : undefined"
+          :expires-at="linkRequest.expiresAt"
+          @accept="acceptRequest"
+          @decline="declineRequest"
+        />
+      </div>
       <NuxtLink :to="editorPath" class="round" :aria-label="t('studio.backToScript')"><UiGlyph name="back" :size="20" /></NuxtLink>
     </header>
     <div v-if="linkOpen" class="scrim" aria-hidden="true" @click="closeLink" />
-    <ConnectPanel v-if="linkOpen" ref="linkPanel" class="link-side" :script-id="id" @close="closeLink" />
+    <ConnectPanel v-if="linkOpen" ref="linkPanel" class="link-side" :script-id="id" :busy="phase !== 'setup' || saving" @close="closeLink" />
 
-    <main class="wrap">
+    <main v-if="link.studioIsRemote" class="wrap">
+      <StudioRemote />
+    </main>
+    <main v-else class="wrap">
       <div class="head">
         <h1>{{ t('studio.setup') }}</h1>
         <NuxtLink :to="editorPath" class="link">{{ t('studio.backToScript') }}</NuxtLink>
@@ -505,6 +537,7 @@ const firstLine = computed(() => reader.paragraphs[0] ?? '')
 }
 /* Feature 004: Connect phone in the setup masthead; the panel opens over the page as on rehearsal (Figma L1, L2). */
 .link-ind {
+  position: relative;
   margin-inline-start: auto;
 }
 .link-ind + .round {

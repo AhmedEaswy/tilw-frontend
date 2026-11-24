@@ -65,6 +65,26 @@ function closeLink() {
   nextTick(() => linkBtn.value?.$el.focus())
 }
 const docked = computed(() => settingsOpen.value || linkOpen.value)
+// The rehearsal shows requests unless the countdown runs.
+const requestQuiet = computed(() => engine.countdown.value > 0)
+// ---------- feature 004 US4: requests (Figma L3) and the studio as remote (L7) ----------
+const linkRequest = computed(() => {
+  if (linkOpen.value || requestQuiet.value) return null
+  if (link.pendingRemote) return { kind: 'remote' as const, name: link.pendingRemote.name, expiresAt: null }
+  const rr = link.state?.roleRequest
+  return rr ? { kind: 'roles' as const, player: rr.player, expiresAt: rr.expiresAt } : null
+})
+const linkBadge = computed(() => !!link.pendingRemote || !!link.state?.roleRequest)
+function acceptRequest() {
+  if (linkRequest.value?.kind === 'remote') void link.acceptRemote()
+  else void link.answerRoles(true)
+}
+function declineRequest() {
+  if (linkRequest.value?.kind === 'remote') void link.declineRemote()
+  else void link.answerRoles(false)
+}
+// Roles swapped: the app reads, so this page's own reader stays paused.
+watch(() => link.studioIsRemote, (on) => { if (on) engine.stop() })
 
 /** The phone drives this page through the same functions as its buttons and shortcuts (research R6). */
 const player = useLinkPlayer(() => ({
@@ -189,14 +209,24 @@ onBeforeUnmount(() => {
         </NuxtLink>
         <h1 class="name" dir="auto">{{ reader.script?.title ?? '' }}</h1>
         <p class="mode">{{ t('reader.title') }}</p>
-        <LinkIndicator
-          ref="linkBtn"
-          class="link-ind"
-          :status="link.status"
-          :badge="!!link.pendingRemote"
-          :expanded="linkOpen"
-          @open="linkOpen ? closeLink() : openLink()"
-        />
+        <div class="link-ind">
+          <LinkIndicator
+            ref="linkBtn"
+            :status="link.status"
+            :badge="linkBadge"
+            :expanded="linkOpen"
+            @open="linkOpen ? closeLink() : openLink()"
+          />
+          <LinkRequest
+            v-if="linkRequest"
+            :kind="linkRequest.kind"
+            :name="linkRequest.kind === 'remote' ? linkRequest.name : undefined"
+            :player="linkRequest.kind === 'roles' ? linkRequest.player : undefined"
+            :expires-at="linkRequest.expiresAt"
+            @accept="acceptRequest"
+            @decline="declineRequest"
+          />
+        </div>
         <NuxtLink :to="`/app/scripts/${id}/record`" class="rec">{{ t('library.setupRecording') }}</NuxtLink>
         <button
           ref="settingsBtn"
@@ -217,6 +247,7 @@ onBeforeUnmount(() => {
           <UiButton v-if="reader.status === 'error'" tone="cue" @click="load">{{ t('common.retry') }}</UiButton>
           <UiButton v-else tone="cue" to="/app/scripts">{{ t('library.backToScripts') }}</UiButton>
         </div>
+        <StudioRemote v-else-if="link.studioIsRemote" class="surface studio-remote" />
         <ReaderSurface
           v-else
           class="surface"
@@ -246,7 +277,7 @@ onBeforeUnmount(() => {
       </div>
 
       <ReaderControls
-        v-if="reader.status === 'ready' && reader.paragraphs.length"
+        v-if="reader.status === 'ready' && reader.paragraphs.length && !link.studioIsRemote"
         class="controls"
         :playing="engine.playing.value"
         :counting="engine.countdown.value > 0"
@@ -303,6 +334,14 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
+/* Feature 004 US4: the request popover hangs under the indicator. */
+.link-ind {
+  position: relative;
+}
+.studio-remote {
+  align-self: start;
+  margin-block-start: 24px;
+}
 .rh {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

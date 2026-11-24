@@ -73,7 +73,7 @@ const rand = (n: number, alphabet = 'abcdefghijklmnopqrstuvwxyz0123456789') =>
   Array.from({ length: n }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join('')
 const ulid = (p: string) => `${p}${rand(24).toUpperCase()}`
 
-export function createMockLinks(d: MockLinkDeps): { links: LinkPort; relay: LinkRelayPort; server: ChannelAuthoriser; endForScript(scriptId: string): void; endWith(linkId: string, reason: LinkEndReason): void } {
+export function createMockLinks(d: MockLinkDeps): { links: LinkPort; relay: LinkRelayPort; server: ChannelAuthoriser; endForScript(scriptId: string): void; endWith(linkId: string, reason: LinkEndReason): void; pairApp(code: string, name?: string): Promise<Pairing> } {
   const iso = (ms: number | null) => (ms === null ? null : new Date(ms).toISOString())
 
   function read(): LinkState {
@@ -88,13 +88,28 @@ export function createMockLinks(d: MockLinkDeps): { links: LinkPort; relay: Link
    * Read, change and save in one step (the mock is single-threaded per tab). Saved even when the call is refused:
    * a refusal can have effects the backend keeps too (the wrong-code count, a link ended by `limit`).
    */
+  // Events go out after the change is written, as a server broadcasts after its commit: a phone that reacts at once
+  // (joining presence on remote.accepted) must find the new state, not the old one.
+  let outbox: Array<() => void> | null = null
+  function publish(channel: string, event: LinkEvent) {
+    if (outbox) outbox.push(() => d.hub.publish(channel, event))
+    else d.hub.publish(channel, event)
+  }
+
   function tx<T>(fn: (s: LinkState) => T): T {
+    const outer = outbox
+    outbox = outer ?? []
     const s = read()
-    housekeep(s)
     try {
+      housekeep(s)
       return fn(s)
     } finally {
       write(s)
+      if (!outer) {
+        const queued = outbox
+        outbox = null
+        queued.forEach(f => f())
+      }
     }
   }
 
@@ -113,7 +128,7 @@ export function createMockLinks(d: MockLinkDeps): { links: LinkPort; relay: Link
   }
   function send(l: MockLink, party: LinkParty, event: LinkEvent) {
     const ch = channelOf(l, party)
-    if (ch) d.hub.publish(ch, event)
+    if (ch) publish(ch, event)
   }
   const other = (p: LinkParty): LinkParty => (p === 'host' ? 'remote' : 'host')
 
@@ -125,8 +140,8 @@ export function createMockLinks(d: MockLinkDeps): { links: LinkPort; relay: Link
     for (const r of l.remotes) if (r.status === 'active' || r.status === 'pending') { r.status = 'ended'; r.endedAt = t }
     s.codes = s.codes.filter(c => c.linkId !== l.id || c.usedAt !== null)
     const event: LinkEvent = { name: 'link.ended', data: { reason } }
-    d.hub.publish(hostChannel(l.id), event)
-    if (active) d.hub.publish(remoteChannel(l.id, active.id), event)
+    publish(hostChannel(l.id), event)
+    if (active) publish(remoteChannel(l.id, active.id), event)
   }
 
   /** What tilw:links-idle does: lapse waiting phones and role requests, end idle links, drop dead codes. */
@@ -137,7 +152,7 @@ export function createMockLinks(d: MockLinkDeps): { links: LinkPort; relay: Link
       for (const r of l.remotes) {
         if (r.status === 'pending' && r.pendingUntil !== null && r.pendingUntil < t) {
           r.status = 'declined'; r.endedAt = t
-          d.hub.publish(remoteChannel(l.id, r.id), { name: 'remote.declined', data: { reason: 'lapsed' } })
+          publish(remoteChannel(l.id, r.id), { name: 'remote.declined', data: { reason: 'lapsed' } })
         }
       }
       if (l.roleRequest && l.roleRequest.expiresAt < t) {
@@ -280,11 +295,11 @@ export function createMockLinks(d: MockLinkDeps): { links: LinkPort; relay: Link
       const t = d.now()
       if (previous) {
         previous.status = 'replaced'; previous.endedAt = t
-        d.hub.publish(remoteChannel(l.id, previous.id), { name: 'remote.replaced', data: { reason: 'replaced' } })
+        publish(remoteChannel(l.id, previous.id), { name: 'remote.replaced', data: { reason: 'replaced' } })
       }
       pending.status = 'active'; pending.pendingUntil = null; pending.lastSeenAt = iso(t)
       l.state = 'connected'; l.remoteSeenAt = t; l.lastUsedAt = t
-      d.hub.publish(remoteChannel(l.id, pending.id), { name: 'remote.accepted', data: { player: l.player } })
+      publish(remoteChannel(l.id, pending.id), { name: 'remote.accepted', data: { player: l.player } })
       return view(l)
     })),
     declineRemote: (id, remoteId) => run(() => tx((s) => {
@@ -292,12 +307,12 @@ export function createMockLinks(d: MockLinkDeps): { links: LinkPort; relay: Link
       const pending = l.remotes.find(r => r.id === remoteId && r.status === 'pending')
       if (!pending) throw new PortError('not_found')
       pending.status = 'declined'; pending.endedAt = d.now()
-      d.hub.publish(remoteChannel(l.id, pending.id), { name: 'remote.declined', data: { reason: 'declined' } })
+      publish(remoteChannel(l.id, pending.id), { name: 'remote.declined', data: { reason: 'declined' } })
     })),
   }
 
-  const relay: LinkRelayPort = {
-    pair: (input, name) => run(() => tx((s): Pairing => {
+  /** Pairing by code or QR secret. `kind: 'app'` is the mock-only stand-in for the Tilw app (US4 role swap). */
+  const pairAs = (input: { code: string } | { secret: string }, name: string | undefined, kind: 'browser' | 'app') => run(() => tx((s): Pairing => {
       const t = d.now()
       if (s.wrong.blockedUntil > t) throw new PortError('rate_limited')
       const c = 'code' in input
@@ -317,7 +332,7 @@ export function createMockLinks(d: MockLinkDeps): { links: LinkPort; relay: Link
       c.usedAt = t
       const hasActive = !!activeRemote(l)
       const remote: MockRemote = {
-        id: ulid('R'), kind: 'browser', name: (name ?? '').trim().slice(0, 80) || 'Phone browser',
+        id: ulid('R'), kind, name: (name ?? '').trim().slice(0, 80) || (kind === 'app' ? 'Tilw app' : 'Phone browser'),
         status: hasActive ? 'pending' : 'active', credential: `rl_${rand(40, '0123456789abcdef')}`, lastSeenAt: iso(t),
         createdAt: t, pendingUntil: hasActive ? t + LINK_RULES.pendingRemoteMinutes * MIN : null, endedAt: null,
       }
@@ -325,7 +340,7 @@ export function createMockLinks(d: MockLinkDeps): { links: LinkPort; relay: Link
       l.lastUsedAt = t
       if (hasActive) {
         const req: LinkRemote = { id: remote.id, kind: remote.kind, name: remote.name, status: remote.status, connected: false, lastSeenAt: remote.lastSeenAt }
-        d.hub.publish(hostChannel(l.id), { name: 'remote.requested', data: { remote: req } })
+        publish(hostChannel(l.id), { name: 'remote.requested', data: { remote: req } })
       } else {
         l.state = 'connected'; l.remoteSeenAt = t
       }
@@ -337,7 +352,10 @@ export function createMockLinks(d: MockLinkDeps): { links: LinkPort; relay: Link
         channels: { own: remoteChannel(l.id, remote.id), presence: presenceChannel(l.id) },
         realtime: { key: 'mock', host: 'mock', port: 0, scheme: 'https' },
       }
-    })),
+    }))
+
+  const relay: LinkRelayPort = {
+    pair: (input, name) => pairAs(input, name, 'browser'),
     command: (auth, id, cmd: LinkCommand) => run(() => tx((s) => {
       const p = party(s, auth, id)
       if (p.party === p.l.player) throw new PortError('conflict')
@@ -436,5 +454,6 @@ export function createMockLinks(d: MockLinkDeps): { links: LinkPort; relay: Link
     endWith(linkId, reason) {
       tx((s) => { const l = s.links.find(x => x.id === linkId); if (l) end(s, l, reason) })
     },
+    pairApp: (code, name) => pairAs({ code }, name ?? 'Tilw app', 'app'),
   }
 }

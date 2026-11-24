@@ -5,7 +5,11 @@
  * waiting; the phone, the previews switch and End link once connected; a waiting second phone; why a link ended;
  * and the locked, unavailable and other-tab states.
  */
-const props = defineProps<{ scriptId: string }>()
+const props = defineProps<{
+  scriptId: string
+  /** A countdown or a take is running: no role swap (US4). */
+  busy?: boolean
+}>()
 const emit = defineEmits<{ close: [] }>()
 
 const { t, locale } = useI18n()
@@ -41,6 +45,11 @@ const since = computed(() => {
   // A duration ("3 minutes" / "3 دقائق"), read after "Connected for" / "متصل منذ".
   return new Intl.NumberFormat(locale.value === 'ar' ? 'ar-u-nu-latn' : 'en', { style: 'unit', unit: 'minute', unitDisplay: 'long' }).format(min)
 })
+
+// US4: role swap with the Tilw app (Figma L3, L7).
+const player = computed(() => s.value?.link?.player ?? 'host')
+const canSwap = computed(() => remote.value?.kind === 'app' && player.value === 'host' && !props.busy)
+const roleRequest = computed(() => s.value?.roleRequest ?? null)
 
 const previews = computed({
   get: () => s.value?.link?.previews ?? true,
@@ -127,6 +136,18 @@ defineExpose({ focus: () => doneBtn.value?.$el.focus() })
             <UiButton tone="primary" size="sm" @click="link.acceptRemote()">{{ t('link.accept') }}</UiButton>
           </div>
         </div>
+        <div v-if="roleRequest" class="card request" role="alert">
+          <p class="who">{{ roleRequest.player === 'remote' ? t('link.rolesAskRead') : t('link.rolesAskBack') }}</p>
+          <div class="acts">
+            <UiButton tone="secondary" size="sm" @click="link.answerRoles(false)">{{ t('link.decline') }}</UiButton>
+            <UiButton tone="primary" size="sm" @click="link.answerRoles(true)">{{ t('link.swapAccept') }}</UiButton>
+          </div>
+        </div>
+        <div v-if="canSwap" class="swap">
+          <UiButton tone="secondary" block @click="link.requestRoles('remote')">{{ t('link.swapRoles') }}</UiButton>
+          <p class="hint">{{ t('link.swapHelp') }}</p>
+        </div>
+        <UiButton v-else-if="player === 'remote'" tone="secondary" block @click="link.requestRoles('host')">{{ t('link.readHere') }}</UiButton>
         <div class="field">
           <span>{{ t('link.previews') }}</span>
           <UiSwitch v-model="previews" :label="t('link.previews')" />
@@ -338,6 +359,10 @@ hr {
 }
 .request {
   border-color: var(--tilw-action-primary);
+}
+.swap {
+  display: grid;
+  gap: 8px;
 }
 .acts {
   display: flex;

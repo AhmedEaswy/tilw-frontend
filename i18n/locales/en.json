@@ -918,7 +918,18 @@
     },
     "accept": "Accept",
     "decline": "Decline",
-    "requestText": "{name} wants to control this studio."
+    "requestText": "{name} wants to control this studio.",
+    "rolesAskRead": "The Tilw app wants to read the script, with this studio as the remote.",
+    "rolesAskBack": "The Tilw app wants this studio to read again.",
+    "answerWithin": "Answer within {time}",
+    "swapAccept": "Swap roles",
+    "swapRoles": "Let the app read",
+    "swapHelp": "The app reads the script and this studio becomes the remote. Not available during a take.",
+    "swapAsked": "Request sent to the app.",
+    "appReads": "The Tilw app is reading. Control it from here.",
+    "readHere": "Read here again",
+    "appOffline": "The app isn't connected. It reconnects on its own when the network is back.",
+    "roleRequestTitle": "Role swap request"
   },
   "remote": {
     "pageTitle": "Phone remote",

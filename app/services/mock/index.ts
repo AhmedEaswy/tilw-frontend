@@ -7,6 +7,7 @@
  * script history, linked storage with a fake Google Drive (mock/drive.ts), take records, devices, email change and
  * the 14-day deletion grace. The clock can be moved from /__mock (`knobs.clockOffsetMs`).
  */
+import { startMockApp } from './app'
 import type { Services } from '../ports'
 import {
   DEFAULT_READING,
@@ -834,6 +835,11 @@ export function createMockServices(kv: KV, opts: MockOptions = {}) {
     linkOffline: () => hub.offline,
     /** Feature 004: end a link as the backend would for an account action (signed_out, script_deleted…). */
     endLink: phone.endWith,
+    /** Feature 004 US4: pair a stand-in Tilw app with a studio's code; it runs in this tab (see mock/app.ts). */
+    async pairMockApp(code: string) {
+      const pairing = await phone.pairApp(code)
+      return startMockApp({ relay: phone.relay, realtime: services.realtime, pairing })
+    },
   }
 
   return { services, db, knobs, hub }
