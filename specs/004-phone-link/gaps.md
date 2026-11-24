@@ -13,7 +13,7 @@ Figma: `t9xEIr22yKOj7o2Ft32hxb`, page **`08 · Release 2 · Phone link`** (`276:
 | L5 | Remote page: controls | rehearsal state with previews; previews off; recording (countdown, time, saving, saved); command result line (done, refused, not delivered); studio offline | `278:273` controls · `278:331` studio offline (in section `278:386`); recording in section `286:424`: `286:425` countdown, `286:488` recording, `286:551` saving, `286:614` saved |
 | L6 | Remote page: end screens | waiting for the studio to accept; declined / lapsed; replaced; ended with reason; left | section `284:276`: `284:277` waiting, `284:326` declined, `284:370` replaced, `284:414` ended (idle), `284:458` left (Arabic phone; English follows) |
 | L7 | Studio as remote (roles swapped with the Tilw app) | RemoteControls inside the studio frame | `288:762` |
-| L8 | Settings → Phone links | list with open and ended links; empty state | — |
+| L8 | Settings → Phone links | list with open and ended links; empty state | section `290:1481`: `290:1482` list, `290:1546` empty |
 
 Plan & usage only gains one more row of the existing limit style, so it needs no new frame.
 

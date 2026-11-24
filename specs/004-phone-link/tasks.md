@@ -226,7 +226,7 @@ description: "Task list for Web app — phone link (release 2)"
 
 ### Tests
 
-- [ ] T047 [P] [US5] `tests/e2e/link.spec.ts` (US5 block):
+- [X] T047 [P] [US5] `tests/e2e/link.spec.ts` (US5 block):
   - Settings → Phone links lists an open and an ended link, newest first;
   - End from there: the phone shows "The studio ended this link";
   - deleting the linked script: the phone shows "The script was deleted";
@@ -235,8 +235,8 @@ description: "Task list for Web app — phone link (release 2)"
 
 ### Implementation
 
-- [ ] T048 [US5] Create `app/components/link/LinkHistory.vue` (phone name and kind, script, studio device, connected or not, last used as relative time, **End** on open links) and add a **Phone links** section to `app/pages/app/settings/index.vue`, using the existing settings row and list components [L8].
-- [ ] T049 [US5] End-reason texts for every `LinkEndReason`, plus `replaced`/`declined`/`lapsed`/`left`, with a generic fallback for unknown reasons. They are used by `ConnectPanel.vue`, `pages/remote.vue` and `LinkHistory.vue` through one helper, `linkEndText(reason)`, in `app/utils/link.ts` (research R15).
+- [X] T048 [US5] *(Phone links is a settings row opening `/app/settings/phone-links`, like Plan and Storage)* Create `app/components/link/LinkHistory.vue` (phone name and kind, script, studio device, connected or not, last used as relative time, **End** on open links) and add a **Phone links** section to `app/pages/app/settings/index.vue`, using the existing settings row and list components [L8].
+- [X] T049 [US5] End-reason texts for every `LinkEndReason`, plus `replaced`/`declined`/`lapsed`/`left`, with a generic fallback for unknown reasons. They are used by `ConnectPanel.vue`, `pages/remote.vue` and `LinkHistory.vue` through one helper, `linkEndText(reason)`, in `app/utils/link.ts` (research R15).
 
 **Checkpoint**: all stories pass on the mock.
 

@@ -46,10 +46,7 @@ function again() {
   nextTick(() => codeInput.value?.focus())
 }
 
-const endText = computed(() => {
-  const r = s.value?.ended
-  return r ? t(`link.ended.${r}`) : t('link.ended.unknown')
-})
+const endText = computed(() => linkEndText(t, s.value?.ended))
 
 // US2: keep the screen on while connected, and pick the link back up when the network or the page returns.
 useWakeLock(() => phase.value === 'connected')

@@ -132,6 +132,11 @@ onBeforeUnmount(() => reader.flushSettings())
         <span class="txt"><b>{{ t('storage.title') }}</b><small>{{ storageHint }}</small></span>
         <span class="go">{{ t('settings.open') }}</span>
       </NuxtLink>
+      <NuxtLink to="/app/settings/phone-links" class="row">
+        <UiGlyph class="ic" name="headset" :size="24" />
+        <span class="txt"><b>{{ t('link.history.pageTitle') }}</b><small>{{ t('link.history.rowHint') }}</small></span>
+        <span class="go">{{ t('settings.open') }}</span>
+      </NuxtLink>
       <button type="button" class="row" @click="openReading">
         <UiGlyph class="ic" name="settings" :size="24" />
         <span class="txt"><b>{{ t('reader.settings.title') }}</b><small>{{ t('settings.readingHint') }}</small></span>
