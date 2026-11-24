@@ -48,6 +48,8 @@ export default defineNuxtConfig({
     // Feature 006: the admin console, client-rendered like the studio.
     '/admin/**': { ssr: false },
     '/admin': { ssr: false },
+    // Feature 006: the sign-up page is only linked while sign-up is open, so the crawler may not find it.
+    '/signup': { prerender: true },
     '/__mock': { ssr: false },
     // Release 2: the email-confirmation link carries its token in the query; render it in the browser like the app.
     '/confirm-email': { ssr: false },

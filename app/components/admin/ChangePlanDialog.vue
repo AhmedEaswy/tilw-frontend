@@ -42,15 +42,18 @@ const name = (p: { nameAr: string; nameEn: string }) => (locale.value === 'ar' ?
 
 async function submit() {
   if (!valid.value || !chosen.value) return
+  // Read before the change: once the plan is in force it leaves the list of choices.
+  const target = chosen.value
+  const isPaid = paid.value
   error.value = ''
   fieldError.value = ''
   try {
     await user.act('plan', () => useServices().admin.changePlan(props.detail.id, {
-      planId: chosen.value!.id,
-      ...(paid.value ? (mode.value === 'custom' ? { endsAt: dayToIso(ends.value, true) } : { period: mode.value }) : {}),
+      planId: target.id,
+      ...(isPaid ? (mode.value === 'custom' ? { endsAt: dayToIso(ends.value, true) } : { period: mode.value }) : {}),
       note: note.value.trim(),
     }))
-    show(t('admin.plan.changed', { plan: name(chosen.value) }), 'success')
+    show(t('admin.plan.changed', { plan: name(target) }), 'success')
     open.value = false
   } catch (e) {
     if (isPortError(e, 'validation') && e.fields?.endsAt) fieldError.value = e.fields.endsAt === 'overlap' ? t('admin.plan.overlap') : t('admin.plan.endInvalid')

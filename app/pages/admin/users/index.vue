@@ -14,9 +14,6 @@ const STATUSES = ['active', 'suspended', 'deletion_scheduled', 'admin'] as const
 
 const list = usePagedList(cursor => useServices().admin.users({ q: filters.q, plan: filters.plan, status: filters.status as (typeof STATUSES)[number] | undefined }, cursor))
 const filters = useQueryFilters(['q', 'plan', 'status'] as const, { allowed: { status: STATUSES }, debounce: ['q'], onChange: () => void list.reload() })
-const route = useRoute()
-// The top-bar search navigates here with ?q=; keep the box in step.
-watch(() => route.query.q, q => (filters.q = typeof q === 'string' ? q : undefined))
 
 onMounted(() => {
   void list.reload()

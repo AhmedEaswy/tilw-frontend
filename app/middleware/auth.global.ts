@@ -28,6 +28,8 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   await auth.init()
 
+  // Feature 006: the session check found the account suspended; sign-in says why.
+  if (needsAuth && auth.suspended) return navigateTo({ path: '/signin', query: { suspended: '1' } }, { replace: true })
   if (needsAuth && auth.status !== 'authed') {
     return navigateTo({ path: '/signin', query: to.fullPath !== '/app' ? { next: to.fullPath } : {} }, { replace: true })
   }

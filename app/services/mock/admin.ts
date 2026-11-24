@@ -169,7 +169,7 @@ export function createMockAdmin(d: MockAdminDeps) {
     db.write((s) => {
       s.users.push({ id: MOCK_ADMIN_ID, name: 'سارة يوسف', email: MOCK_ADMIN_EMAIL, password: SEED_PASSWORD, locale: 'ar', theme: 'system', reading: { ...DEFAULT_READING }, isAdmin: true, createdAt: iso(at(300)) })
       s.users.push({ id: 'u_admin2', name: 'Admin Two', email: 'ops@example.com', password: SEED_PASSWORD, locale: 'en', theme: 'system', reading: { ...DEFAULT_READING }, isAdmin: true, createdAt: iso(at(280)) })
-      for (let i = 0; i < 38; i++) {
+      for (let i = 0; i < 50; i++) {
         const first = FIRST[i % FIRST.length]!
         const last = LAST[(i * 7) % LAST.length]!
         const id = `u_seed${String(i).padStart(2, '0')}`
@@ -236,7 +236,23 @@ export function createMockAdmin(d: MockAdminDeps) {
         })
       }
       if (!s.flags.length) s.flags.push({ key: 'studio.new_editor', enabled: true, description: 'New script editor', updatedAt: iso(t - DAY) })
+      // A few past admin actions, so the audit log and the user detail's activity are not empty.
+      const past: [string, string, string | null, unknown, unknown, number][] = [
+        ['user.suspend', 'User', 'u_seed09', { status: 'active' }, { status: 'suspended', reason: '400 AI calls in an hour' }, 3],
+        ['request.fulfil', 'SubscriptionRequest', 'req_seed1', { state: 'pending' }, { state: 'fulfilled' }, 4],
+        ['subscription.grant', 'Subscription', 'sub_grant', null, { userId: 'u_seed03', plan: 'pro' }, 10],
+        ['settings.signup_mode', 'Setting', 'signup_mode', { signupMode: 'open' }, { signupMode: 'invite_only' }, 12],
+        ['invitation.withdraw', 'Invitation', null, { state: 'pending' }, { state: 'withdrawn' }, 18],
+      ]
+      for (const [action, targetType, targetId, before, after, daysAgo] of past.reverse()) {
+        s.audit.unshift({ id: s.nextAuditId++, adminId: MOCK_ADMIN_ID, adminEmail: null, action, targetType, targetId, before: before as AuditEntry['before'], after: after as AuditEntry['after'], createdAt: iso(t - daysAgo * DAY) })
+      }
     })
+    // Credit grants and a correction by the admin (the ledger's "by" column).
+    for (const [userId, kind, amount, reason] of [['u_seed03', 'grant', 100, 'Creator programme'], ['u_seed05', 'grant', 50, 'Failed calls on 20 Nov'], ['u_seed12', 'correction', -10, 'Duplicate grant']] as const) {
+      const e = d.ai.adminEntry(userId, { kind, amount, reason })
+      tx(s => (s.entryBy[e.id] = MOCK_ADMIN_ID))
+    }
   }
   seed()
 
@@ -882,9 +898,12 @@ export function createMockAdmin(d: MockAdminDeps) {
     }),
     ledger: (f, cursor) => adminRead(() => {
       st = read()
+      // Newest first; entries made in the same millisecond keep the order they were made in (newest first).
       const all = d.ai.allEntries()
-        .filter(e => (!f.userId || e.userId === f.userId) && (!f.kind || e.kind === (f.kind as CreditKind)) && inRange(Date.parse(e.createdAt), f.from, f.to))
-        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+        .map((e, i) => ({ e, i }))
+        .filter(({ e }) => (!f.userId || e.userId === f.userId) && (!f.kind || e.kind === (f.kind as CreditKind)) && inRange(Date.parse(e.createdAt), f.from, f.to))
+        .sort((a, b) => b.e.createdAt.localeCompare(a.e.createdAt) || b.i - a.i)
+        .map(({ e }) => e)
         .map(({ userId, ...e }): LedgerEntry => ({ ...e, user: personOrGone(userId), createdBy: person(st.entryBy[e.id]), aiCallId: e.kind === 'charge' || e.kind === 'own_key' || e.kind === 'overrun' ? `call_${e.id}` : null }))
       return paged(all, cursor)
     }),

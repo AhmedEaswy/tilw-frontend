@@ -73,3 +73,13 @@ bun run preview
 ```
 
 Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+
+## Admin console (feature 006)
+
+The admin console lives at `/admin` (spec: `specs/006-admin-console/`). Only admins can open it.
+
+- **Mock mode:** sign in as `admin@example.com` (seed password in `app/services/mock/seed.ts`), or use **Sign in as admin** on `/__mock`. The admin knobs are on `/__mock` too.
+- **Static hosting:** `/admin/**` is client-rendered like `/app/**`. The host must rewrite it to `200.html`.
+- **Environment variables:**
+  - `NUXT_PUBLIC_ENVIRONMENT` (`local`, `staging` or `production`) sets the badge in the console's top bar.
+  - `NUXT_PUBLIC_SUPPORT_EMAIL` is named in the "account suspended" message.
