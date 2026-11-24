@@ -16,5 +16,5 @@ export function useLinkPlayer(player: LinkPlayer | (() => LinkPlayer)) {
   }
   onMounted(() => link.setPlayer(proxy))
   onBeforeUnmount(() => link.clearPlayer(proxy))
-  return { changed: () => link.changed() }
+  return { changed: () => link.changed(), flush: () => link.flush() }
 }

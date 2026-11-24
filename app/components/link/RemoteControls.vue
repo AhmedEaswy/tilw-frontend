@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Feature 004 (research R10, Figma L5 `278:273`, offline `278:331`): the phone's controls, shared by /remote and,
+ * Feature 004 (research R10, Figma L5 `278:273`, offline `278:331`, recording `286:424`): the phone's controls, shared by /remote and,
  * later, the studio when the Tilw app reads. Presentational: the studio's state in, commands out.
  * Large Play/Pause, Previous and Next for one-handed use; speed, text size, back to the start and record below.
  * Targets are at least 44×44; the result of the last command is announced politely.
@@ -34,6 +34,18 @@ const elapsed = computed(() => {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 })
 
+/** US3 (T038): the take's state under the title, from what the studio reports. */
+const recLine = computed(() => {
+  switch (recording.value) {
+    case 'countdown': return t('remote.rec.countdown')
+    case 'recording': return elapsed.value ? t('remote.rec.recordingFor', { time: elapsed.value }) : t('remote.rec.recording')
+    case 'saving': return t('remote.rec.saving')
+    case 'saved': return t('remote.rec.saved')
+    case 'failed': return t('remote.rec.failed')
+    default: return ''
+  }
+})
+
 const resultText = computed(() => {
   const r = props.lastResult
   if (!r) return ''
@@ -57,6 +69,9 @@ const send = (type: CommandType, extra?: { paragraph?: number; wpm?: number }) =
         {{ t('remote.paragraphOf', { n: nf.format(state.paragraph + 1), total: nf.format(state.paragraphCount) }) }}
         · {{ t('remote.wpm', { n: nf.format(state.wpm) }) }}
         · {{ state.playing ? t('remote.playing') : t('remote.paused') }}
+      </p>
+      <p v-if="recLine" class="recline" :class="recording" role="status">
+        <span class="recdot" aria-hidden="true" /><span dir="auto">{{ recLine }}</span>
       </p>
     </div>
 
@@ -130,6 +145,26 @@ const send = (type: CommandType, extra?: { paragraph?: number; wpm?: number }) =
 </template>
 
 <style scoped>
+.recline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 0;
+  font: 700 15px/1.5 var(--tilw-font-ar);
+}
+.recline .recdot {
+  inline-size: 10px;
+  block-size: 10px;
+  border-radius: 50%;
+  background: var(--tilw-status-error);
+}
+.recline.saved .recdot {
+  background: var(--tilw-status-success);
+}
+.recline.saving .recdot,
+.recline.failed .recdot {
+  background: var(--tilw-text-muted);
+}
 .rc {
   display: flex;
   flex-direction: column;

@@ -162,21 +162,21 @@ description: "Task list for Web app — phone link (release 2)"
 
 ### Tests
 
-- [ ] T035 [P] [US3] `tests/unit/link-recorder-safety.test.ts`: with a take running (a fake player whose recorder spy records calls), `link.ended`, `remote.replaced`, presence loss and closing the connection never call stop. Only a `recordStop` command calls the player's stop (SC-005).
-- [ ] T036 [P] [US3] `tests/e2e/link.spec.ts` (US3 block):
+- [X] T035 [P] [US3] `tests/unit/link-recorder-safety.test.ts`: with a take running (a fake player whose recorder spy records calls), `link.ended`, `remote.replaced`, presence loss and closing the connection never call stop. Only a `recordStop` command calls the player's stop (SC-005).
+- [X] T036 [P] [US3] `tests/e2e/link.spec.ts` (US3 block) *(in `tests/e2e/link-record.spec.ts`: the fake camera and microphone need per-file launch options)*:
   - in the recording studio with fake devices, Record from the phone shows the countdown and then the recording time on the phone, and Stop saves the take;
   - Record from rehearsal is refused with "Open the recording studio";
   - closing the phone page mid-take leaves the take recording.
 
 ### Implementation
 
-- [ ] T037 [US3] Recording studio: in `app/pages/app/scripts/[id]/record.vue`, add the indicator and panel, and register a `LinkPlayer`:
+- [X] T037 [US3] Recording studio: in `app/pages/app/scripts/[id]/record.vue`, add the indicator and panel, and register a `LinkPlayer`:
   - `recordStart` → `startCountdown()` when the phase is `setup` and devices are on, otherwise `devices_off`/`already_recording`/`saving`;
   - `recordStop` → `stopTake()` when recording, otherwise `not_recording`;
   - the reading commands work as in T025;
   - `snapshot.recording` maps the phase (setup → idle or unavailable, countdown, recording with `startedAt`, saving, saved, failed);
   - call `changed()` on phase changes.
-- [ ] T038 [US3] Remote recording display in `app/components/link/RemoteControls.vue`: Record and Stop buttons, the countdown, the elapsed time from `recording.startedAt` (not from when the phone joined), saving and saved, and the refusal texts for the recording reasons [L5 recording].
+- [X] T038 [US3] Remote recording display in `app/components/link/RemoteControls.vue`: Record and Stop buttons, the countdown, the elapsed time from `recording.startedAt` (not from when the phone joined), saving and saved, and the refusal texts for the recording reasons [L5 recording].
 
 **Checkpoint**: US3 tests pass; a take started from the phone survives the phone leaving.
 

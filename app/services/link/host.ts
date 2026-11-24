@@ -270,6 +270,8 @@ export function createLinkHost(deps: HostDeps) {
       if (player === p) player = null
     },
     changed,
+    /** Send the current state now (e.g. "saved" just before the record page leaves). */
+    flush: () => sendState(),
 
     /** The plan already says no (US1 #7): show the locked state without trying to start. */
     lock() {

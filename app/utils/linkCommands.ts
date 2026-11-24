@@ -113,3 +113,63 @@ export function readingSnapshot(o: {
     preview: { current: cut(o.paragraphs[i]), next: o.paragraphs[i + 1] ? cut(o.paragraphs[i + 1]) : null },
   }
 }
+
+/** The recording studio's phases as the phone sees them. */
+export type StudioPhase = 'setup' | 'countdown' | 'recording'
+
+export interface RecordContext {
+  phase: StudioPhase
+  /** Camera and/or microphone are on (the preview is live). */
+  devicesOn: boolean
+  /** A finished take is being written. */
+  saving: boolean
+  /** The script is loaded and has text. */
+  ready: boolean
+  /** The page's own Start (countdown, then the take). */
+  start(): void
+  /** The page's own Stop: ends and saves the take. */
+  stop(): void
+  /** The page's own Cancel during the countdown. */
+  cancelCountdown(): void
+}
+
+/**
+ * Feature 004 US3 (T037): Record and Stop from the phone go through the recording studio's own Start / Stop, so a
+ * take started from the phone is the same as one started here. Only `recordStop` ever stops a take (SC-005).
+ */
+export function applyRecordCommand(cmd: LinkCommand, c: RecordContext): Answer {
+  if (cmd.type === 'recordStart') {
+    if (c.saving) return refuse('saving')
+    if (c.phase !== 'setup') return refuse('already_recording')
+    if (!c.devicesOn) return refuse('devices_off')
+    if (!c.ready) return refuse('unsupported')
+    c.start()
+    return applied
+  }
+  if (cmd.type === 'recordStop') {
+    if (c.saving) return refuse('saving')
+    // Stop during the countdown cancels it, as Esc does in the studio: nothing has been recorded yet.
+    if (c.phase === 'countdown') { c.cancelCountdown(); return applied }
+    if (c.phase !== 'recording') return refuse('not_recording')
+    c.stop()
+    return applied
+  }
+  return refuse('unsupported')
+}
+
+/** What the phone shows about recording (Figma L5 recording `286:424`). */
+export function recordingState(o: {
+  phase: StudioPhase
+  devicesOn: boolean
+  saving: boolean
+  saved: boolean
+  failed: boolean
+  startedAt: string | null
+}): StudioState['recording'] {
+  if (o.saving) return { state: 'saving' }
+  if (o.phase === 'countdown') return { state: 'countdown' }
+  if (o.phase === 'recording') return o.startedAt ? { state: 'recording', startedAt: o.startedAt } : { state: 'recording' }
+  if (o.failed) return { state: 'failed' }
+  if (o.saved) return { state: 'saved' }
+  return { state: o.devicesOn ? 'idle' : 'unavailable' }
+}

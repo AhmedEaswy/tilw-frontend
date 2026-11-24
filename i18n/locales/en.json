@@ -977,6 +977,14 @@
     "newCodeHint": "Ask the studio for a new code.",
     "enterNewCode": "Enter a new code",
     "waitingAccept": "Waiting for the studio to accept",
-    "waitingAcceptText": "Another phone controls this studio now. Your request shows there and can be accepted within 2 minutes."
+    "waitingAcceptText": "Another phone controls this studio now. Your request shows there and can be accepted within 2 minutes.",
+    "rec": {
+      "countdown": "Recording starts after the countdown…",
+      "recording": "Recording",
+      "recordingFor": "Recording · {time}",
+      "saving": "Saving the take…",
+      "saved": "Take saved",
+      "failed": "The take wasn't saved. Download it from the studio."
+    }
   }
 }

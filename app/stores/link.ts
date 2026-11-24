@@ -50,6 +50,7 @@ export const useLinkStore = defineStore('link', () => {
     setPlayer: (p: LinkPlayer | null) => h().setPlayer(p),
     clearPlayer: (p: LinkPlayer) => host?.clearPlayer(p),
     changed: () => host?.changed(),
+    flush: () => host?.flush() ?? Promise.resolve(),
     reset: () => host?.reset(),
   }
 })
