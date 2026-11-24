@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { hydrated } from './r2'
 
 // US6 (T070–T076) — recording studio against Chromium's fake camera and microphone.
 
@@ -9,6 +10,7 @@ test.use({
 
 async function signIn(page: Page) {
   await page.goto('/signin')
+  await hydrated(page)
   await page.getByLabel('البريد الإلكتروني').fill('layan@example.com')
   await page.getByLabel('كلمة المرور', { exact: true }).fill('password123')
   await page.getByRole('button', { name: 'تسجيل الدخول' }).click()
@@ -36,7 +38,7 @@ test('records a video take with the prompter and keeps it in the browser', async
 
   await page.getByRole('button', { name: 'تفعيل الكاميرا والميكروفون' }).click()
   await expect(page.getByText('معاينة مباشرة')).toBeVisible()
-  await expect(page.getByText('الأجهزة')).toBeVisible()
+  await expect(page.getByRole('combobox', { name: 'الميكروفون' })).toBeVisible() // the "الأجهزة" label is desktop only
 
   await page.getByRole('button', { name: 'ابدأ التسجيل' }).click()
   await expect(page.getByText('يبدأ التسجيل بعد')).toBeVisible()
@@ -53,7 +55,7 @@ test('records a video take with the prompter and keeps it in the browser', async
 test('audio mode shows the sound check instead of the camera', async ({ page }) => {
   await signIn(page)
   await page.goto('/app/scripts/s_letter/record')
-  await page.getByRole('radio', { name: 'صوت' }).click()
+  await page.getByRole('radio', { name: 'صوت', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'اختبر صوتك' })).toBeVisible()
   await page.getByRole('button', { name: 'تفعيل الميكروفون' }).click()
   await expect(page.getByText('صوتك الآن')).toBeVisible()

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { hydrated } from './r2'
 
 // US7 (T080–T083) — recordings kept in this browser. Takes are made with Chromium's fake devices.
 
@@ -10,6 +11,7 @@ test.use({
 
 async function signIn(page: Page) {
   await page.goto('/signin')
+  await hydrated(page)
   await page.getByLabel('البريد الإلكتروني').fill('layan@example.com')
   await page.getByLabel('كلمة المرور', { exact: true }).fill('password123')
   await page.getByRole('button', { name: 'تسجيل الدخول' }).click()
@@ -40,14 +42,14 @@ test('reviews, downloads, stars and deletes a take', async ({ page }) => {
   await recordTake(page)
   await recordTake(page)
 
-  await page.getByRole('link', { name: /مراجعة المحاولة/ }).click()
+  await page.getByRole('link', { name: /مراجعة/ }).first().click() // the latest take; phone labels it "مراجعة"
   await expect(page.getByRole('heading', { name: 'مراجعة المحاولة' })).toBeVisible()
-  await expect(page.getByText('المحاولات')).toBeVisible()
+  await expect(page.getByText('المحاولات', { exact: true })).toBeVisible()
 
   const download = page.waitForEvent('download')
   await page.getByRole('button', { name: 'تنزيل الملف الأصلي' }).click()
   expect((await download).suggestedFilename()).toMatch(/^افتتاحية الحلقة - المحاولة 2\.(webm|mp4)$/)
-  await expect(page.getByRole('heading', { name: 'أُرسل طلب التنزيل' })).toBeVisible()
+  await expect(page.getByRole('status').filter({ hasText: 'أُرسل طلب التنزيل' })).toBeVisible() // an h2 announced as a status
   await page.getByRole('button', { name: 'رجوع' }).click()
 
   await page.getByRole('button', { name: 'تمييز كأفضل محاولة' }).click()

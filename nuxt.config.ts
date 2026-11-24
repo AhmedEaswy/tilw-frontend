@@ -75,6 +75,10 @@ export default defineNuxtConfig({
 
   app: {
     head: {
+      // The SPA shell (200.html) for client-rendered routes (/app/**) ships before any page sets its own head, so it
+      // needs a language and a title of its own (WCAG html-has-lang, document-title). app.vue and pages override both.
+      htmlAttrs: { lang: 'ar', dir: 'rtl' },
+      title: 'tilwprompter',
       charset: 'utf-8',
       viewport: 'width=device-width, initial-scale=1, viewport-fit=cover',
       link: [

@@ -1,9 +1,11 @@
 import { expect, test, type Page } from '@playwright/test'
+import { hydrated } from './r2'
 
 // T067 — rehearsal flows against the static build and the in-browser mock.
 
 async function signIn(page: Page) {
   await page.goto('/signin')
+  await hydrated(page)
   await page.getByLabel('البريد الإلكتروني').fill('layan@example.com')
   await page.getByLabel('كلمة المرور', { exact: true }).fill('password123')
   await page.getByRole('button', { name: 'تسجيل الدخول' }).click()
@@ -59,8 +61,9 @@ test('reading settings are saved to the account', async ({ page }) => {
   await page.waitForTimeout(1200)
 
   await page.reload()
-  await expect(page.getByRole('button', { name: '130 كلمة/د' })).toBeVisible()
   await page.getByRole('button', { name: 'إعدادات القراءة' }).click()
+  // The WPM chip is desktop only; the settings panel shows the value on every layout.
+  await expect(page.getByRole('spinbutton', { name: 'كلمة في الدقيقة' })).toHaveAttribute('aria-valuenow', '130')
   await expect(page.getByRole('switch', { name: 'انعكاس المرآة' })).toHaveAttribute('aria-checked', 'true')
 })
 
@@ -68,6 +71,7 @@ test('a failed position save opens recovery and lets the user pick a paragraph',
   await signIn(page)
   await knobs(page, { failPositionSave: true })
   await page.goto('/app/scripts/s_opening/rehearse')
+  await expect(page.getByText('الفقرة 1 من 3')).toBeVisible() // keys work once the script has loaded
   await page.keyboard.press('ArrowLeft')
 
   await expect(page.getByText('تعذر حفظ موضع القراءة')).toBeVisible({ timeout: 5000 })

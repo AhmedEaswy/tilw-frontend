@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { hydrated } from './r2'
 
 // US8 (T090–T095) — preferences, export, legacy recovery, account edit and delete.
 
@@ -6,6 +7,7 @@ test.use({ acceptDownloads: true })
 
 async function signIn(page: Page, password = 'password123') {
   await page.goto('/signin')
+  await hydrated(page)
   await page.getByLabel('البريد الإلكتروني').fill('layan@example.com')
   await page.getByLabel('كلمة المرور', { exact: true }).fill(password)
   await page.getByRole('button', { name: 'تسجيل الدخول' }).click()
@@ -21,9 +23,12 @@ test('appearance and reading settings save to the account', async ({ page }) => 
 
   await page.getByRole('button', { name: /إعدادات القراءة/ }).click()
   await page.getByRole('button', { name: 'زيادة كلمة في الدقيقة' }).click()
-  await page.getByRole('button', { name: 'تم' }).click()
+  await page.getByRole('button', { name: 'تم', exact: true }).click()
+  await page.waitForTimeout(500) // closing saves the settings; let the mock answer before the full page load
   await page.goto('/app/scripts/s_opening/rehearse')
-  await expect(page.getByRole('button', { name: '130 كلمة/د' })).toBeVisible()
+  // The WPM chip is desktop only; the settings panel shows the value on every layout.
+  await page.getByRole('button', { name: 'إعدادات القراءة' }).click()
+  await expect(page.getByRole('spinbutton', { name: 'كلمة في الدقيقة' })).toHaveAttribute('aria-valuenow', '130')
 })
 
 test('exports the account only after the password is confirmed', async ({ page }) => {
@@ -49,7 +54,7 @@ test('recovers a legacy script after consent', async ({ page }) => {
   await page.getByRole('button', { name: 'إضافة النسخة' }).click()
   await expect(page.getByText('أُضيف').first()).toBeVisible()
   await page.goto('/app/scripts')
-  await expect(page.getByText('الافتتاحية الأولى')).toBeVisible()
+  await expect(page.getByRole('link', { name: /الافتتاحية الأولى/ })).toBeVisible()
 })
 
 test('changes the password and signs in with the new one', async ({ page }) => {
