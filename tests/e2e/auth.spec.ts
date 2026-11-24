@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { hydrated } from './r2'
 
 // T026 / T033 — auth flows against the static build and the in-browser mock.
 // Each test starts from a fresh mock (empty localStorage in a new context).
@@ -7,6 +8,7 @@ const SEED = { email: 'layan@example.com', password: 'password123' }
 
 async function signIn(page: Page, email = SEED.email, password = SEED.password) {
   await page.goto('/signin')
+  await hydrated(page)
   await page.getByLabel('البريد الإلكتروني').fill(email)
   await page.getByLabel('كلمة المرور', { exact: true }).fill(password)
   await page.getByRole('button', { name: 'تسجيل الدخول' }).click()
@@ -84,6 +86,7 @@ test('accepting an invitation creates the account and opens the library', async 
 
 test('sign out from settings', async ({ page }) => {
   await signIn(page)
+  await expect(page).toHaveURL(/\/app\/scripts$/) // let the sign-in finish before leaving the page
   await page.goto('/app/settings')
   await page.getByRole('button', { name: 'تسجيل الخروج' }).click()
   await expect(page).toHaveURL(/\/signin$/)

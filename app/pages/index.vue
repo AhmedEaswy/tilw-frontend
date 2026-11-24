@@ -18,6 +18,13 @@ useHead({
 // The landing page is driven by imperative scripts ported from the v4 artifact;
 // they query the DOM by id, so they run once after mount.
 const services = useServices();
+
+// Release 2 (US4, R2-13): the plans poster reads prices and limits from the service, with build-time fallback.
+const { plans } = usePublicPlans();
+const period = ref<"monthly" | "yearly">("yearly");
+// Signed out, the route guard sends this through sign-in and back to the upgrade sheet.
+const getPro = () => navigateTo("/app/settings/plan?upgrade=1");
+
 onMounted(() => {
   initHero();
   initTheme();
@@ -212,20 +219,8 @@ onMounted(() => {
 </section>
 
 <section class="pl-sec" id="plans"><div class="wrap">
-  <div class="pl-head"><h2>الأساس معك مجاناً.</h2><p>الكتابة، التدريب، التسجيل، وجهاز التحكم. تضيف بلس مساعدة في توزيع كلماتك على أسطر مريحة للقراءة.</p></div>
-  <div class="pl-poster">
-    <div class="pl-half pl-free"><span class="pl-kick">للجميع</span><span class="pl-big">مجاني</span><ul><li style="--i:0"><span class="pl-ck"></span>كتابة النصوص واستيراد وتصدير TXT</li><li style="--i:1"><span class="pl-ck"></span>تنسيق الأسطر على جهازك وإشارات الإلقاء</li><li style="--i:2"><span class="pl-ck"></span>3 إعدادات للقراءة مع تحكم بالسرعة والخط</li><li style="--i:3"><span class="pl-ck"></span>التسجيل والمراجعة وتنزيل النسخة الأصلية</li><li style="--i:4"><span class="pl-ck"></span>التحكم بالملقن من هاتفك</li></ul>
-      <a class="pl-btn pl-btn-light" href="/waitlist">ابدأ مجاناً <svg class="pl-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
-    <div class="pl-half pl-plus"><div class="pl-dots" id="pl-dots"></div><span class="pl-kick">عندما تريد مساعدة إضافية</span><span class="pl-big pl-lat">Tilw Plus</span>
-      <p class="pl-d">رصيد شهري لاقتراح فواصل أسطر بالذكاء الاصطناعي. الكلمات تبقى كلماتك، والتطبيق بعد مراجعتك.</p>
-      <div class="pl-ai" id="pl-ai"><span class="pl-scan"></span>
-        <div class="pl-lab"><svg class="pl-spark" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l1.9 5.6L19.5 9.5l-5.6 1.9L12 17l-1.9-5.6L4.5 9.5l5.6-1.9zM19 15l.9 2.6 2.6.9-2.6.9L19 22l-.9-2.6-2.6-.9 2.6-.9z"/></svg>اقتراح توزيع الأسطر</div>
-        <div class="pl-words"></div>
-        <div class="pl-note">الكلمات نفسها. راجع الاقتراح قبل تطبيقه.<button type="button" class="pl-apply" tabindex="-1">تطبيق</button></div>
-      </div>
-      <small>الاشتراك شهري، ويُفعل بعد تأكيد الدفع. السعر والرصيد الحاليان داخل التطبيق.</small>
-      <a class="pl-btn pl-btn-cue" href="#">تعرف على بلس داخل التطبيق <svg class="pl-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
-  </div>
+  <div class="pl-head"><h2>الأساس معك مجاناً.</h2><p>الكتابة، التدريب، التسجيل، وجهاز التحكم. تضيف Pro مدة تسجيل أطول، ونسخاً تلقائياً إلى Google Drive، وسجلاً أطول لنصوصك.</p></div>
+  <PlansPoster v-model:period="period" :plans="plans" mode="landing" @cta="getPro" />
 </div></section>
 
 <section class="fq-sec" id="faq"><div class="wrap fq-in">

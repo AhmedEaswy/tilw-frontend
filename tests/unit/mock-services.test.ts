@@ -146,8 +146,11 @@ describe('account', () => {
     expect(data.format).toBe('tilw-account-v1')
     expect(data.scripts).toHaveLength(3)
     expect(data.account).not.toHaveProperty('password')
-    await m.services.account.deleteAccount({ password: SEED_PASSWORD })
+    // Release 2: deletion is scheduled 14 days ahead and signs out; once the 14 days pass the account is gone.
+    const { deletionDueAt } = await m.services.account.deleteAccount({ password: SEED_PASSWORD })
+    expect(Date.parse(deletionDueAt) - Date.now()).toBeGreaterThan(13.9 * 86_400_000)
     expect(await m.services.auth.me()).toBeNull()
+    m.db.setKnobs({ clockOffsetMs: 15 * 86_400_000 })
     expect(await code(m.services.auth.signIn({ email: 'layan@example.com', password: SEED_PASSWORD }))).toBe('invalid_credentials')
   })
 
@@ -200,5 +203,48 @@ describe('admin', () => {
     expect(await code(m.services.admin.invite({ email: 'a@b.co' }))).toBe('not_found')
     expect(await code(m.services.admin.resend('x'))).toBe('not_found')
     expect(await code(m.services.admin.withdraw('x'))).toBe('not_found')
+  })
+})
+
+// ---------- release 2: PlanPort (T009) ----------
+describe('plans', () => {
+  it('lists Free and Pro with USD prices and every limit kind, without signing in', async () => {
+    const m = setup()
+    const plans = await m.services.plans.listPlans()
+    expect(plans.map(p => [p.key, p.priceMonthlyCents, p.priceYearlyCents, p.currency])).toEqual([['free', 0, 0, 'USD'], ['pro', 800, 7700, 'USD']])
+    expect(plans[1]!.limits.find(l => l.key === 'takes.max_minutes')?.value).toBe(60)
+  })
+
+  it('reports Free limits with usage for the signed-in person', async () => {
+    const m = setup()
+    await m.services.auth.signIn({ email: 'layan@example.com', password: SEED_PASSWORD })
+    const my = await m.services.plans.myPlan()
+    expect(my.plan.key).toBe('free')
+    expect(my.period).toBeNull()
+    const active = my.limits.find(l => l.key === 'scripts.max_active')!
+    expect(active).toMatchObject({ value: 20, usage: 3, overridden: false })
+    expect(my.limits.find(l => l.key === 'takes.max_minutes')).toMatchObject({ value: 10, usage: null })
+  })
+
+  it('resolves override → plan in force → Free → default', async () => {
+    const m = setup()
+    const u = await m.services.auth.signIn({ email: 'layan@example.com', password: SEED_PASSWORD })
+    const v = async (k: string) => (await m.services.plans.myPlan()).limits.find(l => l.key === k)!
+    m.knobs.setPlan(u.id, 'pro')
+    expect((await v('takes.max_minutes')).value).toBe(60)
+    expect((await v('scripts.max_active')).value).toBeNull()
+    m.knobs.setOverride(u.id, 'takes.max_minutes', 90)
+    expect(await v('takes.max_minutes')).toMatchObject({ value: 90, overridden: true })
+    m.knobs.setOverride(u.id, 'takes.max_minutes', undefined)
+    m.knobs.setPlan(u.id, 'free')
+    expect((await v('takes.max_minutes')).value).toBe(10)
+    // A kind neither plan sets falls back to its default.
+    m.db.write(s => s.limitDefinitions.push({ key: 'future.thing', type: 'int', default: 7, counted: false, label: { ar: 'x', en: 'x' } }))
+    expect((await v('future.thing')).value).toBe(7)
+  })
+
+  it('needs a session for my plan', async () => {
+    const m = setup()
+    expect(await code(m.services.plans.myPlan())).toBe('unauthenticated')
   })
 })

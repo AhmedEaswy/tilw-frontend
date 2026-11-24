@@ -45,6 +45,9 @@ export const useEditorStore = defineStore('editor', () => {
     !!script.value && (title.value !== script.value.title || body.value !== script.value.body || JSON.stringify(marks.value) !== JSON.stringify(script.value.marks)),
   )
 
+  /** Release 2 (R2-3): the service keeps this script read-only over a lowered limit. */
+  const readOnly = computed(() => !!script.value?.readOnly)
+
   const words = computed(() => countWords(body.value))
   const paragraphs = computed(() => splitParagraphs(body.value).length)
 
@@ -83,7 +86,8 @@ export const useEditorStore = defineStore('editor', () => {
       adopt(s)
       useScriptsStore().upsert(s)
 
-      const draft = readDraft(id)
+      // A read-only script can't take edits; any old draft stays on the device for when it unlocks.
+      const draft = s.readOnly ? null : readDraft(id)
       if (draft && (draft.title !== s.title || draft.body !== s.body || JSON.stringify(draft.marks) !== JSON.stringify(s.marks))) {
         restoredDraft.value = true
         setContent(draft, { history: false })
@@ -118,6 +122,7 @@ export const useEditorStore = defineStore('editor', () => {
   // ---------- editing ----------
   /** Apply a change from the UI. Marks follow body edits automatically. */
   function setContent(next: Partial<Snapshot>, opts: { history?: boolean } = {}) {
+    if (readOnly.value) return
     if (next.body !== undefined && next.marks === undefined) {
       marks.value = shiftMarks(marks.value, diffEdit(body.value, next.body))
     }
@@ -167,6 +172,7 @@ export const useEditorStore = defineStore('editor', () => {
   const canUndo = computed(() => past.value.length > 0 || historyPending.value)
   const canRedo = computed(() => future.value.length > 0)
   function undo() {
+    if (readOnly.value) return
     flushHistory()
     const prev = past.value.at(-1)
     if (!prev) return
@@ -175,6 +181,7 @@ export const useEditorStore = defineStore('editor', () => {
     restore(prev)
   }
   function redo() {
+    if (readOnly.value) return
     const next = future.value.at(-1)
     if (!next) return
     future.value = future.value.slice(0, -1)
@@ -192,10 +199,12 @@ export const useEditorStore = defineStore('editor', () => {
   // ---------- marks ----------
   const newId = () => (globalThis.crypto?.randomUUID?.() ?? `m_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`)
   function addMark(m: Omit<DeliveryMark, 'id'>) {
+    if (readOnly.value) return
     flushHistory()
     setContent({ marks: [...marks.value, { ...m, id: newId() }] })
   }
   function removeMark(id: string) {
+    if (readOnly.value) return
     flushHistory()
     setContent({ marks: marks.value.filter(m => m.id !== id) })
   }
@@ -242,6 +251,11 @@ export const useEditorStore = defineStore('editor', () => {
         if (isPortError(e, 'conflict')) {
           serverCopy.value = e.current as Script
           saveState.value = 'conflict'
+        } else if (isPortError(e, 'limit_reached')) {
+          // Over the word limit, or the script became read-only: the draft stays, the dialog explains.
+          saveState.value = 'error'
+          useLimitError().handle(e)
+          if (e.limit?.key === 'scripts.max_active') void reloadScript(id)
         } else if (isPortError(e, 'network')) {
           saveState.value = 'offline'
           scheduleSave(5000) // keep trying; the draft is safe meanwhile
@@ -254,6 +268,48 @@ export const useEditorStore = defineStore('editor', () => {
       await saving
     } finally {
       saving = null
+    }
+  }
+
+  /** Fresh copy from the service (its readOnly flag may have changed), keeping local text in the draft. */
+  async function reloadScript(id: string) {
+    try {
+      const s = await api().get(id)
+      script.value = s
+      useScriptsStore().upsert(s)
+    } catch { /* keep what we have */ }
+  }
+
+  /** Release 2 (US5): adopt a restored copy as the confirmed one, clearing any local draft. */
+  function adoptRestored(s: Script) {
+    clearDraft(s.id)
+    adopt(s)
+    past.value = []
+    future.value = []
+    saveState.value = 'saved'
+    useScriptsStore().upsert(s)
+  }
+
+  /**
+   * Release 2 (US5): restore a version. Saves pending edits first so they are kept in History too; a newer copy on
+   * the service puts the editor in the release-1 conflict flow.
+   */
+  async function restoreVersion(versionId: string) {
+    if (!script.value) return null
+    if (dirty.value) await save()
+    if (saveState.value === 'conflict') return null
+    try {
+      const s = await api().restoreVersion(script.value.id, versionId, script.value.version)
+      adoptRestored(s)
+      return s
+    } catch (e) {
+      if (isPortError(e, 'conflict')) {
+        serverCopy.value = e.current as Script
+        saveState.value = 'conflict'
+        reviewing.value = false
+        return null
+      }
+      throw e
     }
   }
 
@@ -308,7 +364,7 @@ export const useEditorStore = defineStore('editor', () => {
 
   return {
     script, title, body, marks, status, loadError, saveState, serverCopy, restoredDraft, reviewing,
-    dirty, words, paragraphs, canUndo, canRedo,
-    load, setContent, undo, redo, addMark, removeMark, save, acceptServerCopy, saveMineAsNew, reset,
+    dirty, readOnly, words, paragraphs, canUndo, canRedo,
+    load, setContent, undo, redo, addMark, removeMark, save, acceptServerCopy, saveMineAsNew, adoptRestored, reloadScript, restoreVersion, reset,
   }
 })

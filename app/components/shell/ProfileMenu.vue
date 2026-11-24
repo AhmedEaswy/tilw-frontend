@@ -20,6 +20,14 @@ const menuId = useId()
 
 const initial = computed(() => auth.user?.name?.trim().charAt(0) ?? '·')
 
+// Release 2 (US2): Upgrade to Pro from the account menu (Free only).
+const plan = usePlanStore()
+const upgrade = useUpgrade()
+function openUpgrade() {
+  open.value = false
+  upgrade.open()
+}
+
 // Effective theme: an explicit choice, or the system setting when none is saved.
 const systemDark = usePreferredDark()
 const dark = computed(() => (prefs.theme === 'system' ? systemDark.value : prefs.theme === 'dark'))
@@ -107,6 +115,9 @@ async function onSignOut() {
       <NuxtLink to="/app/settings" class="item" role="menuitem" tabindex="-1">
         <UiGlyph name="settings" :size="18" />{{ t('nav.settings') }}
       </NuxtLink>
+      <button v-if="plan.my && !plan.isPro" type="button" class="item" role="menuitem" tabindex="-1" @click="openUpgrade">
+        <UiGlyph name="up" :size="18" />{{ t('upgrade.cta') }}
+      </button>
       <button type="button" class="item" role="menuitemcheckbox" :aria-checked="dark" tabindex="-1" @click="toggleTheme">
         <UiGlyph name="sun" :size="18" />
         <span class="grow">{{ t('nav.darkMode') }}</span>

@@ -3,8 +3,10 @@
  * MOCK ONLY: passwords are stored in plain text because nothing here ever leaves the browser;
  * the real backend hashes them.
  */
-import type { Script, User } from '../types'
-import { seedScripts, seedUser } from './seed'
+import type { Device, RemoteTake, Script, ScriptVersion, SyncMode, UpgradeRequest, User } from '../types'
+import type { DriveMode, FakeDriveState } from './drive'
+import { LIMIT_DEFINITIONS, seedPlans, type MockLimitDefinition, type MockPlan, type MockSubscription, type RawLimit } from './plans'
+import { seedDevices, seedScripts, seedUser } from './seed'
 
 export interface KV {
   getItem(key: string): string | null
@@ -22,7 +24,7 @@ export interface MockToken {
 export interface OutboxMail {
   id: string
   to: string
-  kind: 'reset' | 'invite' | 'waitlist'
+  kind: 'reset' | 'invite' | 'waitlist' | 'email'
   link: string | null
   sentAt: number
 }
@@ -36,6 +38,25 @@ export interface MockState {
   invites: MockToken[]
   resets: MockToken[]
   outbox: OutboxMail[]
+  // ---------- release 2 ----------
+  plans: MockPlan[]
+  limitDefinitions: MockLimitDefinition[]
+  /** userId → limit key → value. */
+  overrides: Record<string, Record<string, RawLimit>>
+  subscriptions: MockSubscription[]
+  requests: (UpgradeRequest & { userId: string })[]
+  /** userId → the plan key last reported, for the one-time pro_started / pro_ended notices. */
+  seenPlan: Record<string, string>
+  /** scriptId → snapshots, oldest first. */
+  versions: Record<string, ScriptVersion[]>
+  /** userId → linked storage. */
+  storage: Record<string, { state: 'none' | 'linked' | 'revoked'; accountEmail: string | null; syncMode: SyncMode }>
+  remoteTakes: Record<string, RemoteTake[]>
+  drive: FakeDriveState
+  devices: Record<string, Device[]>
+  emailChange: Record<string, { email: string; token: string; expiresAt: number }>
+  /** userId → scheduled deletion time. */
+  deletion: Record<string, number>
 }
 
 export interface MockKnobs {
@@ -47,6 +68,13 @@ export interface MockKnobs {
   expireTokens: boolean
   /** Reading-position saves fail (reader recovery, 6:79). */
   failPositionSave: boolean
+  /** Release 2: moves the mock's clock (subscriptions, requests, history). */
+  clockOffsetMs: number
+  driveMode: DriveMode
+  /** Google consent page answers "declined". */
+  denyDriveConsent: boolean
+  /** Public plan catalogue unreachable (landing fallback). */
+  plansDown: boolean
 }
 
 export const DEFAULT_KNOBS: MockKnobs = {
@@ -56,6 +84,10 @@ export const DEFAULT_KNOBS: MockKnobs = {
   forceConflictOnNextSave: false,
   expireTokens: false,
   failPositionSave: false,
+  clockOffsetMs: 0,
+  driveMode: 'ok',
+  denyDriveConsent: false,
+  plansDown: false,
 }
 
 const STATE_KEY = 'tilw:mock:v1'
@@ -72,6 +104,19 @@ export function freshState(now = Date.now()): MockState {
     invites: [{ token: 'demo-invite', email: 'invited@example.com', expiresAt: now + 7 * 86_400_000, usedAt: null }],
     resets: [],
     outbox: [],
+    plans: seedPlans(),
+    limitDefinitions: LIMIT_DEFINITIONS.map(d => ({ ...d, label: { ...d.label } })),
+    overrides: {},
+    subscriptions: [],
+    requests: [],
+    seenPlan: {},
+    versions: {},
+    storage: {},
+    remoteTakes: {},
+    drive: { files: {}, sessions: {} },
+    devices: { [user.id]: seedDevices(now) },
+    emailChange: {},
+    deletion: {},
   }
 }
 
@@ -80,7 +125,9 @@ export class MockDb {
   knobs: MockKnobs
 
   constructor(private kv: KV) {
-    this.state = this.read<MockState>(STATE_KEY) ?? freshState()
+    // Saved release-1 state gains the release-2 collections with their seed values.
+    const saved = this.read<MockState>(STATE_KEY)
+    this.state = saved ? { ...freshState(), ...saved } : freshState()
     this.knobs = { ...DEFAULT_KNOBS, ...this.read<Partial<MockKnobs>>(KNOBS_KEY) }
   }
 
@@ -102,6 +149,13 @@ export class MockDb {
     const out = fn(this.state)
     this.kv.setItem(STATE_KEY, JSON.stringify(this.state))
     return out
+  }
+
+  /** Re-read state another tab wrote (the mock has no server to share it otherwise). */
+  reload() {
+    const saved = this.read<MockState>(STATE_KEY)
+    if (saved) this.state = { ...freshState(), ...saved }
+    this.knobs = { ...DEFAULT_KNOBS, ...this.read<Partial<MockKnobs>>(KNOBS_KEY) }
   }
 
   setKnobs(patch: Partial<MockKnobs>) {

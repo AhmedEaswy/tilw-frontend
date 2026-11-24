@@ -247,3 +247,44 @@ describe('error mapping', () => {
     expect(await code(services.scripts.create({ title: 'A' }))).toBe('network')
   })
 })
+
+// ---------- release 2: PlanPort and error codes (T009, T005) ----------
+describe('plans over HTTP', () => {
+  it('reads the public catalogue and my plan from their routes', async () => {
+    const plan = { key: 'free', name: 'Free', priceMonthlyCents: 0, priceYearlyCents: 0, currency: 'USD', limits: [] }
+    const { services, calls } = setup([{ json: [plan] }, { json: { plan, period: null, limits: [], pendingRequest: null } }])
+    expect(await services.plans.listPlans()).toEqual([plan])
+    expect((await services.plans.myPlan()).plan.key).toBe('free')
+    expect(calls.map(c => `${c.method} ${c.url}`)).toEqual(['GET http://api.test/api/plans', 'GET http://api.test/api/user/plan'])
+  })
+
+  it('maps 403 limit_reached with its limit, 409 storage_not_linked and 507 storage_full', async () => {
+    const { services } = setup([
+      { status: 403, json: { code: 'limit_reached', message: 'x', limit: { key: 'scripts.max_active', value: 20, usage: 20 } } },
+      { status: 409, json: { code: 'storage_not_linked', message: 'x' } },
+      { status: 507, json: { code: 'storage_full', message: 'x', free: 0 } },
+    ])
+    const e = await services.scripts.create({ title: 'A' }).catch(x => x)
+    expect(isPortError(e, 'limit_reached')).toBe(true)
+    expect((e as PortError).limit).toEqual({ key: 'scripts.max_active', value: 20, usage: 20 })
+    expect(await code(services.storage.setSyncMode('manual'))).toBe('storage_not_linked')
+    expect(await code(services.remoteTakes.register({ clientId: 't', scriptId: null, title: 'a', kind: 'audio', mime: 'audio/webm', durationMs: 1, sizeBytes: 1, recordedAt: '2026-01-01T00:00:00Z' }))).toBe('storage_full')
+  })
+
+  it('requests and cancels an upgrade', async () => {
+    const request = { id: 'r1', reference: 'TLW-7K3Q', plan: 'pro', period: 'yearly', priceCents: 7700, state: 'pending', createdAt: 'x', expiresAt: 'y' }
+    const { services, calls } = setup([{ status: 201, json: { request, whatsappUrl: 'https://wa.me/1?text=x' } }, { status: 204 }])
+    expect((await services.plans.requestUpgrade({ plan: 'pro', period: 'yearly' })).request.reference).toBe('TLW-7K3Q')
+    await services.plans.cancelRequest()
+    const writes = calls.filter(c => !c.url.endsWith('/sanctum/csrf-cookie'))
+    expect(writes.map(c => `${c.method} ${c.url}`)).toEqual(['POST http://api.test/api/user/subscription-requests', 'DELETE http://api.test/api/user/subscription-requests/current'])
+    expect(writes[0]!.body).toEqual({ plan: 'pro', period: 'yearly' })
+  })
+})
+
+describe('non-JSON success bodies', () => {
+  it('a 2xx body that is not JSON is an unknown error, not a SyntaxError', async () => {
+    const { services } = setup([{ status: 200, text: '<!doctype html><html>proxy</html>' }])
+    expect(await code(services.scripts.get('s'))).toBe('unknown')
+  })
+})

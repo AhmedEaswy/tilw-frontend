@@ -3,11 +3,13 @@
  * Delete account (US8, T094 — G4, approved: follows the export pattern 6:66 → 6:67). Explains what is removed
  * (the account and its scripts) and what stays (recordings in this browser), asks for the password, then shows
  * a done screen and leaves the user signed out.
+ * Release 2 (R2-12 `264:1106`): deletion happens 14 days later; the done card gives the date, says signing in before
+ * then cancels it, and that files in the person's Drive stay.
  */
 import { isPortError } from '~/services/types'
 
 definePageMeta({ layout: 'app' })
-const { t } = useI18n()
+const { t, locale } = useI18n()
 useHead({ title: () => `${t('settings.deleteTitle')} · tilwprompter` })
 const auth = useAuthStore()
 const errorText = useErrorText()
@@ -16,6 +18,7 @@ const step = ref<'confirm' | 'done'>('confirm')
 const password = ref('')
 const error = ref('')
 const busy = ref(false)
+const dueAt = ref<string | null>(null)
 
 async function submit() {
   error.value = ''
@@ -25,7 +28,8 @@ async function submit() {
   }
   busy.value = true
   try {
-    await useServices().account.deleteAccount({ password: password.value })
+    const res = await useServices().account.deleteAccount({ password: password.value })
+    dueAt.value = res?.deletionDueAt ?? null
     step.value = 'done'
   } catch (e) {
     error.value = isPortError(e, 'invalid_credentials') ? t('settings.wrongPassword') : errorText(e)
@@ -59,7 +63,16 @@ onBeforeUnmount(() => {
     </template>
   </TaskCard>
 
-  <TaskCard v-else :kicker="t('settings.account')" :title="t('settings.deletedTitle')" :lede="t('settings.deletedLede')">
+  <TaskCard
+    v-else
+    :kicker="t('settings.account')"
+    :title="t('deletion.doneTitle')"
+    :lede="dueAt ? t('deletion.doneLede', { date: formatDay(dueAt, locale) }) : t('settings.deletedLede')"
+  >
+    <ul class="what">
+      <li class="stays">{{ t('deletion.cancelHint') }}</li>
+      <li class="stays">{{ t('deletion.driveStays') }}</li>
+    </ul>
     <template #actions>
       <UiButton @click="finish">{{ t('settings.toHome') }}</UiButton>
     </template>

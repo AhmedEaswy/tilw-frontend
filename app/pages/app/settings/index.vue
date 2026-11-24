@@ -44,6 +44,28 @@ const themes = computed<{ value: Theme; label: string }[]>(() => [
 
 const initial = computed(() => auth.user?.name?.trim().charAt(0) ?? '·')
 
+// ---------- release 2 (R2-1 `264:1017`): plan name in the account card, Plan & usage and Storage rows ----------
+const plan = usePlanStore()
+const storage = useStorageStore()
+onMounted(() => {
+  if (!plan.my) void plan.load()
+  void storage.load().catch(() => {})
+})
+const planName = computed(() => (plan.my ? (plan.isPro ? t('plan.proName') : t('plan.freeName')) : ''))
+const planHint = computed(() => {
+  const active = plan.my?.limits.find(l => l.key === 'scripts.max_active')
+  if (plan.isPro) return t('settings.planHintPro')
+  return typeof active?.value === 'number' && typeof active.usage === 'number'
+    ? t('settings.planHintFree', { n: active.usage, max: active.value })
+    : t('settings.planHint')
+})
+const storageHint = computed(() => {
+  const st = storage.status
+  if (!st || st.state === 'none') return t('settings.storageHintNone')
+  if (st.state === 'revoked') return t('storage.revoked')
+  return t('settings.storageHintLinked', { mode: t(`storage.mode.${st.syncMode}`) })
+})
+
 // ---------- reading settings drawer ----------
 const readingOpen = ref(false)
 const readingView = ref<'main' | 'more'>('main')
@@ -74,6 +96,7 @@ onBeforeUnmount(() => reader.flushSettings())
         <p class="kicker">{{ t('settings.account') }}</p>
         <p class="name" dir="auto">{{ auth.user?.name }}</p>
         <p class="email" dir="ltr">{{ auth.user?.email }}</p>
+        <p v-if="planName" class="plan-name">{{ t('settings.planLabel', { plan: planName }) }}</p>
         <NuxtLink to="/app/settings/account" class="edit">{{ t('settings.editAccount') }}</NuxtLink>
       </section>
 
@@ -95,6 +118,20 @@ onBeforeUnmount(() => reader.flushSettings())
     </div>
 
     <div class="rows">
+      <NuxtLink to="/app/settings/plan" class="row">
+        <UiGlyph class="ic" name="up" :size="24" />
+        <span class="txt"><b>{{ t('plan.title') }}</b><small>{{ planHint }}</small></span>
+        <span class="go">{{ t('settings.open') }}</span>
+      </NuxtLink>
+      <NuxtLink to="/app/settings/storage" class="row">
+        <span class="ic drive" :class="storage.status?.state ?? 'none'">
+          <DriveMark :size="22" />
+          <i v-if="storage.status?.state === 'linked'" class="dot ok" aria-hidden="true" />
+          <i v-else-if="storage.status?.state === 'revoked'" class="dot bad" aria-hidden="true" />
+        </span>
+        <span class="txt"><b>{{ t('storage.title') }}</b><small>{{ storageHint }}</small></span>
+        <span class="go">{{ t('settings.open') }}</span>
+      </NuxtLink>
       <button type="button" class="row" @click="openReading">
         <UiGlyph class="ic" name="settings" :size="24" />
         <span class="txt"><b>{{ t('reader.settings.title') }}</b><small>{{ t('settings.readingHint') }}</small></span>
@@ -188,6 +225,11 @@ h1 {
 :dir(rtl) .email {
   text-align: start;
 }
+.plan-name {
+  margin: 10px 0 0;
+  color: var(--tilw-stage-cue);
+  font: 500 16px/1.36 var(--tilw-font-ar);
+}
 .edit {
   margin-block-start: 14px;
   color: var(--tilw-stage-cue);
@@ -277,6 +319,29 @@ hr {
 }
 .row .ic {
   color: var(--tilw-action-primary);
+}
+.ic.drive {
+  position: relative;
+  display: grid;
+  flex: none;
+  place-items: center;
+  inline-size: 24px;
+  block-size: 24px;
+}
+.ic.drive .dot {
+  position: absolute;
+  inset-block-end: -3px;
+  inset-inline-end: -4px;
+  inline-size: 10px;
+  block-size: 10px;
+  border: 2px solid var(--tilw-surface-white);
+  border-radius: 50%;
+}
+.ic.drive .dot.ok {
+  background: var(--tilw-status-success);
+}
+.ic.drive .dot.bad {
+  background: var(--tilw-status-error);
 }
 .txt {
   display: grid;
@@ -397,6 +462,11 @@ hr {
   .email {
     margin: 2px 0 0;
     font-size: 15px;
+  }
+  .plan-name {
+    grid-column: 2;
+    margin: 2px 0 0;
+    font-size: 14px;
   }
   .edit {
     grid-column: 2;

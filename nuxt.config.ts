@@ -21,6 +21,14 @@ export default defineNuxtConfig({
       apiBaseUrl: 'http://localhost:8000',
       /** Placeholder until the owner supplies the real address (G16). */
       contactEmail: 'contact@example.com',
+      /**
+       * Release 2: plans shown on the prerendered landing when GET /api/plans can't be reached. The real prices and
+       * limits always come from the service (FR-001); these are only the starting values, in US cents.
+       */
+      landingPlansFallback: {
+        free: { priceMonthlyCents: 0, priceYearlyCents: 0 },
+        pro: { priceMonthlyCents: 800, priceYearlyCents: 7700 },
+      },
     },
   },
 
@@ -28,10 +36,17 @@ export default defineNuxtConfig({
     // The studio is client-rendered; its HTML shell is still prerendered for static hosting.
     '/app/**': { ssr: false },
     '/__mock': { ssr: false },
+    // Release 2: the email-confirmation link carries its token in the query; render it in the browser like the app.
+    '/confirm-email': { ssr: false },
   },
 
   nitro: {
     preset: 'static',
+    // Dev only: when the API is on another site (e.g. https://tilw-backend.test), browsers block its session cookie as
+    // third-party. Set DEV_API_PROXY to the API origin and NUXT_PUBLIC_API_BASE_URL=/_api so the API is same-origin.
+    devProxy: process.env.DEV_API_PROXY
+      ? { '/_api': { target: process.env.DEV_API_PROXY, changeOrigin: true, secure: false } }
+      : {},
     prerender: {
       crawlLinks: false,
       // Add routes here as their pages land (waitlist, forgot-password, privacy, terms…).
@@ -52,6 +67,10 @@ export default defineNuxtConfig({
 
   app: {
     head: {
+      // The SPA shell (200.html) for client-rendered routes (/app/**) ships before any page sets its own head, so it
+      // needs a language and a title of its own (WCAG html-has-lang, document-title). app.vue and pages override both.
+      htmlAttrs: { lang: 'ar', dir: 'rtl' },
+      title: 'tilwprompter',
       charset: 'utf-8',
       viewport: 'width=device-width, initial-scale=1, viewport-fit=cover',
       link: [

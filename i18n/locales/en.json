@@ -110,7 +110,10 @@
     "tokenInvalid": "This link doesn't work. Request a new one.",
     "sessionEnded": "Your session ended. Sign in to continue.",
     "unknown": "Something went wrong. Try again.",
-    "notFound": "We couldn't find this page."
+    "notFound": "We couldn't find this page.",
+    "limitReached": "This would go over a limit of your plan.",
+    "storageFull": "There isn't enough space in Google Drive.",
+    "storageNotLinked": "Google Drive isn't linked. Link it in Storage settings."
   },
   "placeholder": {
     "title": "{screen}",
@@ -386,7 +389,13 @@
     "downloadNow": "Download now",
     "lowStorage": "Browser storage is low, so recording may stop before 10 minutes. Download or delete older takes in Recordings.",
     "recordFailed": "Couldn't start recording in this browser.",
-    "takeWord": "take"
+    "takeWord": "take",
+    "maxMinutes": "{n} {unit} maximum",
+    "takeNoLimit": "Your plan has no take length limit",
+    "takeLimitN": "Takes can be up to {time}",
+    "takeLimitPro": "up to {n} with Pro",
+    "savedLimitN": "The take reached {time}, so it stopped and was saved.",
+    "autoSyncHint": "Takes are copied to Google Drive automatically after saving."
   },
   "recordings": {
     "title": "Recordings",
@@ -434,7 +443,8 @@
     "ended": {
       "limit": "Stopped at 10 minutes and saved automatically. Download the original to keep a copy.",
       "interrupted": "Recording stopped before you finished; what was captured is saved. Download it to keep a copy.",
-      "quota": "Browser storage filled up, so recording stopped; what was captured is saved. Download it to keep a copy."
+      "quota": "Browser storage filled up, so recording stopped; what was captured is saved. Download it to keep a copy.",
+      "limitN": "Stopped at {time} and saved automatically. Download the original to keep a copy."
     }
   },
   "settings": {
@@ -453,7 +463,7 @@
     "legacyTitle": "Scripts from an older version",
     "legacyHint": "Recover old scripts from this browser",
     "deleteTitle": "Delete account",
-    "deleteHint": "Deletes your account and scripts for good. Recordings stay in this browser.",
+    "deleteHint": "Deletes your account and scripts after 14 days; signing in before then cancels it. Recordings stay in this browser.",
     "deleteOpen": "Delete account…",
     "accountData": "Account data",
     "exportHeading": "Download a copy of your scripts",
@@ -485,14 +495,20 @@
     "changePassword": "Change password",
     "currentPassword": "Current password",
     "passwordChanged": "Password changed.",
-    "deleteHeading": "Delete your account for good?",
-    "deleteLede": "This can't be undone. Download a copy of your scripts first if you want to keep them.",
+    "deleteHeading": "Delete your account?",
+    "deleteLede": "Your account is deleted after 14 days, and signing in before then cancels it. Download a copy of your scripts first if you want to keep them.",
     "deleteGone": "Deleted: your account and all your scripts and settings.",
     "deleteStays": "Kept: recordings saved in this browser, until you delete them or clear browser data.",
-    "deleteConfirm": "Delete account for good",
+    "deleteConfirm": "Delete account",
     "deletedTitle": "Your account is deleted",
     "deletedLede": "Thank you for trying tilw. You've been signed out of this browser.",
-    "toHome": "Go to the home page"
+    "toHome": "Go to the home page",
+    "planLabel": "Plan: {plan}",
+    "planHint": "Your plan's limits and what you've used",
+    "planHintFree": "{n} of {max} active scripts",
+    "planHintPro": "Tilw Pro is active",
+    "storageHintNone": "Link Google Drive to keep a copy of your takes",
+    "storageHintLinked": "Google Drive linked · Copying: {mode}"
   },
   "errorPage": {
     "notFoundTitle": "Page not found",
@@ -543,5 +559,298 @@
     "toastWithdrawn": "Invitation to {email} withdrawn",
     "withdrawTitle": "Withdraw this invitation?",
     "withdrawText": "The link for {email} will stop working. You can invite them again later."
+  },
+  "limits": {
+    "activeCount": "{n} of {max} active scripts",
+    "readOnlyChip": "Read only",
+    "readOnlyTitle": "This script is read only",
+    "readOnlyText": "You have {n} active scripts and your plan allows {max}. Archive another script or upgrade to Pro to edit it. You can still rehearse, record and download it.",
+    "readOnlyTextShort": "Your active scripts are over your plan's limit. Archive another script or upgrade to Pro to edit it. You can still rehearse, record and download it.",
+    "soon": "Coming soon",
+    "included": "Included",
+    "notIncluded": "Not included",
+    "unlimited": "Unlimited",
+    "usedOf": "{n} of {max}",
+    "usedOfUnlimited": "{n} · unlimited",
+    "days": "{n} days",
+    "labels": {
+      "scripts": {
+        "max_active": "Active scripts",
+        "max_words": "Longest script (words)"
+      },
+      "takes": {
+        "max_minutes": "Take length"
+      },
+      "ai": {
+        "credits_monthly": "Monthly AI credits"
+      },
+      "storage": {
+        "auto_sync": "Automatic copy to Google Drive",
+        "providers": "Storage available"
+      },
+      "history": {
+        "versions": "History versions per script",
+        "days": "History kept for"
+      }
+    },
+    "providers": {
+      "google_drive": "Google Drive"
+    },
+    "dialog": {
+      "activeTitle": "You've reached your active scripts limit",
+      "activeText": "Your plan allows {value} active scripts and you have {usage}. Archive a script you're not working on to make room for a new one.",
+      "wordsTitle": "This script is longer than your plan allows",
+      "wordsText": "Your plan allows scripts up to {value} words and this one has {usage}. Shorten it or split it in two. What you wrote is kept on this device.",
+      "minutesTitle": "This take is longer than your plan allows",
+      "minutesText": "Your plan allows takes up to {value} minutes and this one is {usage} minutes. The take stays on this device.",
+      "autoSyncTitle": "Automatic copying comes with Pro",
+      "autoSyncText": "On Free you copy takes to Google Drive by hand, one at a time. With Pro every take is copied automatically after it's saved.",
+      "providersTitle": "Storage isn't included in your plan",
+      "providersText": "Your plan doesn't include linking Google Drive right now.",
+      "genericTitle": "You've reached a limit of your plan",
+      "genericText": "Your current plan doesn't allow this. Upgrade to Pro to raise the limit.",
+      "proHint": "With Tilw Pro: unlimited active scripts, longer takes and automatic copies to Google Drive.",
+      "ok": "OK",
+      "archive": "Archive a script"
+    }
+  },
+  "plan": {
+    "title": "Plan & usage",
+    "yourPlan": "Your plan",
+    "freeName": "Free",
+    "proName": "Tilw Pro",
+    "freeForever": "Free for good, no end date",
+    "period": {
+      "monthly": "Monthly",
+      "yearly": "Yearly",
+      "custom": "Custom period"
+    },
+    "until": "until {date}",
+    "renewQueued": "renewal starts {date}",
+    "whyPro": "What Pro adds",
+    "proIncludes": "Your plan includes",
+    "proLines": {
+      "minutes": "Longer takes, up to a full hour.",
+      "scripts": "Unlimited active scripts.",
+      "sync": "Every take copied to Google Drive automatically.",
+      "history": "A year of script history."
+    },
+    "usage": "Usage",
+    "endingTitle": "Pro ends on {date}",
+    "endingLede": "Renew to keep your limits. Nothing is deleted if it ends.",
+    "dismiss": "Hide this notice",
+    "startedToast": "Pro is active until {date}. Thank you.",
+    "startedToastNoDate": "Pro is active. Thank you.",
+    "endedToast": "Pro has ended and you're back on Free. Automatic copying is now manual, and nothing was deleted.",
+    "endedToastReadOnly": "Pro has ended and you're back on Free. Automatic copying is now manual and {n} of your scripts are read only. Nothing was deleted."
+  },
+  "upgrade": {
+    "cta": "Upgrade to Pro",
+    "renew": "Renew",
+    "title": "Upgrade to Tilw Pro",
+    "renewTitle": "Renew Tilw Pro",
+    "continueWhatsapp": "Continue on WhatsApp",
+    "renewWhatsapp": "Renew on WhatsApp",
+    "currentPlan": "Your current plan",
+    "sent": "WhatsApp is open with your message ready. Your request number is {ref}.",
+    "blocked": "Your browser didn't open WhatsApp. Open the link yourself and include the request number in your message.",
+    "noNumber": "Send this request number to the Tilw team, and we'll turn on Pro once the payment is confirmed.",
+    "openLink": "Open the WhatsApp link",
+    "toPlan": "Go to your plan",
+    "reference": "Request number",
+    "copy": "Copy",
+    "copied": "Request number copied.",
+    "copyFailed": "Couldn't copy. Copy the number by hand.",
+    "pendingTitle": "Upgrade request pending",
+    "pendingLede": "You sent your request on WhatsApp. We turn on Pro once the payment is confirmed, and you'll see a notice here.",
+    "periodLabel": "Period",
+    "price": "Price",
+    "sentOn": "Sent on",
+    "reopen": "Open WhatsApp again",
+    "cancel": "Cancel request",
+    "cancelTitle": "Cancel the upgrade request?",
+    "cancelLede": "Request {ref} will stop. You can send a new one any time.",
+    "cancelConfirm": "Cancel request",
+    "cancelled": "Upgrade request cancelled."
+  },
+  "plansPoster": {
+    "freeKick": "For everyone",
+    "freeName": "Free",
+    "proKick": "When you want more room",
+    "startFree": "Start free",
+    "getPro": "Get Tilw Pro",
+    "periodLabel": "Billing period",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "perMonth": "per month",
+    "perYear": "per year",
+    "save": "Save {n}%",
+    "activeN": "Up to {n} active scripts",
+    "activeUnlimited": "Unlimited active scripts",
+    "minutesN": "Takes up to {n} {unit}",
+    "driveManual": "Copy takes to Google Drive by hand",
+    "driveAuto": "Every take copied to Google Drive automatically",
+    "historyN": "History of each script's last {n} versions",
+    "historyDays": "Script history kept for {n} days",
+    "basics": "Write, rehearse, record and download the original",
+    "phone": "Control the prompter from your phone",
+    "aiSoon": "Monthly credits for line-break suggestions (coming soon)",
+    "note": "Your subscription starts once the payment is confirmed on WhatsApp. Prices are in US dollars."
+  },
+  "storage": {
+    "title": "Storage",
+    "lede": "Your takes stay on this device. If you choose, a copy also goes straight from your browser to your own Google Drive.",
+    "drive": "Google Drive",
+    "notLinked": "Not linked",
+    "linkedAs": "Linked as",
+    "revoked": "Google stopped the link. Link Drive again.",
+    "factOnlyOwn": "Tilw sees only the files it creates in your Drive, never your other files.",
+    "factDirect": "Takes go from your browser straight to Drive, never through Tilw's servers.",
+    "factDevice": "The take stays on this device until you delete it.",
+    "link": "Link Google Drive",
+    "relink": "Link Drive again",
+    "unlink": "Unlink",
+    "unlinkTitle": "Unlink Google Drive?",
+    "unlinkLede": "Copies to Drive stop. Takes saved on this device stay as they are.",
+    "unlinkStays": "Files in Drive stay in your account. Takes that are only in Drive show as \"Not reachable\" here.",
+    "unlinkConfirm": "Unlink",
+    "unlinked": "Google Drive unlinked.",
+    "linkedToast": "Google Drive linked as {email}.",
+    "denied": "Linking didn't finish because you didn't agree on Google's page. You can try again any time.",
+    "linkFailed": "Couldn't link Google Drive. Try again.",
+    "linkFirst": "Link Google Drive first.",
+    "syncTitle": "Copying takes",
+    "mode": {
+      "off": "Off",
+      "manual": "Manual",
+      "auto": "Automatic"
+    },
+    "modeHint": {
+      "off": "Takes stay on this device only.",
+      "manual": "You choose which takes are copied to Drive.",
+      "auto": "Every take is copied to Drive after it's saved."
+    },
+    "modeSaved": "Copying is now: {mode}.",
+    "spaceTitle": "Space",
+    "driveSpace": "Google Drive space",
+    "tilwSpace": "Tilw takes in Drive",
+    "usedOf": "{used} of {total}",
+    "free": "{free} free",
+    "full": "Drive is full. Free up some space, then try again.",
+    "tilwTakes": "{n} takes in Drive"
+  },
+  "uploads": {
+    "place": {
+      "device": "On this device",
+      "waiting": "Waiting to copy",
+      "drive": "In Google Drive",
+      "driveOnly": "In Drive only",
+      "unreachable": "Not reachable",
+      "failed": "Backup failed"
+    },
+    "uploading": "Copying {n}%",
+    "failed": "Backup failed",
+    "reason": {
+      "storage_full": "Drive is full",
+      "storage_not_linked": "Drive not linked",
+      "network": "Connection lost",
+      "limit_reached": "Longer than your plan allows"
+    },
+    "copy": "Copy to Drive",
+    "copyLong": "Copy to Google Drive",
+    "seeSpace": "See space",
+    "openStorage": "Storage settings",
+    "change": "Change",
+    "modeLine": {
+      "none": "Takes are saved on this device only.",
+      "off": "Google Drive is linked and copying is off.",
+      "manual": "Copying to Google Drive: manual.",
+      "auto": "Copying to Google Drive: automatic."
+    },
+    "driveOnlyTitle": "In Google Drive only",
+    "driveOnlyLede": "This take was recorded on another device and plays from Drive. Download the original to keep a copy here.",
+    "bothTitle": "On this device and in Google Drive",
+    "bothLede": "There's a copy in Drive, and the original is also saved in this browser.",
+    "deleteBothTitle": "Where do you want to delete this take?",
+    "deleteBothLede": "This take is on this device and in Google Drive. Deleting can't be undone.",
+    "deleteDeviceOnly": "From this device only",
+    "deleteEverywhere": "From this device and Drive",
+    "deleteDriveTitle": "Delete this take from Drive?",
+    "deleteDriveLede": "It will be deleted from Google Drive and your takes for good.",
+    "deleteFromDrive": "Delete from Drive",
+    "deletedDrive": "Take deleted from Drive.",
+    "bytes": "{sent} of {total}",
+    "openInDrive": "Open in Drive"
+  },
+  "history": {
+    "open": "History",
+    "title": "History",
+    "list": "All versions",
+    "previewTitle": "Earlier version",
+    "previewChip": "Previewing an earlier version",
+    "none": "No earlier versions yet. A version is kept every ten minutes of editing.",
+    "reason": {
+      "edit": "Edit",
+      "restore": "Before restore",
+      "ai": "AI change"
+    },
+    "keepN": "Your plan keeps the last {n} versions of each script.",
+    "keepDays": "Your plan keeps versions for {n} days.",
+    "keepAll": "Your plan keeps every version.",
+    "morePro": "Longer history with Pro",
+    "restore": "Restore this version",
+    "confirmTitle": "Restore this version?",
+    "confirmLede": "This version's text will replace the current text. The current text stays in History as \"Before restore\".",
+    "restored": "Version restored. The previous text is in History.",
+    "readOnly": "You can view the history, but restoring isn't available because this script is read only."
+  },
+  "email": {
+    "hint": "Used to sign in.",
+    "change": "Change email",
+    "newEmail": "New email",
+    "note": "We'll send a confirmation link to the new address. You keep signing in with your current email until you open it.",
+    "send": "Send confirmation link",
+    "sent": "We sent a confirmation link to {email}.",
+    "pending": "Waiting for confirmation at",
+    "pendingHint": "Open the link in the new inbox before {date}.",
+    "resend": "Resend",
+    "resent": "We sent a new link. The previous one no longer works.",
+    "cancel": "Cancel change",
+    "cancelled": "Email change cancelled.",
+    "same": "That's already your email.",
+    "confirmTitle": "Confirm email",
+    "confirmedTitle": "Your new email is confirmed",
+    "confirmedLede": "You now sign in with {email}. We signed out your other devices.",
+    "toAccount": "Back to account",
+    "expiredTitle": "This link has expired",
+    "expiredLede": "Request a new link from your account page.",
+    "invalidTitle": "This link doesn't work",
+    "invalidLede": "It may have been used already, or a newer link was sent. Request a new link from your account page.",
+    "requestNew": "Request a new link"
+  },
+  "devices": {
+    "title": "Devices",
+    "lede": "Phones and browsers signed in to your account.",
+    "thisBrowser": "This browser",
+    "current": "Current device",
+    "since": "since {date}",
+    "lastUsed": "last used {when}",
+    "signOut": "Sign out",
+    "confirmTitle": "Sign out of {name}?",
+    "confirmLede": "This device will need to sign in again.",
+    "revoked": "Signed out of {name}.",
+    "platform": {
+      "ios": "iPhone",
+      "android": "Android",
+      "other": "Phone",
+      "web": "Browser"
+    }
+  },
+  "deletion": {
+    "doneTitle": "Your account will be deleted in 14 days",
+    "doneLede": "Your account and scripts will be deleted on {date}. We signed you out on every device.",
+    "cancelHint": "Changed your mind? Sign in before that date and the deletion is cancelled.",
+    "driveStays": "Takes stay in this browser, and files stay in your own Google Drive.",
+    "cancelledToast": "Your account deletion was cancelled. Welcome back."
   }
 }

@@ -1,9 +1,11 @@
 import { expect, test, type Page } from '@playwright/test'
+import { hydrated } from './r2'
 
 // T055 — editor flows against the static build and the in-browser mock.
 
 async function signIn(page: Page) {
   await page.goto('/signin')
+  await hydrated(page)
   await page.getByLabel('البريد الإلكتروني').fill('layan@example.com')
   await page.getByLabel('كلمة المرور', { exact: true }).fill('password123')
   await page.getByRole('button', { name: 'تسجيل الدخول' }).click()

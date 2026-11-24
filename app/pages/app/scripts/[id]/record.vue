@@ -4,16 +4,34 @@
  * Setup: camera / audio before permission (6:38, 6:50; phone 6:40, 6:52), preview with devices
  * (6:39, 6:41) or sound check (6:51, 6:53), permission denied (6:78; desktop per G12).
  * Then the countdown (6:42 / 6:54) and the capture screen with the prompter (6:44 / 6:56).
- * Takes are saved to IndexedDB only; a take that stops on its own (10 min, device lost, storage full) is
+ * Takes are saved to IndexedDB; a take that stops on its own (the plan's take length, device lost, storage full) is
  * still saved (G8). Camera and microphone are requested only from the enable button (constitution IV).
  */
 import type { FinishedTake } from '~/composables/useRecorder'
 
 definePageMeta({ layout: 'reader' })
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const route = useRoute()
 const reader = useReaderStore()
 const takes = useTakesStore()
+const plan = usePlanStore()
+
+// ---------- release 2: plan-based take length (R2-6) ----------
+// Start waits until the plan is read (or the read failed: then the last known limit applies).
+const limitMs = computed(() => recordLimitMs(plan.knownLimit('takes.max_minutes')))
+const limitMinutes = computed(() => Math.round(limitMs.value / 60_000))
+const proMinutes = computed(() => {
+  const v = plan.plans.find(p => p.key === 'pro')?.limits.find(l => l.key === 'takes.max_minutes')?.value
+  return typeof v === 'number' ? v : null
+})
+const minutesText = (n: number) => `${n} ${unitFor(n, 'minute', locale.value)}`
+const takeLimitText = computed(() => {
+  if (!Number.isFinite(limitMs.value)) return t('studio.takeNoLimit')
+  const base = t('studio.takeLimitN', { time: minutesText(limitMinutes.value) })
+  return !plan.isPro && proMinutes.value && proMinutes.value > limitMinutes.value
+    ? `${base} · ${t('studio.takeLimitPro', { n: proMinutes.value })}`
+    : base
+})
 const { show } = useToast()
 const errorText = useErrorText()
 
@@ -63,6 +81,8 @@ onMounted(async () => {
   await reader.load(id.value)
   engine.seek(0)
   void takes.load().catch(() => {})
+  if (!plan.my) void plan.load()
+  if (!plan.plans.length) void plan.loadPublic().catch(() => {})
 })
 
 // ---------- prompter ----------
@@ -80,8 +100,16 @@ const saving = ref(false)
 
 const recorder = useRecorder({ onAutoStop: take => void keep(take) })
 
+// ---------- release 2: uploads wait while the studio counts down or records (constitution V) ----------
+const uploads = useUploadsStore()
+const storage = useStorageStore()
+onMounted(() => !storage.status && storage.load().catch(() => {}))
+const autoSync = computed(() => storage.linked && storage.syncMode === 'auto')
+watch(phase, p => (p === 'setup' ? uploads.resume() : uploads.pause()))
+onBeforeUnmount(() => uploads.resume())
+
 function startCountdown() {
-  if (!live.value) return
+  if (!live.value || !plan.settled) return
   const sec = settings.value.countdownSec
   if (!sec) return beginTake()
   countdown.value = sec
@@ -104,7 +132,7 @@ async function beginTake() {
   const s = media.stream.value
   if (!s) return cancelCountdown()
   const free = await takes.refreshEstimate()
-  const ok = await recorder.start(s, kind.value, free)
+  const ok = await recorder.start(s, kind.value, free, limitMs.value)
   if (!ok) {
     phase.value = 'setup'
     show(t('studio.recordFailed'), 'error')
@@ -140,8 +168,10 @@ async function keep(take: FinishedTake) {
     })
     media.stop()
     phase.value = 'setup'
+    // Auto sync: the take starts uploading once the studio is back on setup (R2-6).
+    if (autoSync.value) void uploads.enqueue(meta.id)
     const msg = take.reason === 'limit'
-      ? t('studio.savedLimit')
+      ? t('studio.savedLimitN', { time: minutesText(Math.round(take.durationMs / 60_000)) })
       : take.reason === 'interrupted'
         ? t('studio.savedInterrupted')
         : take.reason === 'quota'
@@ -238,6 +268,7 @@ const firstLine = computed(() => reader.paragraphs[0] ?? '')
     :kind="kind"
     :stream="media.stream.value"
     :elapsed-ms="recorder.elapsedMs.value"
+    :limit-ms="limitMs"
     :level="level"
     :saving="saving"
     :paragraphs="reader.paragraphs"
@@ -316,7 +347,7 @@ const firstLine = computed(() => reader.paragraphs[0] ?? '')
             <h2 v-if="!live" :class="{ problem }">{{ heading }}</h2>
             <p class="lede">{{ lede }}</p>
             <template v-if="live">
-              <UiButton block :disabled="reader.status !== 'ready' || !reader.paragraphs.length" @click="startCountdown">{{ t('studio.start') }}</UiButton>
+              <UiButton block :loading="!plan.settled" :disabled="reader.status !== 'ready' || !reader.paragraphs.length || !plan.settled" @click="startCountdown">{{ t('studio.start') }}</UiButton>
               <button type="button" class="link" @click="closePreview">{{ t('studio.closePreview') }}</button>
             </template>
             <template v-else-if="problem === 'denied'">
@@ -344,7 +375,7 @@ const firstLine = computed(() => reader.paragraphs[0] ?? '')
 
       <footer class="foot">
         <NuxtLink :to="rehearsePath" class="link">{{ t('studio.practise') }}</NuxtLink>
-        <p>{{ t('studio.takeLimit') }}</p>
+        <p>{{ takeLimitText }}<template v-if="autoSync"><br><span class="auto">{{ t('studio.autoSyncHint') }}</span></template></p>
       </footer>
     </main>
 

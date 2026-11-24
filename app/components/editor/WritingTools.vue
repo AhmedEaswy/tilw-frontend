@@ -14,9 +14,11 @@ const props = defineProps<{
   marksCount: number
   /** Words are selected, so the marks toolbar is already over them. */
   hasSelection: boolean
+  /** Release 2 (R2-3): marks and undo are dimmed; search, download and History stay. */
+  readOnly?: boolean
 }>()
 const query = defineModel<string>('query', { required: true })
-const emit = defineEmits<{ marks: []; undo: []; redo: []; download: []; next: []; prev: [] }>()
+const emit = defineEmits<{ marks: []; undo: []; redo: []; download: []; next: []; prev: []; history: [] }>()
 
 const { t, locale } = useI18n()
 const searchOpen = ref(false)
@@ -65,23 +67,31 @@ defineExpose({ openSearch: () => !searchOpen.value && toggleSearch() })
         </div>
       </li>
       <li>
-        <button type="button" aria-describedby="marks-hint" @click="emit('marks')">
+        <button type="button" aria-describedby="marks-hint" :disabled="readOnly" @click="emit('marks')">
           <UiGlyph name="edit" :size="18" />{{ marksCount ? t('editor.marks.titleCount', { n: marksCount }) : t('editor.marks.title') }}
         </button>
         <p id="marks-hint" class="hint">{{ hasSelection ? t('editor.marks.hintSelected') : t('editor.marks.hint') }}</p>
       </li>
-      <li class="pair">
+      <li class="pair" :class="{ dim: readOnly }">
         <UiGlyph name="rewind" :size="18" />
-        <button type="button" class="inline" :disabled="!canUndo" @click="emit('undo')">{{ t('editor.undo') }}</button>
+        <button type="button" class="inline" :disabled="!canUndo || readOnly" @click="emit('undo')">{{ t('editor.undo') }}</button>
         <span aria-hidden="true">·</span>
-        <button type="button" class="inline" :disabled="!canRedo" @click="emit('redo')">{{ t('editor.redo') }}</button>
+        <button type="button" class="inline" :disabled="!canRedo || readOnly" @click="emit('redo')">{{ t('editor.redo') }}</button>
       </li>
+      <li><button type="button" class="history" @click="emit('history')"><UiGlyph name="clock" :size="18" />{{ t('history.open') }}</button></li>
       <li><button type="button" @click="emit('download')"><UiGlyph name="download" :size="18" />{{ t('editor.download') }}</button></li>
     </ul>
   </aside>
 </template>
 
 <style scoped>
+.dim {
+  opacity: 0.5;
+}
+li > button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
 .tools {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

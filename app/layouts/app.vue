@@ -18,6 +18,34 @@ const sections = computed<{ to: string; key: string; icon: GlyphName }[]>(() => 
   ...(auth.user?.isAdmin ? [{ to: '/app/admin', key: 'nav.admin', icon: 'privacy' as GlyphName }] : []),
 ])
 const isCurrent = (to: string) => route.path === to || route.path.startsWith(`${to}/`)
+
+// ---------- release 2: plan, one-time notices, upload queue ----------
+const plan = usePlanStore()
+const { show } = useToast()
+const { locale } = useI18n()
+
+// The upload queue starts and stops in plugins/uploads.client.ts, so it also runs under the studio's layout.
+watch(() => auth.user?.id, (id) => {
+  if (!id) return
+  void plan.load()
+  // deletion_cancelled comes back from sign-in (research §11).
+  if (auth.consumeNotice() === 'deletion_cancelled') show(t('deletion.cancelledToast'), 'info', 8000)
+}, { immediate: true })
+
+watch(() => plan.notice, (n) => {
+  if (!n) return
+  plan.consumeNotice()
+  if (n === 'pro_started') {
+    const end = plan.my?.endsAt
+    show(end ? t('plan.startedToast', { date: formatDay(end, locale.value) }) : t('plan.startedToastNoDate'), 'success', 8000)
+  } else {
+    const active = plan.my?.limits.find(l => l.key === 'scripts.max_active')
+    const over = typeof active?.value === 'number' && typeof active.usage === 'number' ? Math.max(0, active.usage - active.value) : 0
+    show(over ? t('plan.endedToastReadOnly', { n: over }) : t('plan.endedToast'), 'info', 10000)
+  }
+}, { immediate: true })
+
+useEventListener(window, 'focus', () => auth.user && plan.refreshIfStale())
 </script>
 
 <template>
@@ -38,6 +66,11 @@ const isCurrent = (to: string) => route.path === to || route.path.startsWith(`${
     </header>
 
     <main class="main"><slot /></main>
+
+    <ClientOnly>
+      <LimitDialog />
+      <UpgradeDialog />
+    </ClientOnly>
 
     <nav class="tabs" :aria-label="t('nav.main')">
       <NuxtLink

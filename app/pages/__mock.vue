@@ -56,6 +56,82 @@ function resetAll() {
   show('Mock data reset to the seed')
 }
 const fmt = (n: number) => new Date(n).toLocaleString()
+
+// ---------- release 2: plans, limits, requests, clock, Drive ----------
+const userId = computed(() => (tick.value, state.value.sessionUserId))
+const needUser = () => {
+  if (!userId.value) show('Sign in first', 'error')
+  return userId.value
+}
+const planNow = computed(() => {
+  tick.value
+  const id = userId.value
+  if (!id) return '—'
+  const t = mock.knobs.now()
+  return state.value.subscriptions.find(x => x.userId === id && x.startsAt <= t && t < x.endsAt)?.plan ?? 'free'
+})
+const pending = computed(() => (tick.value, userId.value ? mock.knobs.pendingRequest(userId.value) : null))
+const limitKeys = computed(() => state.value.limitDefinitions.map(d => d.key))
+const limitEdit = reactive({ plan: 'free', key: 'scripts.max_active', value: '20' })
+const overrideEdit = reactive({ key: 'takes.max_minutes', value: '1' })
+const proPrice = reactive({ monthly: 800, yearly: 7700 })
+const clock = reactive({ days: Math.trunc((mock.db.knobs.clockOffsetMs || 0) / 86_400_000), minutes: Math.round(((mock.db.knobs.clockOffsetMs || 0) % 86_400_000) / 60_000) })
+watch(clock, c => (knobs.clockOffsetMs = (Number(c.days) || 0) * 86_400_000 + (Number(c.minutes) || 0) * 60_000), { deep: true })
+
+function parseValue(raw: string) {
+  const v = raw.trim()
+  if (v === '' || v === 'null') return null
+  try {
+    return JSON.parse(v)
+  } catch {
+    return v.split(',').map(x => x.trim()).filter(Boolean)
+  }
+}
+function setPlan(key: string) {
+  const id = needUser()
+  if (!id) return
+  mock.knobs.setPlan(id, key)
+  refresh()
+  show(`Plan: ${key}`)
+}
+function saveLimit() {
+  mock.knobs.setPlanLimit(limitEdit.plan, limitEdit.key, parseValue(limitEdit.value))
+  refresh()
+  show(`${limitEdit.plan} · ${limitEdit.key} = ${limitEdit.value || 'null'}`)
+}
+function saveOverride(remove = false) {
+  const id = needUser()
+  if (!id) return
+  mock.knobs.setOverride(id, overrideEdit.key, remove ? undefined : parseValue(overrideEdit.value))
+  refresh()
+  show(remove ? 'Override removed' : 'Override set')
+}
+function savePrice() {
+  mock.knobs.setPlanPrice('pro', Number(proPrice.monthly), Number(proPrice.yearly))
+  refresh()
+  show('Pro price saved')
+}
+function settle(kind: 'fulfil' | 'rejected' | 'expired') {
+  const id = needUser()
+  if (!id) return
+  const ok = kind === 'fulfil' ? mock.knobs.fulfil(id) : mock.knobs.settle(id, kind)
+  refresh()
+  show(ok ? `Request ${kind === 'fulfil' ? 'fulfilled' : kind}` : 'No pending request', ok ? 'success' : 'error')
+}
+async function addRemoteTake() {
+  const id = needUser()
+  if (!id) return
+  await mock.knobs.addRemoteOnlyTake(id)
+  refresh()
+  show('Added a take that is only in Drive')
+}
+function addPhone() {
+  const id = needUser()
+  if (!id) return
+  mock.knobs.addPhone(id)
+  refresh()
+  show('Added a phone device')
+}
 </script>
 
 <template>
@@ -85,6 +161,70 @@ const fmt = (n: number) => new Date(n).toLocaleString()
         <label class="ck"><input v-model="knobs.forceConflictOnNextSave" type="checkbox"> Conflict on next script save</label>
         <label class="ck"><input v-model="knobs.expireTokens" type="checkbox"> Treat reset/invite links as expired</label>
         <label class="ck"><input v-model="knobs.failPositionSave" type="checkbox"> Reading position saves fail</label>
+      </div>
+    </section>
+
+    <section>
+      <h2>Plan &amp; limits (release 2)</h2>
+      <p>Plan in force: <b>{{ planNow }}</b> · mock clock {{ fmt(mock.knobs.now()) }}</p>
+      <div class="row">
+        <UiButton size="sm" tone="secondary" @click="setPlan('free')">Free</UiButton>
+        <UiButton size="sm" tone="secondary" @click="setPlan('pro')">Pro (1 year)</UiButton>
+      </div>
+      <form class="row" @submit.prevent="saveLimit">
+        <select v-model="limitEdit.plan" aria-label="Plan"><option value="free">free</option><option value="pro">pro</option></select>
+        <select v-model="limitEdit.key" aria-label="Limit key"><option v-for="k in limitKeys" :key="k">{{ k }}</option></select>
+        <input v-model="limitEdit.value" aria-label="Limit value" placeholder="20 · null · true · google_drive">
+        <UiButton size="sm" type="submit">Set plan limit</UiButton>
+      </form>
+      <form class="row" @submit.prevent="saveOverride()">
+        <select v-model="overrideEdit.key" aria-label="Override key"><option v-for="k in limitKeys" :key="k">{{ k }}</option></select>
+        <input v-model="overrideEdit.value" aria-label="Override value">
+        <UiButton size="sm" type="submit">Set my override</UiButton>
+        <UiButton size="sm" tone="ghost" @click="saveOverride(true)">Remove</UiButton>
+      </form>
+      <form class="row" @submit.prevent="savePrice">
+        Pro cents: <input v-model.number="proPrice.monthly" type="number" aria-label="Pro monthly cents"> / month
+        <input v-model.number="proPrice.yearly" type="number" aria-label="Pro yearly cents"> / year
+        <UiButton size="sm" type="submit">Save price</UiButton>
+      </form>
+      <label class="ck"><input v-model="knobs.plansDown" type="checkbox"> Plan catalogue unreachable (landing fallback)</label>
+    </section>
+
+    <section>
+      <h2>Upgrade request</h2>
+      <p v-if="pending">Pending <code>{{ pending.reference }}</code> · {{ pending.period }} · ${{ pending.priceCents / 100 }}</p>
+      <p v-else class="muted">No pending request.</p>
+      <div class="row">
+        <UiButton size="sm" @click="settle('fulfil')">Fulfil (Pro starts now)</UiButton>
+        <UiButton size="sm" tone="secondary" @click="settle('rejected')">Reject</UiButton>
+        <UiButton size="sm" tone="ghost" @click="settle('expired')">Expire</UiButton>
+      </div>
+    </section>
+
+    <section>
+      <h2>Clock</h2>
+      <div class="row">
+        <label>Days <input v-model.number="clock.days" type="number" step="1"></label>
+        <label>Minutes <input v-model.number="clock.minutes" type="number" step="1"></label>
+        <UiButton size="sm" tone="ghost" @click="clock.days = 0; clock.minutes = 0">Real time</UiButton>
+      </div>
+    </section>
+
+    <section>
+      <h2>Google Drive (fake)</h2>
+      <div class="knobs">
+        <label>Mode
+          <select v-model="knobs.driveMode" aria-label="Drive mode">
+            <option value="ok">ok</option><option value="full">full</option><option value="revoked">revoked</option><option value="slow">slow</option>
+          </select>
+        </label>
+        <label class="ck"><input v-model="knobs.denyDriveConsent" type="checkbox"> Google consent declined</label>
+      </div>
+      <p>Files in the fake Drive: {{ Object.keys(state.drive.files).length }}</p>
+      <div class="row">
+        <UiButton size="sm" tone="secondary" @click="addRemoteTake">Add a take from another device</UiButton>
+        <UiButton size="sm" tone="secondary" @click="addPhone">Add a phone device</UiButton>
       </div>
     </section>
 
@@ -137,7 +277,7 @@ section { padding-block-start: 20px; border-block-start: 1px solid var(--tilw-bo
 .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .knobs { display: grid; gap: 10px; }
 .knobs label { display: flex; gap: 10px; align-items: center; }
-input[type='number'], input[type='email'] {
+input[type='number'], input[type='email'], input:not([type]), select {
   block-size: 40px; padding-inline: 10px; border: 1px solid var(--tilw-border-strong);
   border-radius: 8px; background: var(--tilw-surface-white); min-inline-size: 0;
 }

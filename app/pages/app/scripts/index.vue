@@ -13,7 +13,15 @@ useHead({ title: () => `${t('nav.scripts')} · tilwprompter` })
 
 const store = useScriptsStore()
 const errorText = useErrorText()
+const plan = usePlanStore()
 onMounted(() => store.load())
+
+// Release 2 (R2-2): "14 من 20 نصاً نشطاً" next to Import when the plan caps active scripts.
+const activeCap = computed(() => {
+  const max = plan.limit('scripts.max_active')
+  if (typeof max !== 'number') return null
+  return { n: store.items.filter(s => !s.archivedAt).length, max }
+})
 
 const dialog = ref<LibraryDialog>(null)
 const target = ref<ScriptSummary | null>(null)
@@ -64,10 +72,13 @@ const emptyText = computed(() => {
     <header v-if="!(store.status === 'ready' && !store.hasAny)" class="head">
       <h1>{{ t('nav.scripts') }}</h1>
       <div class="head-acts">
+        <span v-if="activeCap && store.status === 'ready'" class="cap" :class="{ full: activeCap.n >= activeCap.max }">{{ t('limits.activeCount', { n: activeCap.n, max: activeCap.max }) }}</span>
         <button type="button" class="import" @click="dialog = 'import'">{{ t('library.importFile') }}</button>
         <UiButton @click="dialog = 'new'">{{ t('library.new') }}</UiButton>
       </div>
     </header>
+
+    <ProEndingBanner class="pro-end" />
 
     <!-- Loading -->
     <div v-if="store.status === 'idle' || store.status === 'loading'" class="body" aria-busy="true">
@@ -154,6 +165,17 @@ h1 {
   display: flex;
   align-items: center;
   gap: 40px;
+}
+.cap {
+  color: var(--tilw-text-muted);
+  font: 400 15px/1.36 var(--tilw-font-ar);
+}
+.cap.full {
+  color: var(--tilw-action-primary);
+  font-weight: 500;
+}
+.pro-end {
+  margin-block-start: 20px;
 }
 .import {
   border: 0;

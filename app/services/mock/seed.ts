@@ -1,5 +1,5 @@
 /** Seed data for the in-browser mock. Copy comes from the Figma prototype so screens match the designs. */
-import { DEFAULT_READING, type Script, type User } from '../types'
+import { DEFAULT_READING, type Device, type Script, type User } from '../types'
 
 export const SEED_PASSWORD = 'password123'
 
@@ -86,3 +86,14 @@ export const LEGACY_SCRIPTS = [
   { key: 'tilw:legacy:1', title: 'الافتتاحية الأولى', kind: 'draft' as const, body: 'كانت البداية سؤالاً بسيطاً.\n\nمن هنا بدأت الحكاية.' },
   { key: 'tilw:legacy:2', title: 'كواليس التصوير', kind: 'saved' as const, body: 'خذ نفساً هادئاً، وانظر إلى الكاميرا.\n\nثم اقرأ بإيقاعك.' },
 ]
+
+/** Release 2: the browser session the seed account signs in with. Phones are added from /__mock. */
+export function seedDevices(now: number): Device[] {
+  const at = new Date(now).toISOString()
+  return [{ id: 'browser', name: 'Web browser', platform: 'web', createdAt: at, lastUsedAt: at, current: true }]
+}
+
+export function mockPhone(now: number): Device {
+  const at = new Date(now - 3 * day).toISOString()
+  return { id: `dev_${Math.random().toString(36).slice(2, 8)}`, name: 'iPhone 15', platform: 'ios', createdAt: at, lastUsedAt: new Date(now - 3_600_000).toISOString(), current: false }
+}

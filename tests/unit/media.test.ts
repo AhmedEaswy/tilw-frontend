@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { freeBytes, levelFromSamples, levelSegments, mustStop, QUOTA_SAFETY, RECORD_LIMIT_MS, takeFileName, waveBars } from '~/utils/media'
+import { freeBytes, levelFromSamples, levelSegments, mustStop, QUOTA_SAFETY, RECORD_LIMIT_MS, recordLimitMs, takeFileName, waveBars } from '~/utils/media'
 import { pickRecorderMime } from '~/utils/mime'
 import { createMemoryTakesRepo, type Take } from '~/services/takes'
 
@@ -9,6 +9,20 @@ describe('recording limits', () => {
   it('stops at 10 minutes', () => {
     expect(mustStop(RECORD_LIMIT_MS - 1, 0, null)).toBeNull()
     expect(mustStop(RECORD_LIMIT_MS, 0, null)).toBe('limit')
+  })
+
+  // Release 2 (T012): the cap comes from the plan's takes.max_minutes.
+  it('uses the plan value, and 10 minutes when the plan is unknown', () => {
+    expect(recordLimitMs(60)).toBe(60 * 60_000)
+    expect(recordLimitMs(1)).toBe(60_000)
+    expect(recordLimitMs(undefined)).toBe(RECORD_LIMIT_MS)
+    expect(recordLimitMs(0)).toBe(RECORD_LIMIT_MS)
+    expect(recordLimitMs('10')).toBe(RECORD_LIMIT_MS)
+    expect(recordLimitMs(null)).toBe(Number.POSITIVE_INFINITY) // unlimited plan: only storage stops it
+    expect(mustStop(59_999, 0, null, recordLimitMs(1))).toBeNull()
+    expect(mustStop(60_000, 0, null, recordLimitMs(1))).toBe('limit')
+    expect(mustStop(30 * 60_000, 0, null, recordLimitMs(60))).toBeNull()
+    expect(mustStop(30 * 60_000, 0, null, recordLimitMs(null))).toBeNull()
   })
 
   it('stops before browser storage runs out', () => {

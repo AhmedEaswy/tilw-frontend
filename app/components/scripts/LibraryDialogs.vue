@@ -16,6 +16,15 @@ const { t } = useI18n()
 const store = useScriptsStore()
 const { show } = useToast()
 const errorText = useErrorText()
+const limitError = useLimitError()
+/** Release 2: a refusal over a plan limit closes this dialog and opens the limit dialog (R2-2). */
+function failed(e: unknown) {
+  if (limitError.handle(e)) {
+    mode.value = null
+    return
+  }
+  formError.value = errorText(e)
+}
 
 const open = computed({
   get: () => mode.value !== null,
@@ -65,7 +74,7 @@ async function createScript() {
     mode.value = null
     await navigateTo(`/app/scripts/${s.id}`)
   } catch (e) {
-    formError.value = errorText(e)
+    failed(e)
   } finally {
     busy.value = false
   }
@@ -89,7 +98,7 @@ async function onFile(e: Event) {
     show(t('library.imported', { title: s.title }))
     await navigateTo(`/app/scripts/${s.id}`)
   } catch (err) {
-    formError.value = errorText(err)
+    failed(err)
   } finally {
     busy.value = false
   }
@@ -108,7 +117,7 @@ async function renameScript() {
     mode.value = null
     show(t('library.renamed'))
   } catch (e) {
-    formError.value = errorText(e)
+    failed(e)
   } finally {
     busy.value = false
   }
@@ -146,7 +155,7 @@ async function run(action: 'duplicate' | 'pin' | 'archive') {
     }
     mode.value = null
   } catch (e) {
-    formError.value = errorText(e)
+    failed(e)
   } finally {
     busy.value = false
   }
