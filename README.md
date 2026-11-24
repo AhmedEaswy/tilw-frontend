@@ -83,3 +83,4 @@ The admin console lives at `/admin` (spec: `specs/006-admin-console/`). Only adm
 - **Environment variables:**
   - `NUXT_PUBLIC_ENVIRONMENT` (`local`, `staging` or `production`) sets the badge in the console's top bar.
   - `NUXT_PUBLIC_SUPPORT_EMAIL` is named in the "account suspended" message.
+- **Strings:** the console's strings live in `i18n/admin/{ar,en}.json`, not in the studio's locale files. The `admin` route middleware loads them, so they never reach the studio's bundle.

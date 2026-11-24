@@ -11,11 +11,13 @@ const { t, locale } = useI18n()
 useHead({ title: () => `${t('admin.nav.payments')} · ${t('admin.title')}` })
 
 const totals = ref<Pick<PaymentsPage, 'count' | 'totalCents'> | null>(null)
-const list = usePagedList(async (cursor) => {
-  const page = await useServices().admin.payments({ from: dayToIso(filters.from), to: dayToIso(filters.to, true), userId: filters.userId }, cursor)
-  if (!cursor) totals.value = { count: page.count, totalCents: page.totalCents }
-  return page
-})
+// Totals come with the answer that is kept, so two quick filter changes can't show the older filter's count and total.
+const list = usePagedList(
+  cursor => useServices().admin.payments({ from: dayToIso(filters.from), to: dayToIso(filters.to, true), userId: filters.userId }, cursor),
+  (page, first) => {
+    if (first) totals.value = { count: page.count, totalCents: page.totalCents }
+  },
+)
 const filters = useQueryFilters(['from', 'to', 'userId'] as const, { onChange: () => void list.reload() })
 onMounted(() => void list.reload())
 </script>

@@ -48,9 +48,11 @@ function openEdit(row: AdminSubscriptionRow, mode: 'end' | 'move') {
   formError.value = ''
   editing.value = { row, mode }
 }
+const editBusy = ref(false)
 async function saveEdit() {
   const e = editing.value
-  if (!e) return
+  if (!e || editBusy.value) return
+  editBusy.value = true
   try {
     const next = e.mode === 'end'
       ? await useServices().admin.updateSubscription(e.row.id, { endedReason: form.reason, note: form.note.trim() || undefined })
@@ -60,6 +62,8 @@ async function saveEdit() {
     editing.value = null
   } catch (err) {
     formError.value = isPortError(err, 'validation') ? t('admin.subs.invalid') : errorText(err)
+  } finally {
+    editBusy.value = false
   }
 }
 
@@ -87,9 +91,11 @@ function openPay(r: AdminUpgradeRequest) {
   payError.value = ''
   paying.value = r
 }
+const payBusy = ref(false)
 async function fulfil() {
   const r = paying.value
-  if (!r) return
+  if (!r || payBusy.value) return
+  payBusy.value = true
   try {
     await useServices().admin.fulfilRequest(r.id, { startsAt: dayToIso(pay.startsAt), endsAt: dayToIso(pay.endsAt, true), note: pay.note.trim() || undefined })
     show(t('admin.reqs.fulfilled', { ref: r.reference }), 'success')
@@ -97,14 +103,18 @@ async function fulfil() {
     await loadRequests()
   } catch (e) {
     payError.value = isPortError(e, 'conflict') ? t('admin.reqs.notPending') : errorText(e)
+  } finally {
+    payBusy.value = false
   }
 }
 const rejecting = ref<AdminUpgradeRequest | null>(null)
 const rejectOpen = computed({ get: () => !!rejecting.value, set: v => !v && (rejecting.value = null) })
 const rejectError = ref('')
+const rejectBusy = ref(false)
 async function reject(note: string) {
   const r = rejecting.value
-  if (!r) return
+  if (!r || rejectBusy.value) return
+  rejectBusy.value = true
   try {
     await useServices().admin.rejectRequest(r.id, note || undefined)
     show(t('admin.reqs.rejected', { ref: r.reference }), 'success')
@@ -112,6 +122,8 @@ async function reject(note: string) {
     await loadRequests()
   } catch (e) {
     rejectError.value = isPortError(e, 'conflict') ? t('admin.reqs.notPending') : errorText(e)
+  } finally {
+    rejectBusy.value = false
   }
 }
 const rtone = (s: string) => (s === 'pending' ? 'warning' : s === 'fulfilled' ? 'success' : '')
@@ -234,7 +246,7 @@ onMounted(() => {
         <p v-if="formError" class="adm-note error" role="alert">{{ formError }}</p>
         <div class="adm-dialog-actions">
           <button type="button" class="adm-btn" @click="editing = null">{{ t('common.cancel') }}</button>
-          <button type="submit" class="adm-btn" :class="editing.mode === 'end' ? 'danger' : 'primary'">{{ editing.mode === 'end' ? t('admin.subs.end') : t('common.save') }}</button>
+          <button type="submit" class="adm-btn" :class="editing.mode === 'end' ? 'danger' : 'primary'" :disabled="editBusy">{{ editing.mode === 'end' ? t('admin.subs.end') : t('common.save') }}</button>
         </div>
       </form>
     </UiDialog>
@@ -250,7 +262,7 @@ onMounted(() => {
         <p v-if="payError" class="adm-note error" role="alert">{{ payError }}</p>
         <div class="adm-dialog-actions">
           <button type="button" class="adm-btn" @click="paying = null">{{ t('common.cancel') }}</button>
-          <button type="submit" class="adm-btn primary">{{ t('admin.reqs.confirmPaid') }}</button>
+          <button type="submit" class="adm-btn primary" :disabled="payBusy">{{ t('admin.reqs.confirmPaid') }}</button>
         </div>
       </form>
     </UiDialog>
@@ -261,6 +273,7 @@ onMounted(() => {
       :text="t('admin.reqs.rejectText')"
       :confirm-label="t('admin.reqs.reject')"
       tone="danger"
+      :busy="rejectBusy"
       :error="rejectError"
       @confirm="reject"
     />

@@ -4,7 +4,11 @@ import type { Page } from '~/services/types'
  * Feature 006 (research R4): one "Load more" list for every admin table. `reload()` starts again from the first page
  * (filters changed); answers that arrive for an older request are dropped, so fast typing never shows stale rows.
  */
-export function usePagedList<T>(fetchPage: (cursor: string | null) => Promise<Page<T>>) {
+export function usePagedList<P extends Page<unknown>, T = P['items'][number]>(
+  fetchPage: (cursor: string | null) => Promise<P>,
+  /** Runs for the answer that is kept (never for one a newer request replaced), with `first` for a first page. */
+  onPage?: (page: P, first: boolean) => void,
+) {
   const items = ref<T[]>([]) as Ref<T[]>
   const cursor = ref<string | null>(null)
   const done = ref(false)
@@ -20,7 +24,8 @@ export function usePagedList<T>(fetchPage: (cursor: string | null) => Promise<Pa
     try {
       const page = await fetchPage(reset ? null : cursor.value)
       if (mine !== seq) return
-      items.value = reset ? page.items : [...items.value, ...page.items]
+      onPage?.(page, reset)
+      items.value = (reset ? page.items : [...items.value, ...page.items]) as T[]
       cursor.value = page.nextCursor
       done.value = !page.nextCursor
       loaded.value = true

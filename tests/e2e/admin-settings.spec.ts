@@ -70,6 +70,8 @@ test.describe('desktop settings', () => {
     await row.getByLabel('مفتاح جديد').fill(secret)
     await row.getByRole('button', { name: 'حفظ' }).click()
     await expect(row.getByText('…wxyz')).toBeVisible()
+    // Admin strings come from their own file, loaded before the page renders: no raw keys anywhere.
+    expect(await page.locator('body').innerText()).not.toMatch(/admin\.[a-z]+\./)
     await expect(row.getByText('محفوظ', { exact: true })).toBeVisible()
     expect(await page.content()).not.toContain(secret)
     expect(await page.evaluate(() => JSON.stringify({ ...localStorage, ...sessionStorage }))).not.toContain(secret)
@@ -79,6 +81,10 @@ test.describe('desktop settings', () => {
     await page.getByRole('button', { name: 'إضافة', exact: true }).click()
     await expect(page.getByRole('row').filter({ hasText: 'ai.captions' })).toBeVisible()
     await page.getByRole('button', { name: 'حذف ai.captions' }).click()
+    // Removing a flag asks first (review fix); nothing changes until it is confirmed.
+    await expect(page.getByRole('dialog')).toContainText('حذف المفتاح ai.captions؟')
+    await expect(page.getByRole('row').filter({ hasText: 'ai.captions' })).toHaveCount(1)
+    await page.getByRole('dialog').getByRole('button', { name: 'حذف', exact: true }).click()
     await expect(page.getByRole('row').filter({ hasText: 'ai.captions' })).toHaveCount(0)
   })
 

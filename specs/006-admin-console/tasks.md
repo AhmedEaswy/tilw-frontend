@@ -96,7 +96,7 @@ description: "Task list for Web app — Admin console (release 2)"
 
 - [X] T045 [P] Keyboard-only e2e `tests/e2e/admin-keyboard.spec.ts`: rail, search, users → detail → suspend dialog (focus trap, Esc) → settings key form (SC-006).
 - [X] T046 [P] Layout check at 1024, 1280 and 1440 px in Arabic and English for every console page (SC-005); fix overflow; narrow rail and drawer (frame D14).
-- [X] T047 [P] Bundle check: studio entry chunk grows ≤ 2 KB; console pages in their own chunks. *(Pages are separate chunks. The entry grew by about 25 KB gzip: the mock admin adapter (11 KB) and the admin strings (13 KB) are bundled like the other mocks and locales. Recorded as G-D10.)*
+- [X] T047 [P] Bundle check: studio entry chunk grows ≤ 2 KB; console pages in their own chunks. *(Pages are separate chunks. After review: the mock is loaded only in mock mode and the admin strings are a separate lazy file; the entry is 57.3 KB gzip against 72.8 KB on main. See G-D10.)*
 - [X] T048 Mark `specs/002-admin-pages/` as replaced (README pointing here); update `README.md` admin section; record final deviations in gaps.md.
 - [X] T049 Full run: `npx vitest run`, `npx nuxi typecheck`, `$env:E2E_PORT='3150'; $env:NUXT_PUBLIC_SERVICES_MODE='mock'; npx playwright test` all green; quickstart walked through in the mock.
 - [X] T050 Open a PR → `main` (not merged); leave a hand-over note in the shared notes folder.

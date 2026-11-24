@@ -1,0 +1,639 @@
+{
+  "admin": {
+    "title": "Admin console",
+    "inviteButton": "Invite someone",
+    "tabWaitlist": "Waitlist",
+    "tabInvitations": "Invitations",
+    "search": "Search by email",
+    "colEmail": "Email",
+    "colJoined": "Joined the list",
+    "colStatus": "Status",
+    "colDate": "Date",
+    "waiting": "Waiting for an invitation",
+    "invited": "Invited",
+    "invitationSent": "Invitation sent",
+    "invite": "Invite",
+    "resend": "Resend",
+    "withdraw": "Withdraw",
+    "inviteAgain": "Invite again",
+    "filterLabel": "Status",
+    "filterAll": "All",
+    "state": {
+      "pending": "Pending",
+      "used": "Joined",
+      "expired": "Expired",
+      "withdrawn": "Withdrawn"
+    },
+    "emptyWaitlist": "Nobody is on the waitlist yet.",
+    "emptyInvitations": "No invitations yet.",
+    "noMatches": "Nothing matches that search.",
+    "loadFailed": "The list could not be loaded.",
+    "inviteTitle": "Invite someone",
+    "emailLabel": "Email",
+    "send": "Send invitation",
+    "alreadyMember": "This email already has an account or a pending invitation.",
+    "invalidEmail": "Enter a valid email address.",
+    "toastInvited": "Invitation sent to {email}",
+    "toastResent": "Invitation resent to {email}",
+    "toastWithdrawn": "Invitation to {email} withdrawn",
+    "withdrawTitle": "Withdraw this invitation?",
+    "withdrawText": "The link for {email} will stop working. You can invite them again later.",
+    "skip": "Skip to content",
+    "menu": "Menu",
+    "topSearch": "Find a person by email or name",
+    "backToStudio": "Back to studio",
+    "accountMenu": "Account menu",
+    "deletedPerson": "Deleted person",
+    "env": {
+      "demo": "Demo data",
+      "local": "Local",
+      "staging": "Staging",
+      "production": "Production"
+    },
+    "nav": {
+      "overview": "Overview",
+      "people": "People",
+      "money": "Money",
+      "ai": "AI",
+      "system": "System",
+      "dashboard": "Dashboard",
+      "users": "Users",
+      "waitlist": "Waitlist",
+      "invitations": "Invitations",
+      "plans": "Plans & quotas",
+      "subscriptions": "Subscriptions",
+      "payments": "Payments",
+      "usage": "AI usage",
+      "calls": "AI calls",
+      "ledger": "Credit ledger",
+      "audit": "Audit log",
+      "settings": "Settings"
+    },
+    "list": {
+      "all": "All",
+      "empty": "Nothing here yet.",
+      "more": "Load more",
+      "loading": "Loading…",
+      "end": "That is everything.",
+      "shown": "{n} shown",
+      "actions": "Actions"
+    },
+    "range": {
+      "from": "From",
+      "to": "To"
+    },
+    "status": {
+      "active": "Active",
+      "suspended": "Suspended",
+      "deletion_scheduled": "Deletion scheduled",
+      "admin": "Admin"
+    },
+    "period": {
+      "monthly": "Monthly",
+      "yearly": "Yearly",
+      "custom": "Custom"
+    },
+    "source": {
+      "request": "Request",
+      "admin": "Admin",
+      "provider": "Provider"
+    },
+    "subState": {
+      "active": "Active",
+      "scheduled": "Scheduled",
+      "ended": "Ended"
+    },
+    "endedReason": {
+      "refund": "Refund",
+      "cancelled": "Cancelled",
+      "other": "Other",
+      "plan_change": "Plan change"
+    },
+    "reqState": {
+      "pending": "Waiting for payment",
+      "fulfilled": "Paid",
+      "rejected": "Rejected",
+      "cancelled": "Cancelled",
+      "expired": "Expired"
+    },
+    "capability": {
+      "format": "Formatting",
+      "transcribe": "Transcription",
+      "captions": "Captions"
+    },
+    "kind": {
+      "monthly": "Monthly",
+      "plan_change": "Plan change",
+      "grant": "Grant",
+      "charge": "Charge",
+      "refund": "Refund",
+      "correction": "Correction",
+      "own_key": "Own key",
+      "overrun": "Overrun"
+    },
+    "dash": {
+      "sub": "Last {n} days · as of {at}",
+      "period": "Period",
+      "days": "{n} days",
+      "attention": "Needs attention",
+      "pendingRequests": "{n} upgrade requests waiting for payment →",
+      "waitlistNotInvited": "{n} on the waitlist with no invitation →",
+      "people": "People",
+      "signups": "Signed up",
+      "inDays": "In {n} days",
+      "activeDay": "Active today",
+      "last24h": "Last 24 hours",
+      "activeWeek": "Active this week",
+      "last7": "Last 7 days",
+      "activeMonth": "Active this month",
+      "last30": "Last 30 days",
+      "total": "Total {n}",
+      "admins": "Admins {n}",
+      "suspended": "Suspended {n}",
+      "deletion": "Deletion scheduled {n}",
+      "signupsByDay": "Sign-ups per day",
+      "utcDays": "UTC days",
+      "revenue": "Revenue (US dollars)",
+      "mrr": "Monthly recurring revenue",
+      "paying": "{n} paying subscriptions",
+      "payments": "Payments in period",
+      "ai": "AI",
+      "creditsUsed": "Credits used",
+      "thisMonth": "This month {n}",
+      "calls": "Calls",
+      "failed": "{n} failed",
+      "ownKey": "Own key",
+      "noCredits": "No credits used",
+      "storage": "Storage (in people’s own drives)",
+      "drives": "Linked drives",
+      "takes": "Takes",
+      "inPeriod": "In period",
+      "newTakes": "New takes"
+    },
+    "users": {
+      "sub": "Newest first, 50 at a time.",
+      "search": "Search email or name",
+      "plan": "Plan",
+      "status": "Status",
+      "newest": "Newest first",
+      "person": "Person",
+      "admin": "Admin",
+      "joined": "Signed up",
+      "lastActive": "Last active",
+      "pending": "Pending request",
+      "yes": "Yes",
+      "none": "No one matches these filters."
+    },
+    "detail": {
+      "joined": "joined {date}",
+      "active": "active {date}",
+      "neverActive": "never active",
+      "actions": "Account actions",
+      "a": {
+        "changePlan": "Change plan",
+        "credits": "Grant credits",
+        "reset": "Send reset link",
+        "makeAdmin": "Make admin",
+        "revokeAdmin": "Remove admin",
+        "suspend": "Suspend",
+        "unsuspend": "Unsuspend",
+        "scheduleDeletion": "Schedule deletion",
+        "cancelDeletion": "Cancel deletion"
+      },
+      "why": {
+        "self": "This is your own account: use your own account settings.",
+        "isAdmin": "This person is an admin: remove the admin flag first.",
+        "notActive": "A suspended person, or one leaving, can’t be made an admin."
+      },
+      "suspendedBy": "Suspended by {by} on {date}: {reason}",
+      "deletionDue": "The account will be deleted on {date}.",
+      "deletionByAdmin": "An admin scheduled it: signing in won’t cancel it.",
+      "deletionBySelf": "They asked for it: signing in cancels it.",
+      "plan": "Plan and subscription",
+      "planInForce": "Plan in force",
+      "from": "From",
+      "to": "To",
+      "source": "Source",
+      "upcoming": "Upcoming",
+      "pendingRequest": "Pending request",
+      "none": "None",
+      "history": "Subscription history",
+      "period": "Period",
+      "limits": "Effective limits",
+      "addOverride": "Add override",
+      "activity": "Recent admin activity",
+      "fullLog": "Full audit log →",
+      "noActivity": "No admin has changed this account yet.",
+      "credits": "Credits",
+      "balance": "Balance",
+      "monthly": "Monthly",
+      "monthlyLeft": "{n} · {left} left",
+      "granted": "Granted",
+      "month": "Month",
+      "storage": "Storage",
+      "notLinked": "Not linked",
+      "linkedSince": "Linked since",
+      "takes": "Takes",
+      "sessions": "Sessions and devices",
+      "web": "Web sessions",
+      "scripts": "Scripts",
+      "activeScripts": "Active",
+      "archived": "Archived",
+      "ai": "AI this month",
+      "failed": "Failed",
+      "ownKey": "Own key",
+      "goneTitle": "This person no longer exists",
+      "goneText": "The account was deleted. Open the users list to find someone else.",
+      "backToUsers": "Back to users",
+      "confirm": {
+        "suspend": {
+          "title": "Suspend {name}?",
+          "text": "{name} is signed out of every session, device and phone link now, and can’t sign in or finish a password reset until you unsuspend. Their data stays as it is."
+        },
+        "unsuspend": {
+          "title": "Unsuspend {name}?",
+          "text": "{name} can sign in again."
+        },
+        "reset": {
+          "title": "Send a reset link to {name}?",
+          "text": "We email {email} the usual reset link (valid 60 minutes) and sign them out everywhere now."
+        },
+        "makeAdmin": {
+          "title": "Make {name} an admin?",
+          "text": "Admins see and change everything in this console."
+        },
+        "revokeAdmin": {
+          "title": "Remove {name} as an admin?",
+          "text": "They lose access to this console at once."
+        },
+        "scheduleDeletion": {
+          "title": "Schedule deletion of {name}?",
+          "text": "The account is deleted in 14 days. {name} is signed out everywhere now, their own AI keys are erased and they get an email. Signing in won’t cancel it; you can cancel it before then."
+        },
+        "cancelDeletion": {
+          "title": "Cancel the deletion of {name}?",
+          "text": "The account stays."
+        }
+      },
+      "done": {
+        "suspend": "{name} is suspended and signed out everywhere.",
+        "unsuspend": "{name} can sign in again.",
+        "reset": "Reset link sent to {email}; they were signed out everywhere.",
+        "makeAdmin": "{name} is now an admin.",
+        "revokeAdmin": "{name} is no longer an admin.",
+        "scheduleDeletion": "Deletion of {name} scheduled.",
+        "cancelDeletion": "Deletion of {name} cancelled."
+      },
+      "conflict": {
+        "suspend": "Refused: this account can’t be suspended now (already suspended, an admin, or yours).",
+        "unsuspend": "Refused: this account isn’t suspended.",
+        "reset": "Refused: use your own account settings for your password.",
+        "makeAdmin": "Refused: already an admin, suspended, or leaving.",
+        "revokeAdmin": "Refused: the last admin can’t lose the flag, and you can’t remove your own.",
+        "scheduleDeletion": "Refused: a deletion is already scheduled, or this is an admin or your own account.",
+        "cancelDeletion": "Refused: no deletion is scheduled."
+      }
+    },
+    "confirm": {
+      "reason": "Reason (required)",
+      "typeEmail": "To confirm, type their email:",
+      "typeHint": "Type the email exactly to enable the button.",
+      "matches": "The email matches."
+    },
+    "plan": {
+      "title": "Change the plan of {name}",
+      "newPlan": "New plan",
+      "period": "Length",
+      "mode": {
+        "monthly": "Monthly",
+        "yearly": "Yearly",
+        "custom": "Custom end date"
+      },
+      "endsAt": "Ends on",
+      "note": "Note (required)",
+      "submit": "Change plan",
+      "changed": "Plan changed to {plan}.",
+      "effectPaid": "The new plan starts now; the plan in force ({from}) ends now. Credits follow the plan-change rule.",
+      "effectFree": "The paid subscription in force ends now; they are back on Free.",
+      "overlap": "This overlaps a scheduled subscription. End that one first in Subscriptions.",
+      "endInvalid": "Pick an end date in the future.",
+      "sameConflict": "That plan is already in force (use Subscriptions to extend it)."
+    },
+    "credits": {
+      "title": "Credits for {name}",
+      "kind": "Kind",
+      "grant": "Grant credits",
+      "correction": "Correct the month",
+      "amount": "Amount",
+      "amountHintGrant": "From 1 to 100,000. Granted credits are used first.",
+      "amountHintCorrection": "Positive or negative, not 0.",
+      "endsAt": "Ends on (optional)",
+      "reason": "Reason (required)",
+      "after": "Balance after: {n}",
+      "submitGrant": "Grant {n} credits",
+      "submitCorrection": "Save correction",
+      "granted": "{n} credits granted to {name}.",
+      "corrected": "Month corrected by {n} for {name}.",
+      "invalid": "Check the amount, the date and the reason.",
+      "keyConflict": "This form was already used for a different change. Close it and start again."
+    },
+    "override": {
+      "title": "Override: {limit}",
+      "value": "Value",
+      "on": "On",
+      "list": "Values (comma-separated)",
+      "endsAt": "Ends on (optional)",
+      "note": "Note",
+      "remove": "Remove override",
+      "saved": "Override saved for {limit}.",
+      "removed": "Override removed: {limit} follows the plan again.",
+      "invalid": "That value doesn’t fit this limit."
+    },
+    "limits": {
+      "limit": "Limit",
+      "value": "Value",
+      "usage": "Usage",
+      "edit": "Edit",
+      "unlimited": "Unlimited",
+      "on": "On",
+      "off": "Off",
+      "override": "Override",
+      "overrideUntil": "Override until {date}"
+    },
+    "waitlist": {
+      "sub": "{n} emails · {waiting} with no invitation",
+      "filter": "Invitation",
+      "notInvited": "Not invited",
+      "invited": "Invited",
+      "state": {
+        "waiting": "No invitation",
+        "invited": "Invited",
+        "account": "Has an account"
+      },
+      "remove": "Remove",
+      "removeTitle": "Remove this entry?",
+      "removeText": "{email} leaves the waitlist. They can join it again.",
+      "removed": "{email} removed from the waitlist."
+    },
+    "invitations": {
+      "sub": "Links work for 7 days · {n} waiting to be accepted",
+      "sent": "Sent",
+      "expires": "Expires"
+    },
+    "plans": {
+      "sub": "Prices in US dollars. Every change applies from the next request and is in the audit log.",
+      "newPlan": "New plan",
+      "newLimit": "New limit kind",
+      "active": "Active",
+      "inactive": "Inactive",
+      "activeLabel": "Active (shown on the landing page)",
+      "freeAlwaysActive": "The free plan can’t be turned off.",
+      "nameAr": "Name in Arabic",
+      "nameEn": "Name in English",
+      "monthly": "Monthly (USD)",
+      "yearly": "Yearly (USD)",
+      "sort": "Order",
+      "saved": "{plan} saved.",
+      "invalid": "Check the names and prices.",
+      "limits": "Limits per plan",
+      "limitsHint": "Click a value to change it. \"Default\" means the limit kind’s default applies.",
+      "default": "default",
+      "useDefault": "Use the default",
+      "limitSaved": "Limit saved.",
+      "limitDefault": "Back to the default.",
+      "key": "Key",
+      "keyHint": "Lower case, digits and _ only (2–32).",
+      "newHint": "New plans start inactive: set their limits, then turn them on.",
+      "newInvalid": "That key is taken or not valid.",
+      "create": "Create",
+      "type": "Type",
+      "labelAr": "Label in Arabic",
+      "labelEn": "Label in English",
+      "counted": "Counted (usage is shown)",
+      "limitInvalid": "Use a dotted key like ai.captions_monthly that doesn’t exist yet."
+    },
+    "subs": {
+      "tab": "Subscriptions",
+      "sub": "Every subscription, newest start first.",
+      "state": "State",
+      "onePerson": "One person",
+      "move": "Move end",
+      "end": "End now",
+      "moveTitle": "Move the end of {name}’s subscription",
+      "endTitle": "End {name}’s subscription now",
+      "newEnd": "New end date",
+      "reason": "Reason",
+      "moved": "End date moved.",
+      "ended": "Subscription ended.",
+      "invalid": "Check the date."
+    },
+    "reqs": {
+      "tab": "Upgrade requests",
+      "sub": "Requests arrive over WhatsApp; confirm the payment to start the plan.",
+      "search": "Search reference or email",
+      "latest": "Latest 200",
+      "reference": "Reference",
+      "price": "Price",
+      "sent": "Sent",
+      "markPaid": "Mark paid",
+      "reject": "Reject",
+      "payTitle": "Confirm payment {ref}",
+      "payText": "{name} · {plan} · {price} (today’s price {today})",
+      "startsAt": "Starts",
+      "startsHint": "Empty: when the plan in force ends, or now.",
+      "endsAt": "Ends",
+      "endsHint": "Empty: one period after the start.",
+      "confirmPaid": "Confirm payment and start",
+      "fulfilled": "{ref} marked paid.",
+      "rejected": "{ref} rejected.",
+      "notPending": "This request is no longer waiting.",
+      "rejectTitle": "Reject {ref}?",
+      "rejectText": "The person sees that the request was rejected."
+    },
+    "pay": {
+      "sub": "Confirmed upgrade requests, newest first.",
+      "count": "Payments",
+      "wholeRange": "In the whole range",
+      "total": "Total",
+      "usd": "US dollars",
+      "average": "Average",
+      "perPayment": "Per payment",
+      "date": "Date",
+      "amount": "Amount",
+      "recordedBy": "Recorded by"
+    },
+    "ai": {
+      "usageSub": "Totals for the chosen period.",
+      "callsSub": "Newest first · the failure reason as the service recorded it.",
+      "calls": "Calls",
+      "callsNote": "{ok} ok · {failed} failed · {pending} running",
+      "credits": "Credits",
+      "creditsNote": "Charges minus refunds",
+      "words": "Words",
+      "seconds": "Seconds",
+      "secondsNote": "Transcription and captions",
+      "groupBy": "Group by",
+      "by": {
+        "provider": "By provider",
+        "capability": "By capability",
+        "day": "By day",
+        "user": "By person"
+      },
+      "col": {
+        "provider": "Provider",
+        "capability": "Capability",
+        "day": "Day (UTC)",
+        "user": "Person"
+      },
+      "ok": "Ok",
+      "failed": "Failed",
+      "creditsByDay": "Credits per day",
+      "noCalls": "No AI calls in this period.",
+      "failures": "Failures",
+      "provider": "Provider",
+      "capabilityLabel": "Capability",
+      "paidWith": "Paid with",
+      "units": "Size",
+      "reason": "Reason",
+      "paid": {
+        "credits": "Credits",
+        "own_key": "Own key"
+      },
+      "unit": {
+        "words": "words",
+        "seconds": "s"
+      },
+      "status": {
+        "pending": "Running",
+        "succeeded": "Ok",
+        "failed": "Failed"
+      }
+    },
+    "ledger": {
+      "sub": "Every credit entry for everyone, newest first.",
+      "person": "Person",
+      "kind": "Kind",
+      "amount": "Amount",
+      "by": "By",
+      "reason": "Reason",
+      "next": "Next"
+    },
+    "picker": {
+      "placeholder": "Type an email or a name"
+    },
+    "audit": {
+      "title": "Audit log",
+      "sub": "Every change an admin made, newest first.",
+      "when": "When",
+      "admin": "Admin",
+      "target": "Target",
+      "details": "Details",
+      "hide": "Hide",
+      "before": "Before",
+      "after": "After",
+      "deletedAdmin": "Deleted admin",
+      "allActions": "All actions",
+      "targetId": "Target id",
+      "oneAdmin": "One admin",
+      "none": "No entries match these filters.",
+      "action": {
+        "label": "Action",
+        "user_suspend": "Suspended an account",
+        "user_unsuspend": "Lifted a suspension",
+        "user_password_reset": "Sent a reset link",
+        "user_plan_change": "Changed a plan",
+        "user_admin_grant": "Made an admin",
+        "user_admin_revoke": "Removed an admin",
+        "user_delete_schedule": "Scheduled a deletion",
+        "user_delete_cancel": "Cancelled a deletion",
+        "credits_grant": "Granted credits",
+        "credits_correct": "Corrected credits",
+        "override_set": "Set an override",
+        "override_remove": "Removed an override",
+        "subscription_grant": "Granted a subscription",
+        "subscription_update": "Moved a subscription end",
+        "subscription_end": "Ended a subscription",
+        "request_fulfil": "Confirmed a payment",
+        "request_reject": "Rejected a request",
+        "plan_create": "Created a plan",
+        "plan_update": "Changed a plan",
+        "limit_set": "Set a plan limit",
+        "limit_unset": "Reset a plan limit",
+        "limit_define": "Added a limit kind",
+        "waitlist_remove": "Removed a waitlist entry",
+        "invitation_create": "Sent an invitation",
+        "invitation_resend": "Resent an invitation",
+        "invitation_withdraw": "Withdrew an invitation",
+        "settings_signup_mode": "Changed the sign-up mode",
+        "settings_ai_key_set": "Stored a platform key",
+        "settings_ai_key_remove": "Removed a platform key",
+        "flag_set": "Set a feature flag",
+        "flag_remove": "Removed a feature flag"
+      }
+    },
+    "settings": {
+      "sub": "Who can join, platform AI keys and feature flags.",
+      "mode": {
+        "title": "Who can join",
+        "invite_only": "Invite only",
+        "open": "Open to everyone",
+        "explain": "Invite only: the sign-up page explains it and points to the waitlist; invitation links work. Open: anyone can create an account at /signup, and the landing page shows \"Create account\" instead of the waitlist.",
+        "confirm": {
+          "open": {
+            "title": "Open sign-up to everyone?",
+            "text": "Anyone can create an account on the free plan at once, and the landing page shows \"Create account\" instead of the waitlist.",
+            "action": "Open sign-up"
+          },
+          "invite_only": {
+            "title": "Make sign-up invite-only?",
+            "text": "The sign-up page stops creating accounts and points to the waitlist. Invitations keep working.",
+            "action": "Make invite-only"
+          }
+        },
+        "done": {
+          "open": "Sign-up is open.",
+          "invite_only": "Sign-up is invite-only."
+        }
+      },
+      "keys": {
+        "title": "Platform AI keys",
+        "explain": "Stored encrypted and never shown again; only the last four characters are. Removing a stored key falls back to the environment key.",
+        "use": {
+          "anthropic": "Formatting on Tilw credits",
+          "deepgram": "Transcription and captions"
+        },
+        "source": {
+          "stored": "Stored",
+          "env": "Environment",
+          "none": "Not set"
+        },
+        "replace": "Replace",
+        "add": "Add key",
+        "remove": "Remove stored key",
+        "newKey": "New key",
+        "project": "Project id",
+        "saved": "{provider} key stored.",
+        "removed": "Stored {provider} key removed.",
+        "invalid": "That key is too short or too long.",
+        "projectRequired": "Deepgram needs a project id.",
+        "cleared": "The field is cleared after saving; the key is not kept in this browser.",
+        "removeTitle": "Remove the stored {provider} key?",
+        "removeText": "The environment key (if any) is used again."
+      },
+      "flags": {
+        "title": "Feature flags",
+        "explain": "The web and phone apps read them from the public settings.",
+        "key": "Key",
+        "description": "Description (optional)",
+        "changed": "Changed",
+        "on": "On",
+        "remove": "Remove",
+        "add": "Add flag",
+        "removed": "Flag {key} removed.",
+        "keyRule": "Lower-case letters, digits and _ . - only, starting with a letter, up to 64 characters.",
+        "removeTitle": "Remove the flag {key}?",
+        "removeText": "The web and phone apps stop seeing it at once; code that reads it treats it as off."
+      }
+    }
+  }
+}

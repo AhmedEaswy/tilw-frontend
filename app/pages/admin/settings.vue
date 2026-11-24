@@ -28,15 +28,19 @@ onMounted(load)
 // ---------- sign-up mode ----------
 const nextMode = ref<SignupMode | null>(null)
 const modeOpen = computed({ get: () => !!nextMode.value, set: v => !v && (nextMode.value = null) })
+const modeBusy = ref(false)
 async function setMode() {
   const m = nextMode.value
-  if (!m) return
+  if (!m || modeBusy.value) return
+  modeBusy.value = true
   try {
     data.value = await useServices().admin.setSignupMode(m)
     show(t(`admin.settings.mode.done.${m}`), 'success')
     nextMode.value = null
   } catch (e) {
     show(errorText(e), 'error')
+  } finally {
+    modeBusy.value = false
   }
 }
 
@@ -56,7 +60,10 @@ function cancelKey() {
   keyText.value = ''
   project.value = ''
 }
+const keyBusy = ref(false)
 async function saveKey(p: AiKeyState['provider']) {
+  if (keyBusy.value) return
+  keyBusy.value = true
   keyError.value = ''
   const key = keyText.value.trim()
   try {
@@ -68,13 +75,17 @@ async function saveKey(p: AiKeyState['provider']) {
     show(t('admin.settings.keys.saved', { provider: p }), 'success')
   } catch (e) {
     keyError.value = isPortError(e, 'validation') ? (e.fields?.project ? t('admin.settings.keys.projectRequired') : t('admin.settings.keys.invalid')) : errorText(e)
+  } finally {
+    keyBusy.value = false
   }
 }
 const removing = ref<AiKeyState['provider'] | null>(null)
 const removeOpen = computed({ get: () => !!removing.value, set: v => !v && (removing.value = null) })
+const removeBusy = ref(false)
 async function removeKey() {
   const p = removing.value
-  if (!p) return
+  if (!p || removeBusy.value) return
+  removeBusy.value = true
   try {
     const state = await useServices().admin.removeAiKey(p)
     if (data.value) data.value = { ...data.value, aiKeys: data.value.aiKeys.map(k => (k.provider === p ? state : k)) }
@@ -82,6 +93,8 @@ async function removeKey() {
     removing.value = null
   } catch (e) {
     show(errorText(e), 'error')
+  } finally {
+    removeBusy.value = false
   }
 }
 const SOURCE_TONE = { stored: 'success', env: 'info', none: '' } as const
@@ -92,12 +105,15 @@ const newDesc = ref('')
 const newOn = ref(true)
 const flagError = ref('')
 const validKey = computed(() => FLAG_KEY.test(newKey.value.trim()))
+const addBusy = ref(false)
 async function addFlag() {
+  if (addBusy.value) return
   flagError.value = ''
   if (!validKey.value) {
     flagError.value = t('admin.settings.flags.keyRule')
     return
   }
+  addBusy.value = true
   try {
     await useServices().admin.setFlag(newKey.value.trim(), { enabled: newOn.value, description: newDesc.value.trim() || null })
     newKey.value = ''
@@ -106,23 +122,43 @@ async function addFlag() {
     await load()
   } catch (e) {
     flagError.value = isPortError(e, 'validation') ? t('admin.settings.flags.keyRule') : errorText(e)
+  } finally {
+    addBusy.value = false
   }
 }
+/** Flags with a save in flight: their switch is disabled, so quick toggles can't land out of order. */
+const pendingFlags = ref<Set<string>>(new Set())
 async function toggleFlag(key: string, enabled: boolean) {
+  if (pendingFlags.value.has(key)) return
+  pendingFlags.value = new Set([...pendingFlags.value, key])
   try {
     await useServices().admin.setFlag(key, { enabled })
     await load()
   } catch (e) {
     show(errorText(e), 'error')
+    await load()
+  } finally {
+    const next = new Set(pendingFlags.value)
+    next.delete(key)
+    pendingFlags.value = next
   }
 }
-async function removeFlag(key: string) {
+const removingFlag = ref<string | null>(null)
+const removeFlagOpen = computed({ get: () => !!removingFlag.value, set: v => !v && (removingFlag.value = null) })
+const removeFlagBusy = ref(false)
+async function removeFlag() {
+  const key = removingFlag.value
+  if (!key || removeFlagBusy.value) return
+  removeFlagBusy.value = true
   try {
     await useServices().admin.removeFlag(key)
     await load()
     show(t('admin.settings.flags.removed', { key }), 'success')
+    removingFlag.value = null
   } catch (e) {
     show(errorText(e), 'error')
+  } finally {
+    removeFlagBusy.value = false
   }
 }
 </script>
@@ -168,7 +204,7 @@ async function removeFlag(key: string) {
             <label v-if="k.provider === 'deepgram'" class="adm-label proj">{{ t('admin.settings.keys.project') }}
               <input v-model="project" class="adm-input adm-ltr" type="text" maxlength="100" autocomplete="off">
             </label>
-            <button type="submit" class="adm-btn primary" :disabled="keyText.trim().length < 8">{{ t('common.save') }}</button>
+            <button type="submit" class="adm-btn primary" :disabled="keyText.trim().length < 8 || keyBusy">{{ t('common.save') }}</button>
             <button type="button" class="adm-btn" @click="cancelKey">{{ t('common.cancel') }}</button>
           </form>
           <p v-if="editing === k.provider && keyError" class="adm-err" role="alert">{{ keyError }}</p>
@@ -190,8 +226,8 @@ async function removeFlag(key: string) {
               <tr v-for="f in data.flags" :key="f.key">
                 <td><span class="adm-person"><b class="adm-ltr">{{ f.key }}</b><small>{{ f.description ?? '' }}</small></span></td>
                 <td class="nowrap" :title="utc(f.updatedAt)">{{ dateTime(f.updatedAt, locale) }}</td>
-                <td><input type="checkbox" role="switch" :checked="f.enabled" :aria-label="f.key" @change="toggleFlag(f.key, ($event.target as HTMLInputElement).checked)"></td>
-                <td class="act"><button type="button" class="adm-link danger" :aria-label="`${t('admin.settings.flags.remove')} ${f.key}`" @click="removeFlag(f.key)">{{ t('admin.settings.flags.remove') }}</button></td>
+                <td><input type="checkbox" role="switch" :checked="f.enabled" :disabled="pendingFlags.has(f.key)" :aria-busy="pendingFlags.has(f.key)" :aria-label="f.key" @change="toggleFlag(f.key, ($event.target as HTMLInputElement).checked)"></td>
+                <td class="act"><button type="button" class="adm-link danger" :aria-label="`${t('admin.settings.flags.remove')} ${f.key}`" @click="removingFlag = f.key">{{ t('admin.settings.flags.remove') }}</button></td>
               </tr>
             </tbody>
           </table>
@@ -200,7 +236,7 @@ async function removeFlag(key: string) {
           <label class="adm-label">{{ t('admin.settings.flags.key') }}<input v-model="newKey" class="adm-input adm-ltr" placeholder="ai.captions" maxlength="64"></label>
           <label class="adm-label">{{ t('admin.settings.flags.description') }}<input v-model="newDesc" class="adm-input" dir="auto" maxlength="200"></label>
           <label class="chk"><input v-model="newOn" type="checkbox"> {{ t('admin.settings.flags.on') }}</label>
-          <button type="submit" class="adm-btn primary">{{ t('admin.settings.flags.add') }}</button>
+          <button type="submit" class="adm-btn primary" :disabled="addBusy">{{ t('admin.settings.flags.add') }}</button>
         </form>
         <p class="adm-hint pad" :class="{ 'adm-err': flagError }" role="status">{{ flagError || t('admin.settings.flags.keyRule') }}</p>
       </section>
@@ -211,6 +247,7 @@ async function removeFlag(key: string) {
       :title="nextMode ? t(`admin.settings.mode.confirm.${nextMode}.title`) : ''"
       :text="nextMode ? t(`admin.settings.mode.confirm.${nextMode}.text`) : ''"
       :confirm-label="nextMode ? t(`admin.settings.mode.confirm.${nextMode}.action`) : ''"
+      :busy="modeBusy"
       @confirm="setMode"
     />
     <AdminConfirmDialog
@@ -219,7 +256,17 @@ async function removeFlag(key: string) {
       :text="t('admin.settings.keys.removeText')"
       :confirm-label="t('admin.settings.keys.remove')"
       tone="danger"
+      :busy="removeBusy"
       @confirm="removeKey"
+    />
+    <AdminConfirmDialog
+      v-model:open="removeFlagOpen"
+      :title="t('admin.settings.flags.removeTitle', { key: removingFlag ?? '' })"
+      :text="t('admin.settings.flags.removeText')"
+      :confirm-label="t('admin.settings.flags.remove')"
+      tone="danger"
+      :busy="removeFlagBusy"
+      @confirm="removeFlag"
     />
   </div>
 </template>

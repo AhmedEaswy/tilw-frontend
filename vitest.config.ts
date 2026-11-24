@@ -5,7 +5,7 @@ import { defineConfig } from 'vitest/config'
 // environment later with `// @vitest-environment nuxt` (@nuxt/test-utils is installed).
 export default defineConfig({
   resolve: {
-    alias: { '~': fileURLToPath(new URL('./app', import.meta.url)) },
+    alias: { '~~': fileURLToPath(new URL('./', import.meta.url)), '~': fileURLToPath(new URL('./app', import.meta.url)) },
   },
   test: {
     include: ['tests/unit/**/*.test.ts'],

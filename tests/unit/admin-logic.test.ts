@@ -104,3 +104,38 @@ describe('usePagedList', async () => {
     expect(l.loaded.value).toBe(true)
   })
 })
+
+describe('usePagedList onPage (review: payments totals)', async () => {
+  const { usePagedList } = await import('~/composables/usePagedList')
+  it('runs only for the answer that is kept, so totals never belong to an older filter', async () => {
+    let release!: (v: Page<number> & { total: number }) => void
+    const slow = new Promise<Page<number> & { total: number }>(r => (release = r))
+    const answers = [slow, Promise.resolve({ items: [2], nextCursor: null, total: 2 })]
+    const seen: number[] = []
+    const l = usePagedList(() => answers.shift()!, (p, first) => first && seen.push(p.total))
+    const old = l.reload()
+    await l.reload()
+    release({ items: [1], nextCursor: null, total: 1 })
+    await old
+    expect(seen).toEqual([2])
+  })
+})
+
+describe('admin strings (review: split out of the studio locales)', async () => {
+  const fs = await import('node:fs')
+  const read = (p: string) => JSON.parse(fs.readFileSync(p, 'utf8'))
+  const keys = (o: unknown, pre = ''): string[] => (o && typeof o === 'object' ? Object.entries(o as Record<string, unknown>).flatMap(([k, v]) => keys(v, `${pre}${k}.`)) : [pre.slice(0, -1)])
+  it('live in i18n/admin only, with the same keys in Arabic and English', () => {
+    for (const l of ['ar', 'en']) expect(read(`i18n/locales/${l}.json`).admin).toBeUndefined()
+    expect(keys(read('i18n/admin/ar.json')).sort()).toEqual(keys(read('i18n/admin/en.json')).sort())
+  })
+  it('are merged into both languages', async () => {
+    vi.doMock('~~/i18n/admin/ar.json', () => ({ default: read('i18n/admin/ar.json') }))
+    vi.doMock('~~/i18n/admin/en.json', () => ({ default: read('i18n/admin/en.json') }))
+    const { loadAdminMessages } = await import('~/utils/adminMessages')
+    const merged: Record<string, Record<string, unknown>> = {}
+    await loadAdminMessages({ mergeLocaleMessage: (l, m) => (merged[l] = m) })
+    expect(Object.keys(merged).sort()).toEqual(['ar', 'en'])
+    expect((merged.ar!.admin as { title: string }).title).toBe('لوحة الإدارة')
+  })
+})
