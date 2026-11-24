@@ -61,8 +61,8 @@ description: "Task list for Web app — AI writing tools (release 2)"
 
 ## Phase 7: User Story 5 — Captions from a take (P3)
 
-- [ ] T025 [P] [US5] Unit tests `tests/unit/ai-captions.test.ts` for `buildCues`, `toSrt`, `toVtt` (≤ 2 × 42, 1–7 s, gaps > 1 s, utterance breaks, long words, Arabic, no overlap, min-duration extension) and e2e step in `tests/e2e/ai-speech.spec.ts` (captions on a take, both downloads).
-- [ ] T026 [US5] `app/services/ai/captions.ts` and `CaptionsDialog.vue` (A5) on `app/pages/app/recordings/[takeId].vue` (device or Drive take; length from the take; downloads named after the take).
+- [X] T025 [P] [US5] Unit tests `tests/unit/ai-captions.test.ts` for `buildCues`, `toSrt`, `toVtt` (≤ 2 × 42, 1–7 s, gaps > 1 s, utterance breaks, long words, Arabic, no overlap, min-duration extension) and e2e step in `tests/e2e/ai-speech.spec.ts` (captions on a take, both downloads).
+- [X] T026 [US5] `app/services/ai/captions.ts` and `CaptionsDialog.vue` (A5) on `app/pages/app/recordings/[takeId].vue` (device or Drive take; length from the take; downloads named after the take).
 
 ## Phase 8: Polish
 
