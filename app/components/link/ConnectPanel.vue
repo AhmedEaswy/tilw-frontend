@@ -65,10 +65,7 @@ async function copyAddress() {
   } catch { /* clipboard blocked: the address is on screen */ }
 }
 
-const endText = computed(() => {
-  const r = s.value?.endReason
-  return r ? t(`link.ended.${r}`) : t('link.ended.unknown')
-})
+const endText = computed(() => linkEndText(t, s.value?.endReason))
 
 const doneBtn = ref<{ $el: HTMLElement }>()
 defineExpose({ focus: () => doneBtn.value?.$el.focus() })

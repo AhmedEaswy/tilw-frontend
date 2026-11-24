@@ -63,3 +63,6 @@ Pin / archive / rename are `update` patches (`pinned`, `archivedAt`, `title`).
 ## Mock behaviour knobs (`/__mock`, dev only)
 `latencyMs` (default 300), `failRate`, `forceConflictOnNextSave`, `expireTokens`, `offline`, and an
 "outbox" listing the reset/invite links that would have been emailed.
+
+## Later deltas
+- **Feature 004 (phone link)** adds `LinkPort`, `LinkRelayPort` and `RealtimePort`, and the `/__mock` phone-link knobs (offline tab, end reason, mock Tilw app). See `specs/004-phone-link/contracts/ports.md`.

@@ -226,7 +226,7 @@ description: "Task list for Web app — phone link (release 2)"
 
 ### Tests
 
-- [ ] T047 [P] [US5] `tests/e2e/link.spec.ts` (US5 block):
+- [X] T047 [P] [US5] `tests/e2e/link.spec.ts` (US5 block):
   - Settings → Phone links lists an open and an ended link, newest first;
   - End from there: the phone shows "The studio ended this link";
   - deleting the linked script: the phone shows "The script was deleted";
@@ -235,8 +235,8 @@ description: "Task list for Web app — phone link (release 2)"
 
 ### Implementation
 
-- [ ] T048 [US5] Create `app/components/link/LinkHistory.vue` (phone name and kind, script, studio device, connected or not, last used as relative time, **End** on open links) and add a **Phone links** section to `app/pages/app/settings/index.vue`, using the existing settings row and list components [L8].
-- [ ] T049 [US5] End-reason texts for every `LinkEndReason`, plus `replaced`/`declined`/`lapsed`/`left`, with a generic fallback for unknown reasons. They are used by `ConnectPanel.vue`, `pages/remote.vue` and `LinkHistory.vue` through one helper, `linkEndText(reason)`, in `app/utils/link.ts` (research R15).
+- [X] T048 [US5] *(Phone links is a settings row opening `/app/settings/phone-links`, like Plan and Storage)* Create `app/components/link/LinkHistory.vue` (phone name and kind, script, studio device, connected or not, last used as relative time, **End** on open links) and add a **Phone links** section to `app/pages/app/settings/index.vue`, using the existing settings row and list components [L8].
+- [X] T049 [US5] End-reason texts for every `LinkEndReason`, plus `replaced`/`declined`/`lapsed`/`left`, with a generic fallback for unknown reasons. They are used by `ConnectPanel.vue`, `pages/remote.vue` and `LinkHistory.vue` through one helper, `linkEndText(reason)`, in `app/utils/link.ts` (research R15).
 
 **Checkpoint**: all stories pass on the mock.
 
@@ -244,13 +244,13 @@ description: "Task list for Web app — phone link (release 2)"
 
 ## Phase 8: Polish & cross-cutting
 
-- [ ] T050 [P] Update `specs/001-studio-frontend/contracts/ports.md` with a pointer to this feature's port delta, and mark gap G3 as resolved by 004 in `specs/001-studio-frontend/gaps.md`.
-- [ ] T051 [P] Run axe and keyboard checks on `/remote` (320×568, Arabic and English, light and dark) and on the panel, and keep shortcuts working while linked. The results go in `tests/e2e/link.spec.ts`.
-- [ ] T052 [P] Bundle check: `pusher-js` and `uqr` must not be in the landing or library chunks (`nuxt build` analyse). Note the result in `specs/004-phone-link/quickstart.md`.
+- [X] T050 [P] Update `specs/001-studio-frontend/contracts/ports.md` with a pointer to this feature's port delta, and mark gap G3 as resolved by 004 in `specs/001-studio-frontend/gaps.md`.
+- [X] T051 [P] Run axe and keyboard checks on `/remote` (320×568, Arabic and English, light and dark) and on the panel, and keep shortcuts working while linked. The results go in `tests/e2e/link.spec.ts`.
+- [X] T052 [P] Bundle check: `pusher-js` and `uqr` must not be in the landing or library chunks (`nuxt build` analyse). Note the result in `specs/004-phone-link/quickstart.md`.
 - [ ] T053 Live run: with backend `003-phone-link` and Reverb running and `NUXT_PUBLIC_SERVICES_MODE=http`:
   - run `npm run test:live` with the link port suite;
   - run quickstart scenarios 1–7 with a real phone, and record the p95 command time on Wi-Fi and 4G (SC-002) and any gaps in `specs/004-phone-link/quickstart.md` and `gaps.md`.
-- [ ] T054 Run `npm test`, `npm run typecheck` and `npm run test:e2e`, and compare the e2e failures with the release-1/release-2 baseline (pre-existing failures are noted, not fixed here).
+- [X] T054 Run `npm test`, `npm run typecheck` and `npm run test:e2e`, and compare the e2e failures with the release-1/release-2 baseline (pre-existing failures are noted, not fixed here).
 
 ---
 

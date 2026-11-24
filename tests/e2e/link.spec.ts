@@ -227,3 +227,84 @@ test('a second studio tab offers Move here', async ({ page, context }) => {
   await panel2.getByRole('button', { name: 'انقله إلى هنا' }).click()
   await expect(panel2.getByText('ربط الهاتف مفتوح في تبويب آخر لهذا الاستوديو.')).toHaveCount(0)
 })
+
+// US5 (T047): see my phone links and why one ended (quickstart scenario 9).
+test('Settings → Phone links: empty, then open and ended links; End from there ends it on the phone', async ({ page, context }) => {
+  await signIn(page)
+  await page.goto('/app/settings')
+  await page.getByRole('link', { name: /روابط الهاتف/ }).click()
+  await expect(page.getByRole('heading', { name: 'لا توجد روابط هاتف بعد' })).toBeVisible()
+
+  const panel = await openPanel(page)
+  const phone = await pairNewPhone(page, context, panel)
+  await expect(phone.getByText('متصل بالاستوديو')).toBeVisible()
+
+  await page.goto('/app/settings/phone-links')
+  const history = page.locator('[data-link-history]')
+  await expect(history.getByRole('listitem')).toHaveCount(1)
+  await expect(history).toContainText('متصفح الهاتف')
+  await history.getByRole('button', { name: 'إنهاء' }).click()
+  await expect(phone.getByText('أنهى الاستوديو هذا الربط.')).toBeVisible()
+  await expect(history).toContainText('أنهى الاستوديو هذا الربط.')
+  await expect(history.getByRole('button', { name: 'إنهاء' })).toHaveCount(0)
+})
+
+for (const [reason, text] of [
+  ['script_deleted', 'حُذف السكربت.'],
+  ['signed_out', 'سُجّل الخروج من كل الأجهزة.'],
+  ['limit', 'خطتك لم تعد تتضمن ربط الهاتف.'],
+] as const) {
+  test(`an account action (${reason}) ends the link with its reason on both sides`, async ({ page, context }) => {
+    await signIn(page)
+    const panel = await openPanel(page)
+    const phone = await pairNewPhone(page, context, panel)
+    await expect(phone.getByText('متصل بالاستوديو')).toBeVisible()
+    const mock = await context.newPage()
+    await mock.goto('/__mock')
+    await mock.getByLabel('End reason').selectOption(reason)
+    await mock.getByRole('button', { name: 'End the open link' }).click()
+    await expect(phone.getByText(text)).toBeVisible()
+    await expect(panel.getByText(text)).toBeVisible()
+  })
+}
+
+// Polish (T051): accessibility and keyboard on /remote and the panel.
+for (const lang of ['ar', 'en'] as const) {
+  for (const scheme of ['light', 'dark'] as const) {
+    test(`/remote passes axe at 320×568 (${lang}, ${scheme}), before and after pairing`, async ({ page, context }) => {
+      await signIn(page)
+      const panel = await openPanel(page)
+      const code = (await panel.locator('.code').first().textContent())!.replace(/\D/g, '')
+      const phone = await context.newPage()
+      await phone.setViewportSize({ width: 320, height: 568 })
+      await phone.emulateMedia({ colorScheme: scheme })
+      await phone.addInitScript((l) => {
+        localStorage.removeItem('tilw:remote:v1')
+        localStorage.setItem('tilw:remote:locale', l)
+      }, lang)
+      await phone.goto('/remote')
+      await expect(phone.locator('input[autocomplete="one-time-code"]')).toBeVisible()
+      expect((await new AxeBuilder({ page: phone }).analyze()).violations).toEqual([])
+
+      // Keyboard only: the code field takes the code and Enter connects.
+      await phone.locator('input[autocomplete="one-time-code"]').focus()
+      await phone.keyboard.type(code)
+      await phone.keyboard.press('Enter')
+      await expect(phone.locator('.status')).toBeVisible()
+      expect((await new AxeBuilder({ page: phone }).analyze()).violations).toEqual([])
+    })
+  }
+}
+
+test('studio shortcuts keep working while a phone is linked', async ({ page, context }) => {
+  await signIn(page)
+  const panel = await openPanel(page)
+  const phone = await pairNewPhone(page, context, panel)
+  await expect(phone.getByText('متصل بالاستوديو')).toBeVisible()
+  // The connected panel (the reading page's own landmarks are release-1 scope, not this feature's).
+  const panelA11y = await new AxeBuilder({ page }).include('[data-link-panel]').analyze()
+  expect(panelA11y.violations).toEqual([])
+  await panel.getByRole('button', { name: 'تم' }).click()
+  await page.keyboard.press('ArrowLeft') // next paragraph in the Arabic (RTL) reader
+  await expect(phone.getByText(/الفقرة 2 من/)).toBeVisible()
+})

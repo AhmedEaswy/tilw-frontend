@@ -51,3 +51,12 @@ Open `/app` in tab A (signed in) and open a script's rehearsal. Tab B is the pho
 - Arabic and English, phone viewport 320×568 and desktop, light and dark, for the panel and the remote page (SC-007).
 - Keyboard: Space, arrows and Esc keep working in A while linked; no layout shift on the reading surface when the status changes.
 - Real mode: repeat scenarios 1–7 with a real phone and Reverb, and note p95 command time on Wi-Fi and 4G (SC-002).
+
+## Results (2026-11-24)
+
+- **Bundle (T052)**: `pusher-js` is its own lazy chunk (about 60 KB), loaded by a dynamic import when a link connects; it is not in the landing, library or entry chunks. The landing HTML carries only a low-priority `<link rel="prefetch">` for it (Nuxt's default), fetched when the browser is idle. `uqr` is in the QR chunk, which the landing page does not reference.
+- **Live run (T053, partial)**: against backend `003-phone-link` with Reverb on this machine, in two browser tabs:
+  - `tests/realtime/link-smoke.mjs` (backend): 50 commands, round trip p50 126–129 ms, p95 156–161 ms (SC-002 met).
+  - In the browser: pairing by code, Next/Faster/Play from the phone tab (about 190 ms to the studio and back), and a studio reload resuming the link. This found and fixed `links/current` without `scriptId` (G-L5).
+  - Still to do: a real phone on Wi-Fi and on 4G, with the p95 for each.
+- **Suites (T054)**: vitest, `nuxi typecheck` and the full Playwright suite (desktop and phone) are green on `004-phone-link`, after the release-1/2 e2e fixes (frontend PR #3).

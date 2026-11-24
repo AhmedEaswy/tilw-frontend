@@ -929,7 +929,20 @@
     "appReads": "The Tilw app is reading. Control it from here.",
     "readHere": "Read here again",
     "appOffline": "The app isn't connected. It reconnects on its own when the network is back.",
-    "roleRequestTitle": "Role swap request"
+    "roleRequestTitle": "Role swap request",
+    "history": {
+      "pageTitle": "Phone links",
+      "rowHint": "Phones that controlled the studio, and why each link ended",
+      "title": "Open and ended links",
+      "lede": "Phones that controlled the studio in the last 30 days, newest first.",
+      "emptyTitle": "No phone links yet",
+      "emptyHint": "Open Connect phone from rehearsal or the recording studio to control the reading from your phone.",
+      "end": "End",
+      "connected": "Connected now",
+      "notConnected": "Not connected",
+      "noPhone": "Waiting for a phone",
+      "noScript": "Deleted script"
+    }
   },
   "remote": {
     "pageTitle": "Phone remote",
