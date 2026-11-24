@@ -78,9 +78,9 @@ From the header they can: suspend (reason required) or unsuspend; send a passwor
 4. **Given** an active person, **When** the admin suspends them with a reason and types their email to confirm, **Then** the status becomes Suspended with who, when and why, and the toast says the person was signed out everywhere.
 5. **Given** a person, **When** the admin sends a password reset and confirms, **Then** the toast names the email it went to and says the person was signed out everywhere.
 6. **Given** a person on Free, **When** the admin changes the plan to Pro yearly with a note, **Then** the plan panel shows Pro in force from now; choosing the plan already in force is not offered.
-7. **Given** a person, **When** the admin grants 50 credits with a reason, **Then** the credits panel shows the new balance and the entry.
+7. **Given** a person, **When** the admin grants 50 credits with a reason, **Then** the credits panel shows the new balance and the entry; a double-click or retry of the same form grants once (the form sends one idempotency key per opening).
 8. **Given** a person, **When** the admin makes them an admin, **Then** the admin mark shows; stopping it is refused for the admin themself and for the last admin.
-9. **Given** a person, **When** the admin schedules deletion with a reason and types their email to confirm, **Then** the status becomes Deletion scheduled with the date; **Cancel deletion** restores it.
+9. **Given** a person, **When** the admin schedules deletion with a reason and types their email to confirm, **Then** the status becomes Deletion scheduled with the date and "scheduled by an admin: signing in won't cancel it"; **Cancel deletion** restores it.
 10. **Given** a limit, **When** the admin sets an override with an end date and note, **Then** the limit shows the override value and "overridden"; removing it shows the plan value again.
 11. **Given** the admin's own detail page, **When** it opens, **Then** suspend, reset, delete and stop-admin are disabled with "Use your own account settings".
 

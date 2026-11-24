@@ -21,7 +21,7 @@ Shapes the web app holds, as the backend 005 contract sends them ([openapi.yaml]
 ## People
 
 - `AdminUserRow` = contract `UserRow` (`pendingRequest: PendingRequest | null`).
-- `AdminUserDetail` = contract `UserDetail` (suspension, plan{subscription, upcoming, pendingRequest}, limits[], overrides[], storage, credits, sessions{web, devices[]}, scripts, ai{ownKey}).
+- `AdminUserDetail` = contract `UserDetail` (incl. `deletionBy`, the admin who scheduled the deletion, null for self-deletion) (suspension, plan{subscription, upcoming, pendingRequest}, limits[], overrides[], storage, credits, sessions{web, devices[]}, scripts, ai{ownKey}).
 - `AdminUserFilters` = `{ q?: string; plan?: string; status?: UserStatusFilter }`.
 - Actions (all answer `AdminUserDetail`, except reset → `{ sentTo }`, credits → `CreditEntry`, override set → `AdminOverride`, override remove → void):
   - `suspend(id, reason)`, `unsuspend(id)`, `sendPasswordReset(id)`, `changePlan(id, { planId, period? | endsAt?, note })`, `grantAdmin(id)`, `revokeAdmin(id)`, `scheduleDeletion(id, reason)`, `cancelDeletion(id)`, `addCredits(id, { kind: 'grant' | 'correction', amount, endsAt?, reason })`, `setOverride(id, key, { value, endsAt?, note? })`, `removeOverride(id, key)`.

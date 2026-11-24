@@ -20,7 +20,7 @@ Errors: every method rejects with `PortError`. Admin routes answer `not_found` f
 | `grantAdmin(id)` · `revokeAdmin(id)` | `AdminUserDetail` | `POST` · `DELETE …/admin` |
 | `scheduleDeletion(id, reason)` · `cancelDeletion(id)` | `AdminUserDetail` | `DELETE /api/admin/users/{id}` (body) · `POST …/restore` |
 | `userCredits(id)` | `Credits` | `GET …/credits` |
-| `addCredits(id, input)` | `CreditEntry` | `POST …/credits` |
+| `addCredits(id, input, idempotencyKey?)` | `CreditEntry` | `POST …/credits` with header `Idempotency-Key` (one UUID per form open; a repeat returns the first entry, reuse for a different change is `conflict`) |
 | `setOverride(id, key, input)` · `removeOverride(id, key)` | `AdminOverride` · `void` | `PUT` · `DELETE …/overrides/{key}` |
 | `userSubscriptions(id)` | `AdminSubscription[]` | `GET …/subscriptions` |
 | `grantSubscription(id, input)` | `AdminSubscription` | `POST …/subscriptions` |

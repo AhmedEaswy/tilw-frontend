@@ -19,7 +19,7 @@ description: "Task list for Web app — Admin console (release 2)"
 ## Phase 1: Setup
 
 - [X] T001 Draw frames D1–D14 on Figma page `10 · Release 2 · Admin console` from page `01 · Design system` (desktop 1440, Arabic RTL first, English LTR for the frame shell, dashboard and user detail). Record node ids in `specs/006-admin-console/gaps.md`. *(Drawn on page `306:100`; node ids in gaps.md.)*
-- [ ] T002 Merge `origin/main` into the branch after frontend PR #5 and backend #4 are merged; re-read backend `specs/005-admin-console/contracts/openapi.yaml` on `origin/main` and note any change in gaps.md. Run vitest and typecheck on the merge before any change.
+- [X] T002 Merge `origin/main` into the branch after frontend PR #5 and backend #4 are merged; re-read backend `specs/005-admin-console/contracts/openapi.yaml` on `origin/main` and note any change in gaps.md. Run vitest and typecheck on the merge before any change.
 - [ ] T003 [P] Add i18n groups `admin.*` (rail, topBar, env, dashboard, users, detail, actions, joining, plans, subscriptions, payments, ai, ledger, audit (with `admin.audit.action.*` for every action name in contracts/ports.md), settings, common table copy), `signup.*`, `errors.accountSuspended`, `errors.accountSuspendedContact`, `errors.signupClosed` to `i18n/locales/ar.json` and `en.json`. Stories fill their keys.
 - [ ] T004 [P] `nuxt.config.ts`: `routeRules['/admin/**'] = { ssr: false }`; runtime `public.environment` (`local`) and `public.supportEmail` (`''`).
 
