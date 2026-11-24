@@ -12,6 +12,8 @@ import {
 import type { LinkAuth, Pairing, PairingCode, PhoneLink, PhoneLinkWithCode, RealtimeSettings } from '../types'
 import { createHttpClient, type HttpClientOptions } from './client'
 import { createHttpRealtime } from './realtime'
+import { createSpeech } from '../ai/speech'
+import type { Credits, FormatEstimate, FormatSuggestion, OwnKey, Transcription, TranscriptionEstimate, TranscriptionPermission } from '../types'
 
 const seg = encodeURIComponent
 
@@ -154,6 +156,38 @@ export function createHttpServices(opts: HttpClientOptions & { realtime?: Realti
     },
 
     realtime: createHttpRealtime({ client: api, settings: opts.realtime ?? null }),
+
+    // ---------- feature 005: AI writing tools (backend specs/004-ai-writing-tools/contracts/openapi.yaml) ----------
+    // Only lengths, sizes, types and the provider's request id go to the API; audio goes to the provider (speech).
+    ai: {
+      formatEstimate: id => api.get<FormatEstimate>(`/api/scripts/${seg(id)}/format/estimate`),
+      format: (id, o = {}) => api.post<FormatSuggestion>(`/api/scripts/${seg(id)}/format`, o.useCredits ? { useCredits: true } : {}),
+      suggestion: async (id) => {
+        try {
+          return await api.get<FormatSuggestion>(`/api/scripts/${seg(id)}/format`)
+        } catch (e) {
+          if (isPortError(e, 'not_found')) return null
+          throw e
+        }
+      },
+      discard: id => api.del<void>(`/api/scripts/${seg(id)}/format`),
+      apply: id => api.post<Script>(`/api/scripts/${seg(id)}/format/apply`),
+      credits: () => api.get<Credits>('/api/ai/credits'),
+      keys: async () => {
+        const res = await api.get<OwnKey[] | { data: OwnKey[] }>('/api/ai/keys')
+        return Array.isArray(res) ? res : (res?.data ?? [])
+      },
+      saveKey: input => api.put<OwnKey>('/api/ai/keys/text', input),
+      deleteKey: () => api.del<void>('/api/ai/keys/text'),
+      checkKey: () => api.post<OwnKey>('/api/ai/keys/text/check'),
+      transcriptionEstimate: ({ seconds, bytes, mimeType, purpose }) =>
+        api.get<TranscriptionEstimate>(`/api/ai/transcriptions/estimate?seconds=${seconds}&bytes=${bytes}&mimeType=${seg(mimeType)}${purpose ? `&purpose=${seg(purpose)}` : ''}`),
+      startTranscription: input => api.post<TranscriptionPermission>('/api/ai/transcriptions', input),
+      transcription: id => api.get<Transcription>(`/api/ai/transcriptions/${seg(id)}`),
+      complete: (id, requestId) => api.post<Transcription>(`/api/ai/transcriptions/${seg(id)}/complete`, { requestId }),
+      fail: (id, reason) => api.post<Transcription>(`/api/ai/transcriptions/${seg(id)}/fail`, reason ? { reason } : {}),
+    },
+    speech: createSpeech({ fetch: opts.fetch }),
   }
 
   return { services, client: api }

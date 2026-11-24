@@ -41,6 +41,7 @@ export const LIMIT_DEFINITIONS: MockLimitDefinition[] = [
   { key: 'storage.providers', type: 'list', default: [], counted: false, label: { ar: 'مزودو التخزين', en: 'Storage providers' } },
   { key: 'history.versions', type: 'int', default: null, counted: false, label: { ar: 'عدد نسخ السجل', en: 'History versions' } },
   { key: 'history.days', type: 'int', default: null, counted: false, label: { ar: 'أيام السجل', en: 'History days' } },
+  { key: 'ai.audio_max_minutes', type: 'int', default: 60, counted: false, label: { ar: 'أطول صوت للتحويل (دقائق)', en: 'Longest audio to transcribe (minutes)' } },
   { key: 'byok.allowed', type: 'bool', default: false, counted: false, label: { ar: 'مفاتيحك الخاصة للذكاء الاصطناعي', en: 'Your own AI keys' } },
   { key: 'phone_link.allowed', type: 'bool', default: false, counted: false, label: { ar: 'التحكم من الهاتف', en: 'Phone link' } },
 ]
@@ -57,6 +58,7 @@ export function seedPlans(): MockPlan[] {
         'scripts.max_words': 50000,
         'takes.max_minutes': 10,
         'ai.credits_monthly': 20,
+        'ai.audio_max_minutes': 60,
         'storage.auto_sync': false,
         'storage.providers': ['google_drive'],
         'history.versions': 5,
@@ -75,6 +77,7 @@ export function seedPlans(): MockPlan[] {
         'scripts.max_words': null,
         'takes.max_minutes': 60,
         'ai.credits_monthly': 500,
+        'ai.audio_max_minutes': 60,
         'storage.auto_sync': true,
         'storage.providers': ['google_drive'],
         'history.versions': null,

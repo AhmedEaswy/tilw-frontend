@@ -23,6 +23,7 @@ beforeEach(() => {
   vi.stubGlobal('useScriptsStore', () => reset)
   vi.stubGlobal('usePlanStore', () => reset)
   vi.stubGlobal('useLinkStore', () => reset) // feature 004: setUser also resets the link host
+  vi.stubGlobal('useAiStore', () => reset) // feature 005: and the AI store
 })
 
 describe('auth.init', () => {

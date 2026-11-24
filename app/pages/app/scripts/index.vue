@@ -24,6 +24,8 @@ const activeCap = computed(() => {
 })
 
 const dialog = ref<LibraryDialog>(null)
+// Feature 005 (US3, A4): a new script from an audio file.
+const audioOpen = ref(false)
 const target = ref<ScriptSummary | null>(null)
 function openActions(s: ScriptSummary) {
   target.value = s
@@ -74,6 +76,7 @@ const emptyText = computed(() => {
       <div class="head-acts">
         <span v-if="activeCap && store.status === 'ready'" class="cap" :class="{ full: activeCap.n >= activeCap.max }">{{ t('limits.activeCount', { n: activeCap.n, max: activeCap.max }) }}</span>
         <button type="button" class="import" @click="dialog = 'import'">{{ t('library.importFile') }}</button>
+        <button type="button" class="import" data-testid="new-from-audio" @click="audioOpen = true">{{ t('ai.speech.newFromAudio') }}</button>
         <UiButton @click="dialog = 'new'">{{ t('library.new') }}</UiButton>
       </div>
     </header>
@@ -104,6 +107,7 @@ const emptyText = computed(() => {
       <div class="first-acts">
         <UiButton @click="dialog = 'new'">{{ t('library.new') }}</UiButton>
         <UiButton tone="secondary" @click="dialog = 'import'">{{ t('library.importFile') }}</UiButton>
+        <UiButton tone="secondary" @click="audioOpen = true">{{ t('ai.speech.newFromAudio') }}</UiButton>
       </div>
     </section>
 
@@ -143,6 +147,7 @@ const emptyText = computed(() => {
     </div>
 
     <LibraryDialogs v-model:mode="dialog" :target="target" />
+    <AudioImportDialog v-if="audioOpen" v-model:open="audioOpen" />
   </div>
 </template>
 

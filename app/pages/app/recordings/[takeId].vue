@@ -77,6 +77,10 @@ async function download() {
   }
 }
 
+// ---------- feature 005: captions (US5) ----------
+const captionsOpen = ref(false)
+const captionTitle = computed(() => (take.value ? [take.value.scriptTitle, t('recordings.take', { n: num(take.value.number) })].join(' · ') : ''))
+
 // ---------- star / delete (G8) ----------
 async function toggleStar() {
   if (!take.value) return
@@ -169,6 +173,8 @@ const endedNote = computed(() => {
               <UiButton block icon="download" :loading="busy" @click="download">{{ t('recordings.downloadOriginal') }}</UiButton>
               <UiButton v-if="canBackUp" block tone="secondary" icon="up" @click="uploads.enqueue(take.id)">{{ t('uploads.copyLong') }}</UiButton>
               <UiButton v-if="take.scriptId !== 'none'" block tone="secondary" :to="`/app/scripts/${take.scriptId}/record`">{{ t('recordings.recordAnother') }}</UiButton>
+              <!-- Feature 005 (US5, A5): captions built in this browser from the provider's word timings. -->
+              <UiButton block tone="secondary" icon="file" data-testid="take-captions" @click="captionsOpen = true">{{ t('ai.captions.action') }}</UiButton>
             </template>
             <!-- 6:48 / 6:76 after the download starts -->
             <template v-else>
@@ -214,6 +220,7 @@ const endedNote = computed(() => {
     </main>
 
     <TakeDeleteDialog v-if="take" v-model:open="confirmDelete" :take="take" :busy="deleting" @confirm="remove" />
+    <CaptionsDialog v-if="take && captionsOpen" v-model:open="captionsOpen" :take="take" :title="captionTitle" />
   </div>
 </template>
 

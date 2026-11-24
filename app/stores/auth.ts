@@ -17,6 +17,8 @@ export const useAuthStore = defineStore('auth', () => {
       useStorageStore().reset()
       // Feature 004: the previous account's link (socket, keep-alive, tab lock) goes with it.
       useLinkStore().reset()
+      // Feature 005: credits, the masked key and waiting suggestions belong to that account.
+      useAiStore().reset()
     }
     user.value = u
     status.value = u ? 'authed' : 'guest'

@@ -8,7 +8,7 @@
  *   A request that never reached the server is `network`.
  * Contract: backend/specs/001-backend-api/contracts/openapi.yaml.
  */
-import { PortError, type PortErrorCode } from '../types'
+import { PortError, type PortErrorCode, type PortErrorInfo } from '../types'
 
 export interface HttpClientOptions {
   /** API origin, no trailing slash, e.g. `http://localhost:8000`. */
@@ -30,7 +30,7 @@ export interface RequestOptions {
 const CODES: readonly PortErrorCode[] = [
   'invalid_credentials', 'validation', 'unauthenticated', 'token_invalid', 'token_expired',
   'conflict', 'not_found', 'rate_limited', 'network', 'unknown',
-  'limit_reached', 'storage_full', 'storage_not_linked', 'partner_offline',
+  'limit_reached', 'storage_full', 'storage_not_linked', 'partner_offline', 'own_key_refused', 'ai_unavailable',
 ]
 
 function browserCookie(name: string): string | null {
@@ -44,7 +44,7 @@ function browserCookie(name: string): string | null {
 
 /** Maps a failed response to a PortError. Exported for tests. */
 export async function toPortError(res: Response): Promise<PortError> {
-  let body: { code?: unknown; fields?: unknown; current?: unknown; limit?: unknown } | null = null
+  let body: { code?: unknown; fields?: unknown; current?: unknown; limit?: unknown; balance?: unknown; cost?: unknown; reason?: unknown } | null = null
   try {
     body = await res.json()
   } catch {
@@ -63,7 +63,14 @@ export async function toPortError(res: Response): Promise<PortError> {
   const limit = code === 'limit_reached' && raw && typeof raw.key === 'string'
     ? { key: raw.key, value: (raw.value ?? null) as number | boolean | string[] | null, usage: typeof raw.usage === 'number' ? raw.usage : null }
     : undefined
-  return new PortError(code, fields, body?.current, limit)
+  // Feature 005: credits limit answers carry balance and cost; ai_unavailable a reason; 429/503 a Retry-After.
+  const info: PortErrorInfo = {}
+  if (typeof body?.balance === 'number') info.balance = body.balance
+  if (typeof body?.cost === 'number') info.cost = body.cost
+  if (typeof body?.reason === 'string') info.reason = body.reason
+  const retry = Number(res.headers?.get?.('Retry-After'))
+  if (Number.isFinite(retry) && retry > 0) info.retryAfter = retry
+  return new PortError(code, fields, body?.current, limit, Object.keys(info).length ? info : undefined)
 }
 
 export function createHttpClient(opts: HttpClientOptions) {
