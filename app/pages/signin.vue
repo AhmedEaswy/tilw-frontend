@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /** Sign in · existing member (6:62, phone 6:100). T020. */
-import { isPortError } from '~/services/types'
+import { isPortError, PortError } from '~/services/types'
 
 definePageMeta({ layout: 'auth' })
 const { t } = useI18n()
@@ -16,11 +16,17 @@ const password = ref('')
 const errors = reactive<{ email?: string; password?: string; form?: string }>({})
 const busy = ref(false)
 const passwordField = ref<{ focus: () => void }>()
+// Feature 006: sign-up link only while sign-up is open; a suspended session ends here with the reason.
+const { signupOpen } = usePublicSettings()
+if (route.query.suspended === '1' || auth.suspended) {
+  errors.form = errorText(new PortError('account_suspended'))
+  auth.suspended = false
+}
 
 /** Only return to in-app paths, never to another site. */
 function nextPath() {
   const n = route.query.next
-  return typeof n === 'string' && n.startsWith('/app') && !n.startsWith('//') ? n : '/app/scripts'
+  return typeof n === 'string' && (n.startsWith('/app') || n.startsWith('/admin')) && !n.startsWith('//') ? n : '/app/scripts'
 }
 
 function validate() {
@@ -82,7 +88,8 @@ async function submit() {
       <UiButton type="submit" block :loading="busy" icon-end="arrow-action">{{ t('auth.signIn') }}</UiButton>
       <template #footer>
         <span>{{ t('auth.noAccount') }}</span>
-        <NuxtLink to="/waitlist">{{ t('auth.joinWaitlist') }}</NuxtLink>
+        <NuxtLink v-if="signupOpen" to="/signup">{{ t('signup.link') }}</NuxtLink>
+        <NuxtLink v-else to="/waitlist">{{ t('auth.joinWaitlist') }}</NuxtLink>
       </template>
     </AuthForm>
   </div>

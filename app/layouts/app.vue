@@ -15,7 +15,7 @@ const sections = computed<{ to: string; key: string; icon: GlyphName }[]>(() => 
   { to: '/app/scripts', key: 'nav.scripts', icon: 'file' },
   { to: '/app/recordings', key: 'nav.recordings', icon: 'video' },
   { to: '/app/settings', key: 'nav.settings', icon: 'settings' },
-  ...(auth.user?.isAdmin ? [{ to: '/app/admin', key: 'nav.admin', icon: 'privacy' as GlyphName }] : []),
+  ...(auth.user?.isAdmin ? [{ to: '/admin', key: 'nav.admin', icon: 'privacy' as GlyphName }] : []),
 ])
 const isCurrent = (to: string) => route.path === to || route.path.startsWith(`${to}/`)
 

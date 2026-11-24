@@ -78,6 +78,8 @@ export interface WaitlistEntry {
   email: string
   joinedAt: string
   invited: boolean
+  /** Feature 006: an account exists for this email. */
+  hasAccount?: boolean
 }
 
 export type InvitationState = 'pending' | 'used' | 'expired' | 'withdrawn'
@@ -252,6 +254,10 @@ export type PortErrorCode =
   | 'own_key_refused'
   /** Feature 005 (AI): the provider failed or the formatter changed words; credits were refunded. */
   | 'ai_unavailable'
+  /** Feature 006 (backend 005): the account is suspended; any signed-in call ends the session with this. */
+  | 'account_suspended'
+  /** Feature 006 (backend 005): public sign-up while the sign-up mode is invite-only. */
+  | 'signup_closed'
 
 export interface PortErrorInfo {
   balance?: number
@@ -578,3 +584,386 @@ export const AI_RULES = {
   ownKeyMin: 20,
   ownKeyMax: 300,
 } as const
+
+// ---------------------------------------------------------------------------------------------------------------
+// Feature 006: admin console (backend 005-admin-console). Shapes as the API sends them; see
+// specs/006-admin-console/data-model.md and the backend contract (components.schemas).
+// ---------------------------------------------------------------------------------------------------------------
+
+/** A paged list: `nextCursor` is null on the last page. */
+export interface Page<T> {
+  items: T[]
+  nextCursor: string | null
+}
+
+export interface PersonRef {
+  id: string
+  /** null when the person was deleted. */
+  email: string | null
+  name: string | null
+}
+
+export type AdminStatus = 'active' | 'suspended' | 'deletion_scheduled'
+export type UserStatusFilter = AdminStatus | 'admin'
+export type SignupMode = 'invite_only' | 'open'
+
+/** Times in ISO 8601 with `Z`; `from` inclusive, `to` exclusive. */
+export interface Period {
+  from?: string
+  to?: string
+}
+
+export interface AdminDashboard {
+  generatedAt: string
+  period: { days: number; from: string; to: string }
+  users: { total: number; admins: number; suspended: number; deletionScheduled: number }
+  signups: { total: number; byDay: { date: string; count: number }[] }
+  active: { day: number; week: number; month: number }
+  storage: { linkedDrives: number; takes: number; bytes: number; bytesInPeriod: number }
+  ai: { creditsUsed: number; creditsUsedThisMonth: number; calls: number; failedCalls: number; ownKeyCalls: number }
+  revenue: { currency: 'USD'; mrrCents: number; payingSubscriptions: number; payments: number; paymentsCents: number }
+  attention: { pendingRequests: number; waitlistNotInvited: number }
+}
+
+export interface PendingRequestRef {
+  id: string
+  reference: string
+  plan: string
+  period: UpgradePeriod
+  priceCents: number
+  state: UpgradeRequest['state']
+  createdAt: string
+  expiresAt: string
+}
+
+export interface AdminUserRow {
+  id: string
+  email: string
+  name: string
+  isAdmin: boolean
+  plan: string | null
+  planEndsAt: string | null
+  pendingRequest: PendingRequestRef | null
+  createdAt: string
+  status: AdminStatus
+  suspendedAt: string | null
+  deletionDueAt: string | null
+  lastActiveAt: string | null
+}
+
+export interface AdminUserFilters {
+  q?: string
+  plan?: string
+  status?: UserStatusFilter
+}
+
+export type AdminLimitValue = number | boolean | string[] | null
+
+export interface AdminOverride {
+  id: string
+  userId: string
+  key: string
+  value: AdminLimitValue
+  endsAt: string | null
+  note: string | null
+  createdBy: string | null
+}
+
+export type SubscriptionState = 'active' | 'scheduled' | 'ended'
+export type SubscriptionSource = 'request' | 'admin' | 'provider'
+
+export interface AdminSubscription {
+  id: string
+  userId: string
+  plan: string
+  period: 'monthly' | 'yearly' | 'custom'
+  startsAt: string
+  endsAt: string
+  endedAt: string | null
+  endedReason: 'refund' | 'cancelled' | 'other' | 'plan_change' | null
+  state: SubscriptionState
+  source: SubscriptionSource
+  requestId: string | null
+  grantedBy: string | null
+  note: string | null
+  createdAt: string
+}
+
+export interface AdminSubscriptionRow extends AdminSubscription {
+  user: PersonRef
+}
+
+export interface AdminLimitRow {
+  key: string
+  type: 'int' | 'bool' | 'list'
+  labelAr: string
+  labelEn: string
+  value: AdminLimitValue
+  usage: number | null
+  overridden: boolean
+}
+
+export interface AdminDevice {
+  id: string
+  name: string
+  platform: 'ios' | 'android' | 'other'
+  lastUsedAt: string | null
+  createdAt: string
+}
+
+export interface AdminUserDetail {
+  id: string
+  email: string
+  name: string
+  locale: Locale
+  isAdmin: boolean
+  status: AdminStatus
+  createdAt: string
+  lastActiveAt: string | null
+  suspension: { at: string; reason: string; byId: string | null; byEmail: string | null } | null
+  deletionDueAt: string | null
+  /** The admin who scheduled the deletion (then signing in does not cancel it); null for a self-deletion. */
+  deletionBy: string | null
+  plan: {
+    key: string | null
+    nameAr: string | null
+    nameEn: string | null
+    subscription: AdminSubscription | null
+    upcoming: AdminSubscription[]
+    pendingRequest: PendingRequestRef | null
+  }
+  limits: AdminLimitRow[]
+  overrides: AdminOverride[]
+  storage: { linked: boolean; provider: 'google_drive' | null; accountEmail: string | null; linkedAt: string | null; takes: number; bytes: number }
+  credits: { balance: number; monthly: number; monthlyLeft: number; granted: number; month: string }
+  sessions: { web: number; devices: AdminDevice[] }
+  scripts: { total: number; active: number; archived: number }
+  ai: { month: string; calls: number; failed: number; credits: number; ownKey: { provider: AiProvider; last4: string; checkedAt: string } | null }
+}
+
+export interface ChangePlanInput {
+  planId: string
+  period?: UpgradePeriod
+  endsAt?: string
+  note: string
+}
+
+export interface AddCreditsInput {
+  kind: 'grant' | 'correction'
+  amount: number
+  endsAt?: string | null
+  reason: string
+}
+
+export interface OverrideInput {
+  value: AdminLimitValue
+  endsAt?: string | null
+  note?: string | null
+}
+
+export interface GrantSubscriptionInput {
+  planId: string
+  period?: UpgradePeriod
+  startsAt?: string
+  endsAt?: string
+  note: string
+}
+
+export type SubscriptionPatch =
+  | { endsAt: string; note?: string }
+  | { endedReason: 'refund' | 'cancelled' | 'other'; endedAt?: string; note?: string }
+
+export interface AdminPlanLimit {
+  key: string
+  type: 'int' | 'bool' | 'list'
+  value: AdminLimitValue
+  /** false = the limit kind's default applies. */
+  set: boolean
+}
+
+export interface AdminPlan {
+  id: string
+  key: string
+  nameAr: string
+  nameEn: string
+  priceMonthlyCents: number
+  priceYearlyCents: number
+  currency: 'USD'
+  active: boolean
+  sort: number
+  limits: AdminPlanLimit[]
+}
+
+export interface PlanInput {
+  nameAr?: string
+  nameEn?: string
+  priceMonthlyCents?: number
+  priceYearlyCents?: number
+  active?: boolean
+  sort?: number
+}
+
+export interface LimitDefinition {
+  key: string
+  type: 'int' | 'bool' | 'list'
+  default: AdminLimitValue
+  counted: boolean
+  labelAr: string
+  labelEn: string
+}
+
+export interface AdminUpgradeRequest extends PendingRequestRef {
+  userId: string
+  email: string
+  name: string
+  currentPriceCents: number
+  handledBy: string | null
+  handledAt: string | null
+  note: string | null
+}
+
+export interface Payment {
+  id: string
+  reference: string
+  user: PersonRef
+  plan: string
+  period: UpgradePeriod
+  amountCents: number
+  currency: 'USD'
+  paidAt: string
+  recordedBy: PersonRef | null
+  subscriptionId: string | null
+  note: string | null
+}
+
+export interface PaymentsPage extends Page<Payment> {
+  count: number
+  totalCents: number
+  currency: 'USD'
+}
+
+export type UsageGroupBy = 'provider' | 'capability' | 'day' | 'user'
+
+export interface UsageFigures {
+  calls: number
+  succeeded: number
+  failed: number
+  pending: number
+  credits: number
+  words: number
+  seconds: number
+  ownKeyCalls: number
+}
+
+export interface UsageGroup extends UsageFigures {
+  key: string
+  user?: PersonRef
+}
+
+export interface AiUsage {
+  from: string
+  to: string
+  groupBy: UsageGroupBy
+  totals: UsageFigures
+  groups: UsageGroup[]
+}
+
+export interface AdminAiCall {
+  id: string
+  user: PersonRef
+  capability: AiCapability
+  provider: string
+  paidWith: PaidWith
+  units: number
+  unit: 'words' | 'seconds'
+  credits: number
+  status: 'pending' | 'succeeded' | 'failed'
+  failure: string | null
+  elapsedMs: number | null
+  durationSeconds: number | null
+  overrun: boolean
+  createdAt: string
+  finishedAt: string | null
+}
+
+export interface AiCallFilters extends Period {
+  status?: AdminAiCall['status']
+  userId?: string
+  provider?: string
+  capability?: AiCapability
+}
+
+export interface LedgerEntry extends CreditEntry {
+  month: string
+  user: PersonRef
+  createdBy: PersonRef | null
+  aiCallId: string | null
+}
+
+export interface LedgerFilters extends Period {
+  userId?: string
+  kind?: CreditKind
+}
+
+export interface SubscriptionFilters {
+  state?: SubscriptionState
+  plan?: string
+  source?: SubscriptionSource
+  userId?: string
+}
+
+export interface AiKeyState {
+  provider: 'anthropic' | 'deepgram'
+  set: boolean
+  source: 'stored' | 'env' | 'none'
+  last4: string | null
+  updatedAt: string | null
+  project?: string | null
+}
+
+export interface FeatureFlag {
+  key: string
+  enabled: boolean
+  description: string | null
+  updatedAt: string
+}
+
+export interface AdminSettings {
+  signupMode: SignupMode
+  aiKeys: AiKeyState[]
+  flags: FeatureFlag[]
+}
+
+export interface PublicSettings {
+  signupMode: SignupMode
+  flags: Record<string, boolean>
+}
+
+export interface AuditEntry {
+  id: number
+  adminId: string | null
+  adminEmail: string | null
+  action: string
+  targetType: string
+  targetId: string | null
+  before: Record<string, unknown> | null
+  after: Record<string, unknown> | null
+  createdAt: string
+}
+
+export interface AuditAction {
+  action: string
+  targetType: string
+}
+
+export interface AuditFilters {
+  adminId?: string
+  action?: string
+  targetType?: string
+  targetId?: string
+  after?: string
+  before?: string
+}
+
+/** Feature-flag key rule (backend FR-023). */
+export const FLAG_KEY = /^[a-z][a-z0-9_.-]{0,63}$/

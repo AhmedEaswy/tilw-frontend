@@ -6,6 +6,8 @@ import { isPortError } from '~/services/types'
  */
 export function useErrorText() {
   const { t } = useI18n()
+  // Feature 006 (owner decision): the suspended message names the support email when one is configured.
+  const support = String(useRuntimeConfig().public.supportEmail || '')
   return (e: unknown, overrides: Partial<Record<string, string>> = {}) => {
     const code = isPortError(e) ? e.code : 'unknown'
     if (overrides[code]) return overrides[code]!
@@ -21,6 +23,8 @@ export function useErrorText() {
       case 'partner_offline': return t('errors.partnerOffline')
       case 'own_key_refused': return t('errors.ownKeyRefused')
       case 'ai_unavailable': return t('errors.aiUnavailable')
+      case 'account_suspended': return support ? t('errors.accountSuspendedContact', { email: support }) : t('errors.accountSuspended')
+      case 'signup_closed': return t('errors.signupClosed')
       default: return t('errors.unknown')
     }
   }

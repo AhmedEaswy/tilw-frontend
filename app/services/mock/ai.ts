@@ -618,6 +618,23 @@ export function createMockAi(d: MockAiDeps) {
     /** Run the expiry housekeeping now (as `tilw:ai-expire`). */
     settleExpired: () => tx(s => settleExpired(s)),
     reset: () => d.kv.removeItem(KEY),
+    // ---------- feature 006: what the admin console reads and writes ----------
+    credits: (userId: string) => tx(s => creditsOf(s, userId)),
+    /** Every entry, with its person and month (the admin ledger). */
+    allEntries: () => tx(s => s.entries.map(e => ({ ...publicEntry(e), userId: e.userId, month: e.month }))),
+    /** An admin grant (used first, optional end) or a correction of the month. */
+    adminEntry: (userId: string, input: { kind: 'grant' | 'correction'; amount: number; endsAt?: string | null; reason: string }) => tx((s) => {
+      ensureMonth(s, userId)
+      const e = input.kind === 'grant'
+        ? add(s, userId, { kind: 'grant', amount: input.amount, monthlyAmount: 0, endsAt: input.endsAt ?? null, reason: input.reason })
+        : add(s, userId, { kind: 'correction', amount: input.amount, monthlyAmount: input.amount, reason: input.reason })
+      return publicEntry(e)
+    }),
+    ownKey: (userId: string) => tx(s => s.keys[userId] ?? null),
+    /** Account deletion by an admin erases the person's own keys. */
+    eraseKey: (userId: string) => tx((s) => {
+      delete s.keys[userId]
+    }),
   }
 
   return { ai, speech, controls }

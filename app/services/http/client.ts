@@ -23,14 +23,15 @@ export interface HttpClientOptions {
 export interface RequestOptions {
   body?: unknown
   headers?: Record<string, string>
-  /** `json` (default) parses the body, `blob` returns it as a Blob, `none` ignores it. */
-  as?: 'json' | 'blob' | 'none'
+  /** `json` (default) parses the body, `blob` returns it as a Blob, `none` ignores it, `raw` returns `{ body, headers }`. */
+  as?: 'json' | 'blob' | 'none' | 'raw'
 }
 
 const CODES: readonly PortErrorCode[] = [
   'invalid_credentials', 'validation', 'unauthenticated', 'token_invalid', 'token_expired',
   'conflict', 'not_found', 'rate_limited', 'network', 'unknown',
   'limit_reached', 'storage_full', 'storage_not_linked', 'partner_offline', 'own_key_refused', 'ai_unavailable',
+  'account_suspended', 'signup_closed',
 ]
 
 function browserCookie(name: string): string | null {
@@ -131,13 +132,16 @@ export function createHttpClient(opts: HttpClientOptions) {
     if (o.as === 'none' || res.status === 204) return undefined as T
     if (o.as === 'blob') return (await res.blob()) as T
     const text = await res.text()
-    if (!text) return null as T
+    let body: unknown = null
     try {
-      return JSON.parse(text) as T
+      body = text ? JSON.parse(text) : null
     } catch {
       // A 2xx that isn't JSON (an HTML page from a proxy or a misrouted base URL) is not an answer from the service.
       throw new PortError('unknown')
     }
+    // Feature 006: some lists put the next page's cursor in a header (GET /api/admin/users → X-Next-Cursor).
+    if (o.as === 'raw') return { body, headers: res.headers } as T
+    return body as T
   }
 
   return {

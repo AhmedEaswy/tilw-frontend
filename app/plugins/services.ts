@@ -40,15 +40,23 @@ export default defineNuxtPlugin((nuxtApp) => {
     : createHttpServices({ baseUrl, realtime: (config.public.realtime as RealtimeSettings | undefined) ?? null }).services
 
   let redirecting = false
-  async function onUnauthenticated() {
+  /**
+   * The session ended (or, feature 006, the account was suspended: the API ends the session with `account_suspended`
+   * on any signed-in call). Studio and admin pages go to sign-in; a suspension says so there instead of a toast.
+   */
+  async function onUnauthenticated(suspended = false) {
     if (redirecting || !import.meta.client) return
     const route = nuxtApp.$router.currentRoute.value
-    if (!route.path.startsWith('/app')) return
+    if (!route.path.startsWith('/app') && !route.path.startsWith('/admin')) return
     redirecting = true
     await nuxtApp.runWithContext(async () => {
       useAuthStore().setUser(null)
-      useToast().show((nuxtApp.$i18n as { t: (k: string) => string }).t('errors.sessionEnded'), 'info')
-      await navigateTo({ path: '/signin', query: { next: route.fullPath } }, { replace: true })
+      if (suspended) {
+        await navigateTo({ path: '/signin', query: { suspended: '1' } }, { replace: true })
+      } else {
+        useToast().show((nuxtApp.$i18n as { t: (k: string) => string }).t('errors.sessionEnded'), 'info')
+        await navigateTo({ path: '/signin', query: { next: route.fullPath } }, { replace: true })
+      }
     })
     redirecting = false
   }
@@ -64,6 +72,7 @@ export default defineNuxtPlugin((nuxtApp) => {
           if (!out || typeof (out as Promise<unknown>).catch !== 'function') return out
           return (out as Promise<unknown>).catch((e: unknown) => {
             if (isPortError(e, 'unauthenticated')) void onUnauthenticated()
+            else if (isPortError(e, 'account_suspended')) void onUnauthenticated(true)
             throw e
           })
         }
@@ -89,6 +98,8 @@ export default defineNuxtPlugin((nuxtApp) => {
     // Feature 005: AI routes behave like any account port; the speech port talks to the provider only.
     ai: guard(base.ai),
     speech: base.speech,
+    // Feature 006: public settings need no sign-in.
+    settings: base.settings,
   }
 
   return {

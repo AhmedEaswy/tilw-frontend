@@ -196,13 +196,15 @@ describe('account', () => {
 })
 
 describe('admin', () => {
-  it('does not exist in the mock: every call is not_found', async () => {
+  it('is not found for a signed-in non-admin, as on the real API (feature 006)', async () => {
     const m = setup()
+    expect(await code(m.services.admin.waitlist())).toBe('unauthenticated')
+    await m.services.auth.signIn({ email: 'layan@example.com', password: SEED_PASSWORD })
     expect(await code(m.services.admin.waitlist())).toBe('not_found')
     expect(await code(m.services.admin.invitations())).toBe('not_found')
     expect(await code(m.services.admin.invite({ email: 'a@b.co' }))).toBe('not_found')
-    expect(await code(m.services.admin.resend('x'))).toBe('not_found')
-    expect(await code(m.services.admin.withdraw('x'))).toBe('not_found')
+    expect(await code(m.services.admin.dashboard(30))).toBe('not_found')
+    expect(await code(m.services.admin.users({}))).toBe('not_found')
   })
 })
 

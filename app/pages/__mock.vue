@@ -51,9 +51,33 @@ function invite() {
   inviteEmail.value = ''
   refresh()
 }
+// ---------- feature 006: admin console ----------
+const adminKnobs = reactive({ ...mock.knobs.admin.knobs() })
+watch(adminKnobs, k => mock.knobs.admin.setKnobs({ ...k }), { deep: true })
+const adminSummary = computed(() => (tick.value, mock.knobs.admin.summary()))
+async function signInAdmin() {
+  await auth.signIn('admin@example.com', SEED_PASSWORD)
+  refresh()
+  show('Signed in as admin@example.com')
+}
+function setSignupMode(m: 'invite_only' | 'open') {
+  mock.knobs.admin.setSignupMode(m)
+  show(`Sign-up mode: ${m}`)
+}
+function suspendCurrent() {
+  const id = needUser()
+  if (!id) return
+  mock.knobs.admin.suspend(id, 'mock panel')
+  show('Suspended: the next call from that session is refused')
+}
+function unsuspendLayan() {
+  mock.knobs.admin.unsuspend('u_layan')
+  show('Layan unsuspended')
+}
 function resetAll() {
   mock.db.reset()
   mock.knobs.ai.reset()
+  mock.knobs.admin.reset()
   auth.setUser(null)
   refresh()
   show('Mock data reset to the seed')
@@ -221,6 +245,7 @@ async function endOpenLink() {
       <p>Signed in as <b>{{ sessionEmail }}</b>. Seed account: <code>layan@example.com</code> / <code>{{ SEED_PASSWORD }}</code></p>
       <div class="row">
         <UiButton size="sm" @click="signInSeed">Sign in as Layan</UiButton>
+        <UiButton size="sm" tone="secondary" @click="signInAdmin">Sign in as admin</UiButton>
         <UiButton size="sm" tone="secondary" @click="signOut">Sign out</UiButton>
         <UiButton size="sm" tone="ghost" @click="resetAll">Reset all mock data</UiButton>
       </div>
@@ -262,6 +287,22 @@ async function endOpenLink() {
         App: {{ appState.paired ? 'paired' : 'not paired' }} · reads: {{ appState.player === 'remote' ? 'yes' : 'no' }} ·
         paragraph {{ appState.paragraph + 1 }} · {{ appState.playing ? 'playing' : 'paused' }} · {{ appState.wpm }} wpm
       </p>
+    </section>
+
+    <section>
+      <h2>Admin console (feature 006)</h2>
+      <p>Admin: <code>admin@example.com</code> / <code>{{ SEED_PASSWORD }}</code> · <NuxtLink to="/admin">Open the console</NuxtLink></p>
+      <p data-testid="mock-admin-summary">Seed: {{ adminSummary.people }} people · {{ adminSummary.admins }} admins · {{ adminSummary.waitlist }} on the waitlist · {{ adminSummary.invitations }} invitations · {{ adminSummary.requests }} pending requests · {{ adminSummary.calls }} AI calls · {{ adminSummary.audit }} audit entries</p>
+      <div class="knobs">
+        <label class="ck"><input v-model="adminKnobs.listsFail" type="checkbox"> Admin lists fail</label>
+        <label class="ck"><input v-model="adminKnobs.emptyDashboard" type="checkbox"> Empty dashboard</label>
+      </div>
+      <div class="row">
+        <UiButton size="sm" tone="secondary" @click="setSignupMode('open')">Sign-up: open</UiButton>
+        <UiButton size="sm" tone="secondary" @click="setSignupMode('invite_only')">Sign-up: invite only</UiButton>
+        <UiButton size="sm" tone="secondary" @click="suspendCurrent">Suspend current person</UiButton>
+        <UiButton size="sm" tone="ghost" @click="unsuspendLayan">Unsuspend Layan</UiButton>
+      </div>
     </section>
 
     <section>

@@ -1,0 +1,255 @@
+<script setup lang="ts">
+/**
+ * Admin · settings (feature 006 US6, Figma D10 `313:2122`): the sign-up mode (with a confirmation that says what
+ * changes), the platform AI keys (typed once, never shown again: only set/source/last four/when), and feature flags.
+ * A key is kept only in the field until it is sent; the field is cleared after saving (SC-004).
+ */
+import { FLAG_KEY, isPortError, type AdminSettings, type AiKeyState, type SignupMode } from '~/services/types'
+import { dateTime, utc } from '~/utils/admin'
+
+definePageMeta({ layout: 'admin', middleware: 'admin' })
+const { t, locale } = useI18n()
+useHead({ title: () => `${t('admin.nav.settings')} · ${t('admin.title')}` })
+const { show } = useToast()
+const errorText = useErrorText()
+
+const data = ref<AdminSettings | null>(null)
+const error = ref<unknown>(null)
+async function load() {
+  error.value = null
+  try {
+    data.value = await useServices().admin.settings()
+  } catch (e) {
+    error.value = e
+  }
+}
+onMounted(load)
+
+// ---------- sign-up mode ----------
+const nextMode = ref<SignupMode | null>(null)
+const modeOpen = computed({ get: () => !!nextMode.value, set: v => !v && (nextMode.value = null) })
+async function setMode() {
+  const m = nextMode.value
+  if (!m) return
+  try {
+    data.value = await useServices().admin.setSignupMode(m)
+    show(t(`admin.settings.mode.done.${m}`), 'success')
+    nextMode.value = null
+  } catch (e) {
+    show(errorText(e), 'error')
+  }
+}
+
+// ---------- platform keys ----------
+const editing = ref<AiKeyState['provider'] | null>(null)
+const keyText = ref('')
+const project = ref('')
+const keyError = ref('')
+function startKey(p: AiKeyState['provider']) {
+  editing.value = p
+  keyText.value = ''
+  project.value = ''
+  keyError.value = ''
+}
+function cancelKey() {
+  editing.value = null
+  keyText.value = ''
+  project.value = ''
+}
+async function saveKey(p: AiKeyState['provider']) {
+  keyError.value = ''
+  const key = keyText.value.trim()
+  try {
+    const state = await useServices().admin.setAiKey(p, { key, ...(p === 'deepgram' && project.value.trim() ? { project: project.value.trim() } : {}) })
+    keyText.value = ''
+    project.value = ''
+    editing.value = null
+    if (data.value) data.value = { ...data.value, aiKeys: data.value.aiKeys.map(k => (k.provider === p ? state : k)) }
+    show(t('admin.settings.keys.saved', { provider: p }), 'success')
+  } catch (e) {
+    keyError.value = isPortError(e, 'validation') ? (e.fields?.project ? t('admin.settings.keys.projectRequired') : t('admin.settings.keys.invalid')) : errorText(e)
+  }
+}
+const removing = ref<AiKeyState['provider'] | null>(null)
+const removeOpen = computed({ get: () => !!removing.value, set: v => !v && (removing.value = null) })
+async function removeKey() {
+  const p = removing.value
+  if (!p) return
+  try {
+    const state = await useServices().admin.removeAiKey(p)
+    if (data.value) data.value = { ...data.value, aiKeys: data.value.aiKeys.map(k => (k.provider === p ? state : k)) }
+    show(t('admin.settings.keys.removed', { provider: p }), 'success')
+    removing.value = null
+  } catch (e) {
+    show(errorText(e), 'error')
+  }
+}
+const SOURCE_TONE = { stored: 'success', env: 'info', none: '' } as const
+
+// ---------- flags ----------
+const newKey = ref('')
+const newDesc = ref('')
+const newOn = ref(true)
+const flagError = ref('')
+const validKey = computed(() => FLAG_KEY.test(newKey.value.trim()))
+async function addFlag() {
+  flagError.value = ''
+  if (!validKey.value) {
+    flagError.value = t('admin.settings.flags.keyRule')
+    return
+  }
+  try {
+    await useServices().admin.setFlag(newKey.value.trim(), { enabled: newOn.value, description: newDesc.value.trim() || null })
+    newKey.value = ''
+    newDesc.value = ''
+    newOn.value = true
+    await load()
+  } catch (e) {
+    flagError.value = isPortError(e, 'validation') ? t('admin.settings.flags.keyRule') : errorText(e)
+  }
+}
+async function toggleFlag(key: string, enabled: boolean) {
+  try {
+    await useServices().admin.setFlag(key, { enabled })
+    await load()
+  } catch (e) {
+    show(errorText(e), 'error')
+  }
+}
+async function removeFlag(key: string) {
+  try {
+    await useServices().admin.removeFlag(key)
+    await load()
+    show(t('admin.settings.flags.removed', { key }), 'success')
+  } catch (e) {
+    show(errorText(e), 'error')
+  }
+}
+</script>
+
+<template>
+  <div class="adm-page">
+    <div class="adm-head">
+      <div>
+        <h1>{{ t('admin.nav.settings') }}</h1>
+        <p class="adm-sub">{{ t('admin.settings.sub') }}</p>
+      </div>
+    </div>
+    <AdminListState :loading="!data && !error" :loaded="!!data" :error="error" :empty="false" @retry="load" />
+
+    <template v-if="data">
+      <section class="adm-card adm-card-pad" aria-labelledby="mode-h">
+        <div class="adm-card-head">
+          <h2 id="mode-h">{{ t('admin.settings.mode.title') }}</h2>
+          <span class="adm-chip" data-testid="signup-mode">{{ t(`admin.settings.mode.${data.signupMode}`) }}</span>
+        </div>
+        <div class="adm-seg" role="group" :aria-label="t('admin.settings.mode.title')">
+          <button v-for="m in (['invite_only', 'open'] as const)" :key="m" type="button" :aria-pressed="data.signupMode === m" @click="m !== data!.signupMode && (nextMode = m)">{{ t(`admin.settings.mode.${m}`) }}</button>
+        </div>
+        <p class="adm-muted">{{ t('admin.settings.mode.explain') }}</p>
+      </section>
+
+      <section class="adm-card adm-card-pad" aria-labelledby="keys-h">
+        <h2 id="keys-h">{{ t('admin.settings.keys.title') }}</h2>
+        <p class="adm-muted">{{ t('admin.settings.keys.explain') }}</p>
+        <div v-for="k in data.aiKeys" :key="k.provider" class="key" :data-testid="`key-${k.provider}`">
+          <div class="adm-card-head">
+            <span class="adm-person"><b class="adm-ltr">{{ k.provider === 'anthropic' ? 'Anthropic' : 'Deepgram' }}</b><small>{{ t(`admin.settings.keys.use.${k.provider}`) }}{{ k.project ? ` · ${k.project}` : '' }}</small></span>
+            <span class="state">
+              <span class="adm-chip" :class="SOURCE_TONE[k.source]">{{ t(`admin.settings.keys.source.${k.source}`) }}</span>
+              <span v-if="k.last4" class="adm-ltr">…{{ k.last4 }}</span>
+              <span v-if="k.updatedAt" class="adm-muted" :title="utc(k.updatedAt)">{{ dateTime(k.updatedAt, locale) }}</span>
+            </span>
+          </div>
+          <form v-if="editing === k.provider" class="adm-row" autocomplete="off" @submit.prevent="saveKey(k.provider)">
+            <label class="adm-label">{{ t('admin.settings.keys.newKey') }}
+              <input v-model="keyText" class="adm-input adm-ltr" type="password" autocomplete="new-password" spellcheck="false" minlength="8" maxlength="500" required>
+            </label>
+            <label v-if="k.provider === 'deepgram'" class="adm-label proj">{{ t('admin.settings.keys.project') }}
+              <input v-model="project" class="adm-input adm-ltr" type="text" maxlength="100" autocomplete="off">
+            </label>
+            <button type="submit" class="adm-btn primary" :disabled="keyText.trim().length < 8">{{ t('common.save') }}</button>
+            <button type="button" class="adm-btn" @click="cancelKey">{{ t('common.cancel') }}</button>
+          </form>
+          <p v-if="editing === k.provider && keyError" class="adm-err" role="alert">{{ keyError }}</p>
+          <div v-if="editing !== k.provider" class="adm-row">
+            <button type="button" class="adm-btn" @click="startKey(k.provider)">{{ k.set ? t('admin.settings.keys.replace') : t('admin.settings.keys.add') }}</button>
+            <button v-if="k.source === 'stored'" type="button" class="adm-link danger" @click="removing = k.provider">{{ t('admin.settings.keys.remove') }}</button>
+          </div>
+        </div>
+        <p class="adm-hint">{{ t('admin.settings.keys.cleared') }}</p>
+      </section>
+
+      <section class="adm-card" aria-labelledby="flags-h">
+        <div class="adm-toolbar"><h2 id="flags-h" class="adm-card-title">{{ t('admin.settings.flags.title') }}</h2><span class="adm-grow adm-muted">{{ t('admin.settings.flags.explain') }}</span></div>
+        <div v-if="data.flags.length" class="adm-scroll">
+          <table class="adm-tbl">
+            <caption>{{ t('admin.settings.flags.title') }}</caption>
+            <thead><tr><th scope="col">{{ t('admin.settings.flags.key') }}</th><th scope="col">{{ t('admin.settings.flags.changed') }}</th><th scope="col">{{ t('admin.settings.flags.on') }}</th><th scope="col" class="act"><span class="adm-muted">{{ t('admin.list.actions') }}</span></th></tr></thead>
+            <tbody>
+              <tr v-for="f in data.flags" :key="f.key">
+                <td><span class="adm-person"><b class="adm-ltr">{{ f.key }}</b><small>{{ f.description ?? '' }}</small></span></td>
+                <td class="nowrap" :title="utc(f.updatedAt)">{{ dateTime(f.updatedAt, locale) }}</td>
+                <td><input type="checkbox" role="switch" :checked="f.enabled" :aria-label="f.key" @change="toggleFlag(f.key, ($event.target as HTMLInputElement).checked)"></td>
+                <td class="act"><button type="button" class="adm-link danger" :aria-label="`${t('admin.settings.flags.remove')} ${f.key}`" @click="removeFlag(f.key)">{{ t('admin.settings.flags.remove') }}</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <form class="adm-row add" @submit.prevent="addFlag">
+          <label class="adm-label">{{ t('admin.settings.flags.key') }}<input v-model="newKey" class="adm-input adm-ltr" placeholder="ai.captions" maxlength="64"></label>
+          <label class="adm-label">{{ t('admin.settings.flags.description') }}<input v-model="newDesc" class="adm-input" dir="auto" maxlength="200"></label>
+          <label class="chk"><input v-model="newOn" type="checkbox"> {{ t('admin.settings.flags.on') }}</label>
+          <button type="submit" class="adm-btn primary">{{ t('admin.settings.flags.add') }}</button>
+        </form>
+        <p class="adm-hint pad" :class="{ 'adm-err': flagError }" role="status">{{ flagError || t('admin.settings.flags.keyRule') }}</p>
+      </section>
+    </template>
+
+    <AdminConfirmDialog
+      v-model:open="modeOpen"
+      :title="nextMode ? t(`admin.settings.mode.confirm.${nextMode}.title`) : ''"
+      :text="nextMode ? t(`admin.settings.mode.confirm.${nextMode}.text`) : ''"
+      :confirm-label="nextMode ? t(`admin.settings.mode.confirm.${nextMode}.action`) : ''"
+      @confirm="setMode"
+    />
+    <AdminConfirmDialog
+      v-model:open="removeOpen"
+      :title="t('admin.settings.keys.removeTitle', { provider: removing ?? '' })"
+      :text="t('admin.settings.keys.removeText')"
+      :confirm-label="t('admin.settings.keys.remove')"
+      tone="danger"
+      @confirm="removeKey"
+    />
+  </div>
+</template>
+
+<style scoped>
+.key {
+  display: grid;
+  gap: 10px;
+  padding-block: 12px;
+  border-block-start: 1px solid var(--tilw-border-subtle);
+}
+.state {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.proj {
+  flex: 0 1 220px !important;
+}
+.add {
+  padding: 12px 16px 0;
+}
+.pad {
+  padding: 6px 16px 12px;
+}
+.chk {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  block-size: 36px;
+  font: 500 14px/1.4 var(--tilw-font-ar);
+}
+</style>
