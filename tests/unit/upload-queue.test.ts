@@ -199,3 +199,94 @@ describe('upload queue', () => {
     await done
   })
 })
+
+// ---------- review fixes (002): cancel, unlink, auto-sync backfill ----------
+describe('upload queue: cancel, unlink and backfill', () => {
+  it('a cancelled upload is not written back as waiting, and its service record is removed', async () => {
+    const env = await setup()
+    env.m.db.setKnobs({ driveMode: 'slow' })
+    const store = memoryQueueStore()
+    const q = queueFor(env, store)
+    const seen: QueueProgress['state'][] = []
+    let cancelled: Promise<void> | null = null
+    q.onProgress((p) => {
+      seen.push(p.state)
+      if (p.state === 'uploading' && p.sent > 0 && !cancelled) cancelled = q.cancel('t1')
+    })
+    await q.start(env.user.id)
+    await q.enqueue('t1')
+    while (!cancelled) await tick()
+    await cancelled
+    for (let i = 0; i < 20; i++) await tick()
+    expect(await store.list()).toEqual([])
+    expect(seen.slice(seen.indexOf('removed'))).toEqual(['removed'])
+    expect(await env.m.services.remoteTakes.list()).toEqual([])
+    expect(Object.keys(env.m.db.s.drive.files)).toEqual([])
+  })
+
+  it('a cancelled take can be queued again and uploads', async () => {
+    const env = await setup()
+    const q = queueFor(env, memoryQueueStore())
+    await q.start(env.user.id)
+    q.pause()
+    await q.enqueue('t1')
+    await q.cancel('t1')
+    const done = until(q, ['done'])
+    await q.enqueue('t1')
+    q.resume()
+    await done
+    expect(await env.m.services.remoteTakes.list()).toHaveLength(1)
+  })
+
+  it('unlinking stops the running upload, marks queued takes as not linked and forgets Drive tokens', async () => {
+    const env = await setup()
+    env.m.db.setKnobs({ driveMode: 'slow' })
+    await env.takes.put({ ...(await env.takes.get('t1'))!, id: 't2', number: 2, createdAt: '2026-11-20T11:00:00Z' })
+    let tokenCalls = 0
+    const storage = { ...env.m.services.storage, uploadToken: (s: string | null) => (tokenCalls++, env.m.services.storage.uploadToken(s)), uploader: () => env.m.services.storage.uploader() }
+    const store = memoryQueueStore()
+    const q = queueFor(env, store, { storage })
+    const seen: QueueProgress[] = []
+    let unlinked: Promise<void> | null = null
+    q.onProgress((p) => {
+      seen.push(p)
+      if (p.state === 'uploading' && p.sent > 0 && !unlinked) unlinked = q.unlinked()
+    })
+    await q.start(env.user.id)
+    await q.enqueue('t1')
+    await q.enqueue('t2')
+    while (!unlinked) await tick()
+    await unlinked
+    for (let i = 0; i < 20; i++) await tick()
+    const entries = await store.list()
+    expect(entries.map(e => [e.takeId, e.state, e.error]).sort()).toEqual([['t1', 'failed', 'storage_not_linked'], ['t2', 'failed', 'storage_not_linked']])
+    const afterUnlink = seen.slice(seen.findIndex(p => p.state === 'failed'))
+    expect(afterUnlink.every(p => p.state === 'failed')).toBe(true)
+    expect(Object.keys(env.m.db.s.drive.files)).toEqual([])
+
+    // Linked again + Retry: a fresh token is fetched instead of the cached one.
+    env.m.db.setKnobs({ driveMode: 'ok' })
+    const before = tokenCalls
+    const done = until(q, ['done'])
+    await q.retry('t1')
+    await done
+    expect(tokenCalls).toBeGreaterThan(before)
+  })
+
+  it('backfill queues device takes that have no Drive copy yet, oldest first, and skips backed-up ones', async () => {
+    const env = await setup()
+    const t1 = (await env.takes.get('t1'))!
+    await env.takes.put({ ...t1, id: 't_old', number: 2, createdAt: '2026-11-19T10:00:00Z' })
+    await env.takes.put({ ...t1, id: 't_done', number: 3, remote: { id: 'r_x', state: 'backed_up', providerFileId: 'f' } })
+    const store = memoryQueueStore()
+    const q = queueFor(env, store)
+    const order: string[] = []
+    q.onProgress(p => p.state === 'waiting' && order.push(p.takeId))
+    await q.start(env.user.id)
+    q.pause()
+    expect(await q.backfill()).toBe(2)
+    expect(order).toEqual(['t_old', 't1'])
+    expect(await q.backfill()).toBe(0) // already queued
+    expect((await store.list()).map(e => e.takeId).sort()).toEqual(['t1', 't_old'])
+  })
+})

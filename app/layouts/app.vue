@@ -21,17 +21,13 @@ const isCurrent = (to: string) => route.path === to || route.path.startsWith(`${
 
 // ---------- release 2: plan, one-time notices, upload queue ----------
 const plan = usePlanStore()
-const uploads = useUploadsStore()
 const { show } = useToast()
 const { locale } = useI18n()
 
+// The upload queue starts and stops in plugins/uploads.client.ts, so it also runs under the studio's layout.
 watch(() => auth.user?.id, (id) => {
-  if (!id) {
-    uploads.stop()
-    return
-  }
+  if (!id) return
   void plan.load()
-  void uploads.start(id)
   // deletion_cancelled comes back from sign-in (research §11).
   if (auth.consumeNotice() === 'deletion_cancelled') show(t('deletion.cancelledToast'), 'info', 8000)
 }, { immediate: true })

@@ -16,6 +16,26 @@ export const usePlanStore = defineStore('plan', () => {
   /** One-time notice from the last read (`pro_started` / `pro_ended`), until a screen shows it. */
   const notice = ref<'pro_started' | 'pro_ended' | null>(null)
   let loadedAt = 0
+  const savedKey = () => {
+    const id = useAuthStore().user?.id
+    return id ? `tilw:plan-limits:${id}` : null
+  }
+  function readSaved(): Record<string, unknown> | null {
+    const k = savedKey()
+    if (!k || !import.meta.client) return null
+    try {
+      return JSON.parse(localStorage.getItem(k) ?? 'null')
+    } catch {
+      return null
+    }
+  }
+  function writeSaved(m: MyPlan) {
+    const k = savedKey()
+    if (!k || !import.meta.client) return
+    try {
+      localStorage.setItem(k, JSON.stringify(Object.fromEntries(m.limits.map(l => [l.key, l.value]))))
+    } catch { /* storage full or blocked: the in-memory plan still applies */ }
+  }
   const clock = useClock()
   let inflight: Promise<void> | null = null
 
@@ -24,6 +44,18 @@ export const usePlanStore = defineStore('plan', () => {
     const l = my.value?.limits.find(x => x.key === key)
     return l ? l.value : undefined
   }
+  /**
+   * Like `limit()`, but when the plan can't be read (offline, server error) it falls back to the value last read for
+   * this account, kept in this browser. The studio uses it so a Pro take isn't cut to the Free length by a failed read.
+   */
+  function knownLimit(key: string): number | boolean | string[] | null | undefined {
+    const v = limit(key)
+    if (v !== undefined) return v
+    const saved = readSaved()
+    return saved && key in saved ? (saved[key] as number | boolean | string[] | null) : undefined
+  }
+  /** The plan was read, or the last read failed (then `knownLimit()` is the best guess). */
+  const settled = computed(() => !!my.value || (!!error.value && !loading.value))
   function usage(key: string): number | null | undefined {
     return my.value?.limits.find(x => x.key === key)?.usage
   }
@@ -42,6 +74,7 @@ export const usePlanStore = defineStore('plan', () => {
       try {
         const next = await useServices().plans.myPlan()
         my.value = next
+        writeSaved(next)
         if (next.notice) notice.value = next.notice
         error.value = null
         loadedAt = Date.now()
@@ -85,9 +118,10 @@ export const usePlanStore = defineStore('plan', () => {
 
   function reset() {
     my.value = null
+    error.value = null
     notice.value = null
     loadedAt = 0
   }
 
-  return { plans, my, loading, error, notice, isPro, daysLeft, limit, usage, load, loadPublic, refreshIfStale, requestUpgrade, cancelRequest, consumeNotice, reset }
+  return { plans, my, loading, error, notice, isPro, daysLeft, limit, knownLimit, settled, usage, load, loadPublic, refreshIfStale, requestUpgrade, cancelRequest, consumeNotice, reset }
 })

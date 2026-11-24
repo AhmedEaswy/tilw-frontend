@@ -34,6 +34,8 @@ export const useStorageStore = defineStore('storage', () => {
 
   async function unlink() {
     await useServices().storage.unlink()
+    // Nothing more goes to Drive: drop cached Drive tokens and stop the running and queued uploads.
+    await useUploadsStore().unlinked()
     await load()
   }
 

@@ -281,3 +281,10 @@ describe('plans over HTTP', () => {
     expect(writes[0]!.body).toEqual({ plan: 'pro', period: 'yearly' })
   })
 })
+
+describe('non-JSON success bodies', () => {
+  it('a 2xx body that is not JSON is an unknown error, not a SyntaxError', async () => {
+    const { services } = setup([{ status: 200, text: '<!doctype html><html>proxy</html>' }])
+    expect(await code(services.scripts.get('s'))).toBe('unknown')
+  })
+})

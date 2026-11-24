@@ -113,6 +113,14 @@ export function createUploadQueue(deps: QueueDeps) {
   const tries = new Map<string, number>()
   /** Drive tokens per folder (scriptId), kept in memory only. */
   const tokens = new Map<string, UploadToken>()
+  /**
+   * Entries being taken out of the queue: `removed` (cancelled) or `unlinked` (Drive was unlinked). While a key is
+   * here, `process()` and its progress handler write nothing for it, so an aborted upload can't put it back as
+   * waiting. The key leaves once the cancel is done, or when the `process()` that was running it returns.
+   */
+  const stopped = new Map<string, { why: 'removed' | 'unlinked'; settled: boolean }>()
+  /** Key of the entry `process()` is working on. */
+  let current: string | null = null
 
   const keyOf = (takeId: string) => `${userId}:${takeId}`
 
@@ -137,11 +145,23 @@ export function createUploadQueue(deps: QueueDeps) {
 
   async function save(e: QueueEntry, patch: Partial<QueueEntry>) {
     Object.assign(e, patch, { updatedAt: new Date().toISOString() })
+    if (stopped.has(e.key)) return
     await deps.store.put(e)
+  }
+
+  /** The service's take record of an entry that was dropped: it will never get a file, so remove it. */
+  async function dropRemote(remoteId: string | null) {
+    if (!remoteId) return
+    try {
+      await deps.remote.remove(remoteId, { remote: false })
+    } catch { /* already gone (the take was deleted everywhere), or offline: the record stays as not backed up */ }
   }
 
   /** Upload one entry. Resolves when it is done, failed, or put back to wait. */
   async function process(e: QueueEntry) {
+    // Cancelled (or marked failed by an unlink) since `kick()` read the list: leave it alone.
+    const live = (await deps.store.list()).find(x => x.key === e.key)
+    if (!live || live.state === 'failed' || stopped.has(e.key)) return
     const take = await deps.takes.get(e.takeId)
     if (!take) {
       // The take was deleted from this device: nothing left to send.
@@ -149,10 +169,13 @@ export function createUploadQueue(deps: QueueDeps) {
       emit({ takeId: e.takeId, state: 'removed', sent: 0, total: 0, error: null })
       return
     }
+    if (stopped.has(e.key)) return
     await save(e, { state: 'uploading', error: null, total: take.blob.size })
     emit({ takeId: e.takeId, state: 'uploading', sent: e.offset, total: take.blob.size, error: null })
     abort = new AbortController()
+    current = e.key
     const signal = abort.signal
+    if (stopped.has(e.key)) abort.abort()
     try {
       // 'none' = a take with no script. A script the service doesn't know (deleted, or recorded before this account
       // used the API) goes to the root `Tilw` folder as a take with no script rather than failing for good.
@@ -178,6 +201,11 @@ export function createUploadQueue(deps: QueueDeps) {
           starred: take.starred,
         })
         await save(e, { remoteId: rt.id })
+        if (stopped.get(e.key)?.why === 'removed') {
+          // Cancelled while registering: the record would never get a file.
+          await dropRemote(rt.id)
+          return
+        }
         if (rt.state === 'backed_up' && rt.providerFileId) return await finish(e, rt.providerFileId)
       }
       const drive = deps.storage.uploader()
@@ -190,6 +218,7 @@ export function createUploadQueue(deps: QueueDeps) {
             await save(e, { sessionUrl: session.url, offset: 0 })
           }
           const { fileId } = await drive.resume({ url: e.sessionUrl! }, take.blob, tok.accessToken, (sent, total) => {
+            if (stopped.has(e.key)) return
             e.offset = sent
             void deps.store.put({ ...e, updatedAt: new Date().toISOString() })
             emit({ takeId: e.takeId, state: 'uploading', sent, total, error: null })
@@ -212,6 +241,7 @@ export function createUploadQueue(deps: QueueDeps) {
         }
       }
     } catch (err) {
+      if (stopped.has(e.key)) return // cancelled or unlinked: the entry was already removed or marked
       if ((err as Error)?.name === 'AbortError') {
         await save(e, { state: 'waiting' })
         emit({ takeId: e.takeId, state: 'waiting', sent: e.offset, total: e.total, error: null })
@@ -236,6 +266,7 @@ export function createUploadQueue(deps: QueueDeps) {
   }
 
   async function finish(e: QueueEntry, fileId: string) {
+    if (stopped.has(e.key)) return
     const rt = await deps.remote.update(e.remoteId!, { state: 'backed_up', providerFileId: fileId })
     try {
       await deps.takes.update(e.takeId, { remote: { id: rt.id, state: 'backed_up', providerFileId: fileId } })
@@ -257,9 +288,16 @@ export function createUploadQueue(deps: QueueDeps) {
     try {
       for (;;) {
         if (paused || !owner || !userId) break
-        const next = (await mine()).find(e => e.state === 'waiting' || e.state === 'uploading')
+        const next = (await mine()).find(e => (e.state === 'waiting' || e.state === 'uploading') && !stopped.has(e.key))
         if (!next) break
-        await process(next)
+        current = next.key
+        try {
+          await process(next)
+        } finally {
+          current = null
+          // A cancel or unlink that finished while this run unwound was waiting for it to end.
+          if (stopped.get(next.key)?.settled) stopped.delete(next.key)
+        }
         if (next.state === 'waiting' && next.error === 'network') break // wait for the retry timer
       }
     } finally {
@@ -272,6 +310,45 @@ export function createUploadQueue(deps: QueueDeps) {
     if (m?.userId !== userId) return
     if (m.type === 'progress' && m.progress) emit(m.progress, false)
     if (m.type === 'kick') void kick()
+    // Another tab cancelled a take or unlinked Drive: stop the upload running here.
+    if (m.type === 'cancel' && typeof (m as { takeId?: unknown }).takeId === 'string') {
+      const k = keyOf((m as { takeId: string }).takeId)
+      halt(k, 'removed')
+      settle(k)
+    }
+    if (m.type === 'unlink') void unlinked(false)
+  }
+
+  /** Take an entry out of the queue: no more writes for it, and stop its upload if it is the one running. */
+  function halt(key: string, why: 'removed' | 'unlinked') {
+    stopped.set(key, { why, settled: false })
+    tries.delete(key)
+    if (current === key) abort?.abort()
+  }
+  /** The entry is gone or marked: forget it, unless its upload is still unwinding (`kick()` forgets it then). */
+  function settle(key: string) {
+    const s = stopped.get(key)
+    if (!s) return
+    if (current === key) s.settled = true
+    else stopped.delete(key)
+  }
+
+  /**
+   * Drive was unlinked: forget the Drive tokens, stop the running upload, and mark every waiting entry as failed
+   * with `storage_not_linked` so nothing goes out until the person links again and taps Retry.
+   */
+  async function unlinked(broadcast = true) {
+    tokens.clear()
+    clearTimeout(retryTimer)
+    if (!userId) return
+    if (broadcast) channel?.postMessage({ type: 'unlink', userId })
+    const open = (await mine()).filter(e => e.state !== 'failed')
+    open.forEach(e => halt(e.key, 'unlinked'))
+    for (const e of open) {
+      await deps.store.put({ ...e, state: 'failed', error: 'storage_not_linked', updatedAt: new Date().toISOString() })
+      emit({ takeId: e.takeId, state: 'failed', sent: e.offset, total: e.total, error: 'storage_not_linked' }, broadcast)
+      settle(e.key)
+    }
   }
 
   return {
@@ -308,6 +385,7 @@ export function createUploadQueue(deps: QueueDeps) {
       channel = null
       userId = null
       tokens.clear()
+      stopped.clear()
     },
 
     async enqueue(takeId: string) {
@@ -315,6 +393,7 @@ export function createUploadQueue(deps: QueueDeps) {
       const existing = (await mine()).find(e => e.takeId === takeId)
       if (existing && existing.state !== 'failed') return
       const e: QueueEntry = existing ?? { key: keyOf(takeId), userId, takeId, remoteId: null, sessionUrl: null, offset: 0, total: 0, state: 'waiting', error: null, updatedAt: '' }
+      stopped.delete(e.key)
       await save(e, { state: 'waiting', error: null })
       tries.delete(e.key)
       emit({ takeId, state: 'waiting', sent: e.offset, total: e.total, error: null })
@@ -331,9 +410,31 @@ export function createUploadQueue(deps: QueueDeps) {
       if (!userId) return
       const e = (await mine()).find(x => x.takeId === takeId)
       if (!e) return
-      if (e.state === 'uploading') abort?.abort()
+      halt(e.key, 'removed')
+      channel?.postMessage({ type: 'cancel', userId, takeId })
       await deps.store.del(e.key)
+      settle(e.key)
       emit({ takeId, state: 'removed', sent: 0, total: 0, error: null })
+      // Registered but never finished: the service's record would stay "uploading" with no file.
+      await dropRemote(e.remoteId)
+    },
+
+    /** Drive was unlinked (Storage settings). */
+    unlinked: () => unlinked(),
+
+    /**
+     * Auto sync on: queue every take on this device that has no copy in Drive yet and isn't queued. Takes that
+     * already failed stay failed until Retry.
+     */
+    async backfill() {
+      if (!userId) return
+      const queued = new Set((await mine()).map(e => e.takeId))
+      const all = await deps.takes.list()
+      const todo = all
+        .filter(t => !queued.has(t.id) && t.remote?.state !== 'backed_up')
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+      for (const t of todo) await this.enqueue(t.id)
+      return todo.length
     },
 
     entries: () => mine(),
