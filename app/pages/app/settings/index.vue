@@ -59,6 +59,11 @@ const planHint = computed(() => {
     ? t('settings.planHintFree', { n: active.usage, max: active.value })
     : t('settings.planHint')
 })
+// Feature 005: AI & credits row with the balance.
+const ai = useAiStore()
+const { renewDate } = useAiText()
+onMounted(() => ai.refreshCredits())
+const aiHint = computed(() => (ai.balance === null ? t('ai.credits.settingsHintLoading') : t('ai.credits.settingsHint', { n: ai.balance, date: renewDate.value })))
 const storageHint = computed(() => {
   const st = storage.status
   if (!st || st.state === 'none') return t('settings.storageHintNone')
@@ -130,6 +135,11 @@ onBeforeUnmount(() => reader.flushSettings())
           <i v-else-if="storage.status?.state === 'revoked'" class="dot bad" aria-hidden="true" />
         </span>
         <span class="txt"><b>{{ t('storage.title') }}</b><small>{{ storageHint }}</small></span>
+        <span class="go">{{ t('settings.open') }}</span>
+      </NuxtLink>
+      <NuxtLink to="/app/settings/ai" class="row" data-testid="settings-ai">
+        <UiGlyph class="ic" name="edit" :size="24" />
+        <span class="txt"><b>{{ t('ai.credits.title') }}</b><small>{{ aiHint }}</small></span>
         <span class="go">{{ t('settings.open') }}</span>
       </NuxtLink>
       <NuxtLink to="/app/settings/phone-links" class="row">

@@ -45,8 +45,8 @@ description: "Task list for Web app — AI writing tools (release 2)"
 
 ## Phase 4: User Story 2 — See my credits and where they went (P1)
 
-- [ ] T018 [P] [US2] e2e `tests/e2e/ai-credits.spec.ts`: balance 20, entries after a format and a refund, negative banner after a mock overrun, Settings row and Plan & usage rows; axe.
-- [ ] T019 [US2] `CreditsCard.vue`, `CreditEntries.vue`, page `app/pages/app/settings/ai.vue` (A6): balance, monthly, granted, renewal, entries (kind, capability, amount, status, refund link, grant end), negative banner; Settings index row with the balance; Plan & usage shows `ai.credits_monthly`, `byok.allowed` and `ai.audio_max_minutes` as limits (remove "coming soon").
+- [X] T018 [P] [US2] e2e `tests/e2e/ai-credits.spec.ts`: balance 20, entries after a format and a refund, negative banner after a mock overrun, Settings row and Plan & usage rows; axe.
+- [X] T019 [US2] `CreditsCard.vue`, `CreditEntries.vue`, page `app/pages/app/settings/ai.vue` (A6): balance, monthly, granted, renewal, entries (kind, capability, amount, status, refund link, grant end), negative banner; Settings index row with the balance; Plan & usage shows `ai.credits_monthly`, `byok.allowed` and `ai.audio_max_minutes` as limits (remove "coming soon").
 
 ## Phase 5: User Story 3 — Turn speech into script text (P2)
 
