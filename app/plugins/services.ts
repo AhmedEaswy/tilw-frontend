@@ -9,7 +9,7 @@ import type { Services } from '~/services/ports'
 import { createHttpServices } from '~/services/http'
 import { createMockServices, type MockBackend } from '~/services/mock'
 import { memoryKV } from '~/services/mock/db'
-import { isPortError } from '~/services/types'
+import { isPortError, type RealtimeSettings } from '~/services/types'
 
 export default defineNuxtPlugin((nuxtApp) => {
   const config = useRuntimeConfig()
@@ -37,7 +37,7 @@ export default defineNuxtPlugin((nuxtApp) => {
   const baseUrl = apiBase.startsWith('/') && import.meta.server ? useRequestURL().origin + apiBase : apiBase
   const base: Services = mock
     ? mock.services
-    : createHttpServices({ baseUrl }).services
+    : createHttpServices({ baseUrl, realtime: (config.public.realtime as RealtimeSettings | undefined) ?? null }).services
 
   let redirecting = false
   async function onUnauthenticated() {
@@ -81,6 +81,11 @@ export default defineNuxtPlugin((nuxtApp) => {
     plans: guard(base.plans),
     storage: guard(base.storage),
     remoteTakes: guard(base.remoteTakes),
+    // Feature 004: the owner's link actions behave like any account port; the relay and the live channel are also
+    // used by the phone, which has no session, so a 401 there means "pairing gone", not "sign in again".
+    links: guard(base.links),
+    relay: base.relay,
+    realtime: base.realtime,
   }
 
   return {

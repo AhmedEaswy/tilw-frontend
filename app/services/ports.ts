@@ -6,6 +6,8 @@ import type {
   Device, Invitation, LegacyScript, MyPlan, PendingEmail, Plan, ReadingPosition, ReadingSettings, RemoteTake, RemoteTakeInput,
   Script, ScriptPatch, ScriptSummary, ScriptVersion, ScriptVersionSummary, StorageStatus, SyncMode, UpgradePeriod, UpgradeRequest,
   UploadToken, User, WaitlistEntry,
+  ConnectionState, LinkAck, LinkAuth, LinkCommand, LinkEvent, LinkParty, Pairing, PairingCode, PhoneLink, PhoneLinkWithCode,
+  PresenceMember, RealtimeSettings, StudioState,
 } from './types'
 
 export interface AuthPort {
@@ -128,6 +130,53 @@ export interface AdminPort {
   withdraw(id: string): Promise<void>
 }
 
+/** Feature 004: the owner's phone links (session). Contract: specs/004-phone-link/contracts/ports.md. */
+export interface LinkPort {
+  /** Starts (or reuses) the open link for this script and studio, with a fresh code. */
+  start(scriptId: string): Promise<PhoneLinkWithCode>
+  current(): Promise<PhoneLink | null>
+  /** Open links and links ended within 30 days, newest first. */
+  list(): Promise<PhoneLink[]>
+  newCode(linkId: string): Promise<PairingCode>
+  update(linkId: string, patch: { previews: boolean }): Promise<PhoneLink>
+  end(linkId: string): Promise<void>
+  acceptRemote(linkId: string, remoteId: string): Promise<PhoneLink>
+  declineRemote(linkId: string, remoteId: string): Promise<void>
+}
+
+/** Feature 004: what either side of a link sends. The phone has no session; it signs calls with its `rl_` credential. */
+export interface LinkRelayPort {
+  /** Public. `token_invalid` for a wrong, used or expired code (always the same), `rate_limited` after 5 wrong tries. */
+  pair(input: { code: string } | { secret: string }, name?: string): Promise<Pairing>
+  command(auth: LinkAuth, linkId: string, cmd: LinkCommand): Promise<void>
+  ack(auth: LinkAuth, linkId: string, ack: LinkAck): Promise<void>
+  state(auth: LinkAuth, linkId: string, state: StudioState): Promise<void>
+  ping(auth: LinkAuth, linkId: string): Promise<void>
+  leave(auth: LinkAuth, linkId: string): Promise<void>
+  requestRoles(auth: LinkAuth, linkId: string, player: LinkParty): Promise<void>
+  answerRoles(auth: LinkAuth, linkId: string, accept: boolean): Promise<void>
+}
+
+/** Feature 004: the live channel. The socket only receives; everything is sent over the relay port. */
+export interface RealtimeConnection {
+  readonly state: ConnectionState
+  onState(cb: (s: ConnectionState) => void): () => void
+  /** Private channel; resolves to an unsubscribe once subscribed, rejects when authorisation is refused. */
+  subscribe(channel: string, onEvent: (e: LinkEvent) => void): Promise<() => void>
+  presence(channel: string, on: {
+    members: (m: PresenceMember[]) => void
+    added: (m: PresenceMember) => void
+    removed: (m: PresenceMember) => void
+  }): Promise<() => void>
+  close(): void
+}
+
+export interface RealtimePort {
+  /** Where the studio connects; null when phone link can't reach a realtime server. */
+  settings(): RealtimeSettings | null
+  connect(auth: LinkAuth, settings: RealtimeSettings): RealtimeConnection
+}
+
 export interface Services {
   auth: AuthPort
   waitlist: WaitlistPort
@@ -138,4 +187,7 @@ export interface Services {
   plans: PlanPort
   storage: StoragePort
   remoteTakes: RemoteTakesPort
+  links: LinkPort
+  relay: LinkRelayPort
+  realtime: RealtimePort
 }

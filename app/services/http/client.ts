@@ -30,7 +30,7 @@ export interface RequestOptions {
 const CODES: readonly PortErrorCode[] = [
   'invalid_credentials', 'validation', 'unauthenticated', 'token_invalid', 'token_expired',
   'conflict', 'not_found', 'rate_limited', 'network', 'unknown',
-  'limit_reached', 'storage_full', 'storage_not_linked',
+  'limit_reached', 'storage_full', 'storage_not_linked', 'partner_offline',
 ]
 
 function browserCookie(name: string): string | null {

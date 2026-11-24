@@ -9,11 +9,17 @@ import {
   type ScriptSummary, type ScriptVersion, type ScriptVersionSummary, type StorageStatus, type SyncMode, type UpgradeRequest,
   type UploadToken, type User, type WaitlistEntry,
 } from '../types'
+import type { LinkAuth, Pairing, PairingCode, PhoneLink, PhoneLinkWithCode, RealtimeSettings } from '../types'
 import { createHttpClient, type HttpClientOptions } from './client'
+import { createHttpRealtime } from './realtime'
 
 const seg = encodeURIComponent
 
-export function createHttpServices(opts: HttpClientOptions): { services: Services; client: ReturnType<typeof createHttpClient> } {
+/** Feature 004: the phone signs link calls with its `rl_` credential; the studio uses its session cookie. */
+export const linkHeaders = (auth: LinkAuth): Record<string, string> =>
+  auth.kind === 'remote' ? { Authorization: `Bearer ${auth.credential}` } : {}
+
+export function createHttpServices(opts: HttpClientOptions & { realtime?: RealtimeSettings | null }): { services: Services; client: ReturnType<typeof createHttpClient> } {
   const api = createHttpClient(opts)
   let notice: 'deletion_cancelled' | null = null
   const drive = createDriveUploader({ fetch: opts.fetch })
@@ -120,6 +126,34 @@ export function createHttpServices(opts: HttpClientOptions): { services: Service
       update: (id, patch) => api.patch<RemoteTake>(`/api/takes/${seg(id)}`, patch),
       remove: (id, { remote }) => api.del<void>(`/api/takes/${seg(id)}${remote ? '?remote=1' : ''}`),
     },
+
+    // ---------- feature 004: phone link (backend specs/003-phone-link/contracts/openapi.yaml) ----------
+    links: {
+      start: scriptId => api.post<PhoneLinkWithCode>('/api/links', { scriptId }),
+      current: () => api.get<PhoneLink | null>('/api/links/current'),
+      list: async () => {
+        const res = await api.get<PhoneLink[] | { data: PhoneLink[] }>('/api/links')
+        return Array.isArray(res) ? res : (res?.data ?? [])
+      },
+      newCode: id => api.post<PairingCode>(`/api/links/${seg(id)}/codes`),
+      update: (id, patch) => api.patch<PhoneLink>(`/api/links/${seg(id)}`, patch),
+      end: id => api.del<void>(`/api/links/${seg(id)}`),
+      acceptRemote: (id, remoteId) => api.post<PhoneLink>(`/api/links/${seg(id)}/remotes/${seg(remoteId)}/accept`),
+      declineRemote: (id, remoteId) => api.post<void>(`/api/links/${seg(id)}/remotes/${seg(remoteId)}/decline`),
+    },
+
+    relay: {
+      pair: (input, name) => api.post<Pairing>('/api/links/pair', name ? { ...input, name } : input),
+      command: (auth, id, cmd) => api.post<void>(`/api/links/${seg(id)}/commands`, cmd, { headers: linkHeaders(auth) }),
+      ack: (auth, id, ack) => api.post<void>(`/api/links/${seg(id)}/acks`, ack, { headers: linkHeaders(auth) }),
+      state: (auth, id, state) => api.put<void>(`/api/links/${seg(id)}/state`, state, { headers: linkHeaders(auth) }),
+      ping: (auth, id) => api.post<void>(`/api/links/${seg(id)}/ping`, undefined, { headers: linkHeaders(auth) }),
+      leave: (auth, id) => api.post<void>(`/api/links/${seg(id)}/leave`, undefined, { headers: linkHeaders(auth) }),
+      requestRoles: (auth, id, player) => api.post<void>(`/api/links/${seg(id)}/roles`, { player }, { headers: linkHeaders(auth) }),
+      answerRoles: (auth, id, accept) => api.post<void>(`/api/links/${seg(id)}/roles/${accept ? 'accept' : 'decline'}`, undefined, { headers: linkHeaders(auth) }),
+    },
+
+    realtime: createHttpRealtime({ client: api, settings: opts.realtime ?? null }),
   }
 
   return { services, client: api }

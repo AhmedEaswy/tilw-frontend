@@ -18,6 +18,7 @@ export function useErrorText() {
       case 'limit_reached': return t('errors.limitReached')
       case 'storage_full': return t('errors.storageFull')
       case 'storage_not_linked': return t('errors.storageNotLinked')
+      case 'partner_offline': return t('errors.partnerOffline')
       default: return t('errors.unknown')
     }
   }

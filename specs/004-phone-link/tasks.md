@@ -17,21 +17,21 @@ description: "Task list for Web app — phone link (release 2)"
 
 ## Phase 1: Setup
 
-- [ ] T001 Draw the phone-link frames L1–L8 on a new Figma page `08 · Release 2 · Phone link`, from page `01 · Design system` (desktop Arabic light first, plus the phone frames for L4–L6). Record each node id in `specs/004-phone-link/gaps.md`. **No screen task (T020 onward) starts before its frame exists** (constitution II).
-- [ ] T002 [P] Add `pusher-js@^8` and `uqr` to `package.json` dependencies and install them.
-- [ ] T003 [P] Add `runtimeConfig.public.realtime` (`key`, `host`, `port`, `scheme`; empty by default, `NUXT_PUBLIC_REALTIME_*`) and `routeRules['/remote'] = { ssr: false }` in `nuxt.config.ts`. Make `/remote` `noindex` (add it to the robots/noindex handling the app already has for `/app`).
-- [ ] T004 [P] Add the i18n key groups `link.*` (panel, status, reasons, requests, history), `remote.*` (start, controls, results, end screens) and `limits.phone_link.allowed` to `i18n/locales/ar.json` and `i18n/locales/en.json` (each story fills its keys).
+- [X] T001 Draw the phone-link frames L1–L8 on a new Figma page `08 · Release 2 · Phone link`, from page `01 · Design system` (desktop Arabic light first, plus the phone frames for L4–L6). Record each node id in `specs/004-phone-link/gaps.md`. **No screen task (T020 onward) starts before its frame exists** (constitution II). *(MVP frames L1, L2, L4, L5 drawn on page `276:157`; L3 and L6–L8 are drawn at the start of US2/US4/US5.)*
+- [X] T002 [P] Add `pusher-js@^8` and `uqr` to `package.json` dependencies and install them.
+- [X] T003 [P] Add `runtimeConfig.public.realtime` (`key`, `host`, `port`, `scheme`; empty by default, `NUXT_PUBLIC_REALTIME_*`) and `routeRules['/remote'] = { ssr: false }` in `nuxt.config.ts`. Make `/remote` `noindex` (add it to the robots/noindex handling the app already has for `/app`).
+- [X] T004 [P] Add the i18n key groups `link.*` (panel, status, reasons, requests, history), `remote.*` (start, controls, results, end screens) and `limits.phone_link.allowed` to `i18n/locales/ar.json` and `i18n/locales/en.json` (each story fills its keys).
 
 ## Phase 2: Foundation (blocks all stories)
 
-- [ ] T005 Add every type in data-model.md to `app/services/types.ts`:
+- [X] T005 Add every type in data-model.md to `app/services/types.ts`:
   - the link and remote shapes: `LinkParty`, `PhoneLink`, `PhoneLinkWithCode`, `PairingCode`, `LinkRemote`, `Pairing`, `RealtimeSettings`;
   - the message shapes: `LinkCommand`, `CommandType`, `LinkAck`, `RefusalReason`, `StudioState`;
   - the realtime shapes: `LinkEvent`, `PresenceMember`, `ConnectionState`, `LinkAuth`;
   - `'partner_offline'` in `PortErrorCode`.
-- [ ] T006 Add `LinkPort`, `LinkRelayPort`, `RealtimePort` and `RealtimeConnection` to `app/services/ports.ts`, exactly as in contracts/ports.md, and add `links`, `relay` and `realtime` to `Services`.
-- [ ] T007 Add `'partner_offline'` (409) to `CODES` in `app/services/http/client.ts`, and give it a fallback text in `app/composables/useErrorText.ts`.
-- [ ] T008 Mock link backend in `app/services/mock/link.ts`, persisted in KV `tilw:mock:links:v1`. It applies the backend rules (research R11):
+- [X] T006 Add `LinkPort`, `LinkRelayPort`, `RealtimePort` and `RealtimeConnection` to `app/services/ports.ts`, exactly as in contracts/ports.md, and add `links`, `relay` and `realtime` to `Services`.
+- [X] T007 Add `'partner_offline'` (409) to `CODES` in `app/services/http/client.ts`, and give it a fallback text in `app/composables/useErrorText.ts`.
+- [X] T008 Mock link backend in `app/services/mock/link.ts`, persisted in KV `tilw:mock:links:v1`. It applies the backend rules (research R11):
   - codes: 6 digits plus a URL secret, 5 minutes, single use, the same `token_invalid` for wrong, used and expired codes, and `rate_limited` after 5 wrong tries in 15 minutes;
   - start: reuses an open link for the same script and host;
   - remotes: one active, a second one pending for 2 minutes, accept/decline;
@@ -39,34 +39,34 @@ description: "Task list for Web app — phone link (release 2)"
   - role requests last 30 seconds;
   - end: the 10-minute idle rule on the mock clock, and end reasons;
   - `partner_offline` when the receiver has no live heartbeat.
-- [ ] T009 Mock realtime in `app/services/mock/realtime.ts`: a `RealtimePort` on `BroadcastChannel('tilw-link-mock')`.
+- [X] T009 Mock realtime in `app/services/mock/realtime.ts`: a `RealtimePort` on `BroadcastChannel('tilw-link-mock')`.
   - Channel-addressed events, and authorisation of the same channel rules as the backend (host, own remote, presence; a pending remote may join only its own channel).
   - Presence: heartbeats every 2 s, and a member is removed after 6 s without one.
   - Connection-state callbacks, and a per-tab `offline` knob that stops heartbeats and delivery.
-- [ ] T010 Wire `links`, `relay` and `realtime` into `createMockServices` in `app/services/mock/index.ts`. Add `links` to the plugin's `guard()` set in `app/plugins/services.ts`, and leave `relay` and `realtime` unguarded (contracts/ports.md).
-- [ ] T011 HTTP adapter for `LinkPort` and `LinkRelayPort` in `app/services/http/index.ts`, with every route in contracts/ports.md. `LinkAuth` `remote` adds `Authorization: Bearer <credential>` per request (research R4).
-- [ ] T012 HTTP realtime adapter in `app/services/http/realtime.ts`:
+- [X] T010 Wire `links`, `relay` and `realtime` into `createMockServices` in `app/services/mock/index.ts`. Add `links` to the plugin's `guard()` set in `app/plugins/services.ts`, and leave `relay` and `realtime` unguarded (contracts/ports.md).
+- [X] T011 HTTP adapter for `LinkPort` and `LinkRelayPort` in `app/services/http/index.ts`, with every route in contracts/ports.md. `LinkAuth` `remote` adds `Authorization: Bearer <credential>` per request (research R4).
+- [X] T012 HTTP realtime adapter in `app/services/http/realtime.ts`:
   - dynamic `import('pusher-js')`, with options per research R1;
   - authorisation through `channelAuthorization.customHandler`, which posts `{ socket_id, channel_name }` to `/api/broadcasting/auth` through the shared client with the same `LinkAuth`;
   - events bound by their bare names, and presence mapped to `PresenceMember`;
   - `settings()` returns `runtimeConfig.public.realtime`, or `null` when its key is empty.
-- [ ] T013 [P] `tests/unit/link-ports.test.ts`: a contract suite run against the mock and the HTTP adapter (fake fetch and a fake Pusher). It covers:
+- [X] T013 [P] `tests/unit/link-ports.test.ts`: a contract suite run against the mock and the HTTP adapter (fake fetch and a fake Pusher). It covers:
   - start, reuse, new code, pair by code and by secret, code errors and the rate limit;
   - command and ack routing, state with preview stripping, `partner_offline`;
   - the second phone (accept/decline/lapse), roles, end with each reason;
   - `401` after the end.
-- [ ] T014 [P] `/__mock` phone link section in `app/pages/__mock.vue`: "this tab offline" toggle, "pair a mock Tilw app" (an app remote that can be player: auto-acks commands and sends state; research R11), end a link with a chosen reason, and the existing clock offset. Add helpers `linkKnob(page, …)` and `phonePage(context)` to `tests/e2e/r2.ts` (or a new `tests/e2e/link.ts`).
-- [ ] T015 Create `app/composables/useLinkPlayer.ts`: a registry of one `LinkPlayer` (`scriptId`, `apply`, `snapshot`), `register` and `unregister` on mount and unmount, and `changed()`, which tells the link store to send state (data-model).
-- [ ] T016 Create `app/stores/link.ts` (`useLinkStore`), with the fields, actions and status transitions in data-model.md:
+- [X] T014 [P] `/__mock` phone link section in `app/pages/__mock.vue`: "this tab offline" toggle, "pair a mock Tilw app" (an app remote that can be player: auto-acks commands and sends state; research R11), end a link with a chosen reason, and the existing clock offset. Add helpers `linkKnob(page, …)` and `phonePage(context)` to `tests/e2e/r2.ts` (or a new `tests/e2e/link.ts`). *(Done: offline-tab toggle and "end the open link with a reason" on /__mock. The mock Tilw app remote is deferred to US4, where the role swap needs it. Two-page e2e helpers live in `tests/e2e/link.spec.ts`.)*
+- [X] T015 Create `app/composables/useLinkPlayer.ts`: a registry of one `LinkPlayer` (`scriptId`, `apply`, `snapshot`), `register` and `unregister` on mount and unmount, and `changed()`, which tells the link store to send state (data-model).
+- [X] T016 Create `app/stores/link.ts` (`useLinkStore`), with the fields, actions and status transitions in data-model.md:
   - Connect and subscribe to the host channel and presence after `start` or `current`.
   - On `command`: dispatch to the registered player, or refuse with `unsupported`, then post the ack.
   - On `member_added`: send the full state.
   - Keep a private `seq`, and coalesce state sends to one every 150 ms, sending the newest (research R6).
   - Drop the connection on `link.ended`.
-  - **No import of, or reference to, the recorder** (research R14).
-- [ ] T017 [P] Create `app/composables/useHostTab.ts`: Web Lock `tilw-link-host`, with a `BroadcastChannel('tilw-link')` fallback and a "move here" handoff (research R8). The link store uses it before connecting.
-- [ ] T018 [P] Create `app/components/link/QrCode.vue`: `uqr` → inline SVG, dark on white with a 4-module quiet zone in both themes, at least 200 px on desktop, with an `aria-label` from i18n.
-- [ ] T019 [P] Create `app/components/link/RemoteControls.vue` (presentational):
+  - **No import of, or reference to, the recorder** (research R14). *(The logic lives in framework-free `app/services/link/host.ts` (like the upload queue), with `app/stores/link.ts` as a thin Pinia mirror, so it is unit-tested without Nuxt.)*
+- [X] T017 [P] Create `app/composables/useHostTab.ts`: Web Lock `tilw-link-host`, with a `BroadcastChannel('tilw-link')` fallback and a "move here" handoff (research R8). The link store uses it before connecting.
+- [X] T018 [P] Create `app/components/link/QrCode.vue`: `uqr` → inline SVG, dark on white with a 4-module quiet zone in both themes, at least 200 px on desktop, with an `aria-label` from i18n.
+- [X] T019 [P] Create `app/components/link/RemoteControls.vue` (presentational):
   - props: `state`, `pending`, `lastResult`, `disabled`, `recordingAvailable`; emits `send(type, extra)`;
   - big Play/Pause, Next and Previous; secondary restart, go to paragraph, faster, slower, speed, text size, record and stop;
   - a result line, 44×44 targets, and RTL/LTR mirroring of Next and Previous [L5].
@@ -82,18 +82,18 @@ description: "Task list for Web app — phone link (release 2)"
 
 ### Tests
 
-- [ ] T020 [P] [US1] `tests/unit/link-store.test.ts`:
+- [X] T020 [P] [US1] `tests/unit/link-store.test.ts`:
   - `open()` gives waiting with a code, then connected on `member_added` (remote), with the full state sent;
   - commands dispatch to the player and are acked with its result, and with no player (or another script) they are refused with `unsupported`;
   - state sends are coalesced (≤ 1 per 150 ms, newest wins) and `seq` increases;
-  - `limit_reached` gives `locked`, and no realtime settings give `unavailable`.
-- [ ] T021 [P] [US1] `tests/unit/remote-store.test.ts`:
+  - `limit_reached` gives `locked`, and no realtime settings give `unavailable`. *(In `tests/unit/link-host-remote.test.ts`, against the framework-free host/remote modules and the two-tab mock.)*
+- [X] T021 [P] [US1] `tests/unit/remote-store.test.ts`:
   - a hash secret pairs, and the hash is removed;
   - a code pairs; `token_invalid` and `rate_limited` give their messages;
   - `send` shows done on ack, refused with a reason, or not delivered after 5 s or on `partner_offline`, and a late ack after the timeout is ignored;
   - a state with a lower or equal `seq` is dropped;
-  - the pairing is stored with `lastSeenAt`.
-- [ ] T022 [P] [US1] `tests/e2e/link.spec.ts` (US1 block), with a studio page and a phone page in one context:
+  - the pairing is stored with `lastSeenAt`. *(Same file as T020.)*
+- [X] T022 [P] [US1] `tests/e2e/link.spec.ts` (US1 block), with a studio page and a phone page in one context:
   - Connect phone shows the QR, code and countdown;
   - the phone pairs by code; Play, Next and Faster apply in the studio and show as done on the phone;
   - Next at the last paragraph shows the reason;
@@ -104,25 +104,25 @@ description: "Task list for Web app — phone link (release 2)"
 
 ### Implementation
 
-- [ ] T023 [US1] Create `app/components/link/ConnectPanel.vue` (waiting and connected states): QR, the 6-digit code in large digits, the address as copyable text, the expiry countdown with **New code** when it runs out, the remote's name and kind, and **End link**. It is a side drawer on desktop and a bottom sheet on phones, using the reading-settings drawer layout [L1].
-- [ ] T024 [US1] Create `app/components/link/LinkIndicator.vue`: a masthead dot and label (off / waiting / connected) that opens the panel. Its fixed width prevents layout shift, and a polite live region announces status changes [L2].
-- [ ] T025 [US1] Rehearsal: in `app/pages/app/scripts/[id]/rehearse.vue`, add the indicator and panel, and register a `LinkPlayer` through `useLinkPlayer`:
+- [X] T023 [US1] Create `app/components/link/ConnectPanel.vue` (waiting and connected states): QR, the 6-digit code in large digits, the address as copyable text, the expiry countdown with **New code** when it runs out, the remote's name and kind, and **End link**. It is a side drawer on desktop and a bottom sheet on phones, using the reading-settings drawer layout [L1].
+- [X] T024 [US1] Create `app/components/link/LinkIndicator.vue`: a masthead dot and label (off / waiting / connected) that opens the panel. Its fixed width prevents layout shift, and a polite live region announces status changes [L2].
+- [X] T025 [US1] Rehearsal: in `app/pages/app/scripts/[id]/rehearse.vue`, add the indicator and panel, and register a `LinkPlayer` through `useLinkPlayer`:
   - `apply` maps the commands to `engine.toggle/play/stop/next/prev/goTo/restart` and to the reader store's `wpm` and `fontSize` setters, using the same speed and size steps as `ReaderControls`;
   - refusals: `at_end`/`at_start` at the bounds, `not_recording_mode` for record commands, `unsupported` during the countdown or with a dialog open;
   - `snapshot` builds the state (title ≤ 120 characters, paragraph, count, playing, mode, wpm, size, `recording.state: 'unavailable'`, previews ≤ 120 characters from `reader.paragraphs`);
-  - call `changed()` from watchers on paragraph, playing and settings.
-- [ ] T026 [US1] Create `app/stores/remote.ts` (`useRemoteStore`), with phases and actions per data-model:
+  - call `changed()` from watchers on paragraph, playing and settings. *(Command mapping and snapshot are shared in `app/utils/linkCommands.ts` so the record page (T037) reuses them.)*
+- [X] T026 [US1] Create `app/stores/remote.ts` (`useRemoteStore`), with phases and actions per data-model:
   - `start()`: hash secret → pair, then `history.replaceState`; otherwise a stored pairing less than 10 minutes old → reconnect; otherwise code entry.
   - Subscribe to `channels.own` and `channels.presence`.
   - Commands use a pending map with 5-second timers.
   - Drop states whose `seq` isn't higher.
-  - Persist and clear `localStorage['tilw:remote:v1']`.
-- [ ] T027 [US1] Create `app/layouts/remote.vue` (brand, language switch, no studio chrome) and `app/pages/remote.vue`, with three steps:
+  - Persist and clear `localStorage['tilw:remote:v1']`. *(Logic in framework-free `app/services/link/remote.ts`; `app/stores/remote.ts` mirrors it.)*
+- [X] T027 [US1] Create `app/layouts/remote.vue` (brand, language switch, no studio chrome) and `app/pages/remote.vue`, with three steps:
   - the start step: a 6-digit numeric input (`inputmode="numeric"`, `autocomplete="one-time-code"`) with the errors from Story 1 #3 [L4];
   - the connected step: `RemoteControls` with the title, "paragraph N of M" and previews in the script's direction [L5];
-  - focus management between the steps.
-- [ ] T028 [US1] Remote language: with no saved choice, the remote page uses English when `navigator.language` starts with `en`, otherwise Arabic, and the layout's switch saves `localStorage['tilw:remote:locale']`. Implement this in `app/plugins/locale.client.ts`, branching on the `/remote` route only, so the studio's behaviour is unchanged (research R9).
-- [ ] T029 [US1] Plan limit: add `'phone_link.allowed'` to `KNOWN_LIMITS` in `app/utils/limits.ts`, with a yes/no display on `app/pages/app/settings/plan.vue`. Connect phone shows locked when `plan.limit('phone_link.allowed') === false`, and opens `LimitDialog` on a `limit_reached` from `start` (research R12) [L1 locked].
+  - focus management between the steps. *(One numeric input instead of six boxes for accessibility and paste/one-time-code; recorded as gap G-L3.)*
+- [X] T028 [US1] Remote language: with no saved choice, the remote page uses English when `navigator.language` starts with `en`, otherwise Arabic, and the layout's switch saves `localStorage['tilw:remote:locale']`. Implement this in `app/plugins/locale.client.ts`, branching on the `/remote` route only, so the studio's behaviour is unchanged (research R9).
+- [X] T029 [US1] Plan limit: add `'phone_link.allowed'` to `KNOWN_LIMITS` in `app/utils/limits.ts`, with a yes/no display on `app/pages/app/settings/plan.vue`. Connect phone shows locked when `plan.limit('phone_link.allowed') === false`, and opens `LimitDialog` on a `limit_reached` from `start` (research R12) [L1 locked].
 
 **Checkpoint**: US1 unit and e2e tests pass on the mock; a phone tab drives rehearsal.
 

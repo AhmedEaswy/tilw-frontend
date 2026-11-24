@@ -3,7 +3,12 @@
 </script>
 
 <template>
-  <div class="stage"><slot /></div>
+  <div class="stage">
+    <slot />
+    <!-- Feature 004: the Connect phone panel's locked state offers the release-2 upgrade path from the stage. -->
+    <LimitDialog />
+    <UpgradeDialog />
+  </div>
 </template>
 
 <style scoped>

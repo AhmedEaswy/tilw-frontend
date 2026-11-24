@@ -18,6 +18,7 @@ useHead({ title: () => `${t('reader.title')} · ${reader.script?.title ?? ''} ·
 
 const settings = computed(() => reader.settings)
 const engine = useReaderEngine({ words: computed(() => reader.paragraphWords), pauses: computed(() => reader.pauses), settings })
+const link = useLinkStore()
 
 const uiDir = computed<'rtl' | 'ltr'>(() => (localeProperties.value.dir === 'rtl' ? 'rtl' : 'ltr'))
 const reducedMotion = usePreferredReducedMotion()
@@ -28,6 +29,8 @@ async function load() {
   await reader.load(id.value)
   engine.stop()
   engine.seek(positionToProgress(engine.timeline.value, reader.script?.lastPosition))
+  // Feature 004: a phone linked to this script before a reload reconnects to the studio without a new code.
+  if (reader.status === 'ready') void link.resume(id.value)
 }
 onMounted(load)
 watch(id, load)
@@ -38,10 +41,47 @@ const settingsView = ref<'main' | 'more'>('main')
 const panel = ref<{ focus: () => void }>()
 const settingsBtn = ref<HTMLButtonElement>()
 function openSettings(view: 'main' | 'more' = 'main') {
+  linkOpen.value = false
   settingsView.value = view
   settingsOpen.value = true
   nextTick(() => panel.value?.focus())
 }
+
+// ---------- feature 004: Connect phone (Figma L1, L2) ----------
+const linkOpen = ref(false)
+const linkPanel = ref<{ focus: () => void }>()
+const linkBtn = ref<{ $el: HTMLElement }>()
+function openLink() {
+  settingsOpen.value = false
+  linkOpen.value = true
+  // Opening the panel starts the link when there isn't one for this script yet.
+  if (link.status === 'idle' || (link.status === 'ended' && link.link?.scriptId !== id.value)) void link.open(id.value)
+  nextTick(() => linkPanel.value?.focus())
+}
+function closeLink() {
+  if (!linkOpen.value) return
+  linkOpen.value = false
+  if (link.status === 'ended') link.reset()
+  nextTick(() => linkBtn.value?.$el.focus())
+}
+const docked = computed(() => settingsOpen.value || linkOpen.value)
+
+/** The phone drives this page through the same functions as its buttons and shortcuts (research R6). */
+const player = useLinkPlayer(() => ({
+  scriptId: id.value,
+  apply: cmd => applyReadingCommand(cmd, {
+    engine,
+    settings: settings.value,
+    update: updateSettings,
+    ready: reader.status === 'ready' && reader.paragraphs.length > 0,
+    blocked: recoveryOpen.value,
+  }),
+  snapshot: () => readingSnapshot({ title: reader.script?.title, paragraphs: reader.paragraphs, engine, settings: settings.value }),
+}))
+watch(
+  () => [engine.paragraph.value, engine.playing.value, engine.ended.value, settings.value.wpm, settings.value.fontSize, settings.value.mode, reader.script?.title, reader.paragraphs.length],
+  () => player.changed(),
+)
 function closeSettings() {
   if (!settingsOpen.value) return
   settingsOpen.value = false
@@ -118,6 +158,7 @@ useShortcuts(
       if (engine.countdown.value) engine.stop()
       else if (recoveryOpen.value && recoveryView.value === 'choose') recoveryView.value = 'notice'
       else if (settingsOpen.value && settingsView.value === 'more') settingsView.value = 'main'
+      else if (linkOpen.value) closeLink()
       else closeSettings()
     },
     next: () => engine.next(),
@@ -140,7 +181,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="rh" :class="{ docked: settingsOpen }">
+  <div class="rh" :class="{ docked }">
     <div class="main">
       <header class="top">
         <NuxtLink :to="editorPath" class="round back" :aria-label="t('library.backToScripts')">
@@ -148,6 +189,14 @@ onBeforeUnmount(() => {
         </NuxtLink>
         <h1 class="name" dir="auto">{{ reader.script?.title ?? '' }}</h1>
         <p class="mode">{{ t('reader.title') }}</p>
+        <LinkIndicator
+          ref="linkBtn"
+          class="link-ind"
+          :status="link.status"
+          :badge="!!link.pendingRemote"
+          :expanded="linkOpen"
+          @open="linkOpen ? closeLink() : openLink()"
+        />
         <NuxtLink :to="`/app/scripts/${id}/record`" class="rec">{{ t('library.setupRecording') }}</NuxtLink>
         <button
           ref="settingsBtn"
@@ -225,6 +274,8 @@ onBeforeUnmount(() => {
     </div>
 
     <div v-if="settingsOpen" class="scrim" aria-hidden="true" @click="closeSettings" />
+    <div v-if="linkOpen" class="scrim" aria-hidden="true" @click="closeLink" />
+    <ConnectPanel v-if="linkOpen" ref="linkPanel" class="side" :script-id="id" @close="closeLink" />
     <SettingsPanel
       v-if="settingsOpen"
       ref="panel"
@@ -281,7 +332,7 @@ onBeforeUnmount(() => {
 /* header (94 px with a divider) */
 .top {
   display: grid;
-  grid-template-columns: 44px minmax(0, auto) minmax(0, 1fr) auto 44px;
+  grid-template-columns: 44px minmax(0, auto) minmax(0, 1fr) auto auto 44px;
   align-items: center;
   gap: 20px;
   block-size: 94px;
@@ -402,7 +453,7 @@ onBeforeUnmount(() => {
 
 /* Docked panel narrows the stage (6:28: 852 px stage + 428 px inspector). */
 .rh.docked .top {
-  grid-template-columns: 44px minmax(0, auto) minmax(0, 1fr) auto 44px;
+  grid-template-columns: 44px minmax(0, auto) minmax(0, 1fr) auto auto 44px;
   padding-inline: 32px 34px;
 }
 .rh.docked .stage-body {
@@ -447,7 +498,7 @@ onBeforeUnmount(() => {
     padding-block-end: calc(32px + env(safe-area-inset-bottom, 0px));
   }
   .top {
-    grid-template-columns: 44px minmax(0, 1fr) 44px;
+    grid-template-columns: 44px minmax(0, 1fr) auto 44px;
     gap: 16px;
     block-size: 73px;
     padding-inline: max(14px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px));

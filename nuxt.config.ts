@@ -29,6 +29,12 @@ export default defineNuxtConfig({
         free: { priceMonthlyCents: 0, priceYearlyCents: 0 },
         pro: { priceMonthlyCents: 800, priceYearlyCents: 7700 },
       },
+      /**
+       * Feature 004 (phone link): the realtime server the studio connects to (Laravel Reverb, Pusher protocol).
+       * NUXT_PUBLIC_REALTIME_KEY / _HOST / _PORT / _SCHEME. An empty key in http mode means phone link is unavailable.
+       * The phone remote gets these from the pairing answer instead.
+       */
+      realtime: { key: '', host: '', port: 443, scheme: 'https' },
     },
   },
 
@@ -38,6 +44,8 @@ export default defineNuxtConfig({
     '/__mock': { ssr: false },
     // Release 2: the email-confirmation link carries its token in the query; render it in the browser like the app.
     '/confirm-email': { ssr: false },
+    // Feature 004: the public phone remote. Its pairing secret is in the hash; it runs only in the browser.
+    '/remote': { ssr: false },
   },
 
   nitro: {
@@ -50,7 +58,7 @@ export default defineNuxtConfig({
     prerender: {
       crawlLinks: false,
       // Add routes here as their pages land (waitlist, forgot-password, privacy, terms…).
-      routes: ['/', '/signin', '/forgot-password', '/forgot-password/sent', '/reset-password', '/waitlist', '/waitlist/confirmed', '/privacy', '/terms', '/app', '/__mock'],
+      routes: ['/', '/signin', '/forgot-password', '/forgot-password/sent', '/reset-password', '/waitlist', '/waitlist/confirmed', '/privacy', '/terms', '/app', '/__mock', '/remote'],
     },
   },
 

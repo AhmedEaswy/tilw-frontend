@@ -113,7 +113,8 @@
     "notFound": "We couldn't find this page.",
     "limitReached": "This would go over a limit of your plan.",
     "storageFull": "There isn't enough space in Google Drive.",
-    "storageNotLinked": "Google Drive isn't linked. Link it in Storage settings."
+    "storageNotLinked": "Google Drive isn't linked. Link it in Storage settings.",
+    "partnerOffline": "The other device isn't connected right now."
   },
   "placeholder": {
     "title": "{screen}",
@@ -591,6 +592,9 @@
       "history": {
         "versions": "History versions per script",
         "days": "History kept for"
+      },
+      "phone_link": {
+        "allowed": "Phone link"
       }
     },
     "providers": {
@@ -852,5 +856,127 @@
     "cancelHint": "Changed your mind? Sign in before that date and the deletion is cancelled.",
     "driveStays": "Takes stay in this browser, and files stay in your own Google Drive.",
     "cancelledToast": "Your account deletion was cancelled. Welcome back."
+  },
+  "link": {
+    "connect": "Connect phone",
+    "title": "Connect phone",
+    "done": "Done",
+    "intro": "Scan the code with your phone's camera to control the reading from it. No app and no sign-in on the phone.",
+    "qrLabel": "QR code for the phone remote address",
+    "codeLabel": "Or open the address on your phone and type the code",
+    "copyAddress": "Copy address",
+    "copied": "Address copied",
+    "expiresIn": "Code works for {time}",
+    "expired": "This code has expired.",
+    "newCode": "New code",
+    "previews": "Show the start of each paragraph on the phone",
+    "previewsHelp": "The phone sees the title and the reading position. Turn this off to keep the script text here only.",
+    "end": "End link",
+    "anotherPhone": "Another phone?",
+    "connectedSince": "Connected for {time} · controls the reading",
+    "kind": {
+      "browser": "Phone browser",
+      "app": "Tilw app"
+    },
+    "status": {
+      "idle": "Connect phone",
+      "starting": "Getting ready…",
+      "waiting": "Waiting for phone",
+      "connected": "Phone connected",
+      "partnerOffline": "Phone offline",
+      "ended": "Link ended",
+      "locked": "Connect phone",
+      "unavailable": "Phone link isn't available",
+      "otherTab": "Open in another tab"
+    },
+    "connectedTitle": "Connected",
+    "offlineTitle": "Phone offline",
+    "offlineText": "The phone reconnects on its own when its network is back within 10 minutes, with no new code.",
+    "endedTitle": "Link ended",
+    "startAgain": "Connect a phone",
+    "lockedTitle": "Your plan doesn't include phone link",
+    "lockedText": "Your current plan doesn't include controlling the studio from a phone. Upgrade to use your phone as a remote for reading and recording.",
+    "myPlan": "My plan",
+    "unavailableText": "Phone link isn't available right now. Try again later.",
+    "otherTabText": "Phone link is open in another tab of this studio.",
+    "moveHere": "Move it here",
+    "ended": {
+      "owner": "The studio ended this link.",
+      "remote": "The phone left.",
+      "idle": "The link ended after 10 minutes with no connection.",
+      "script_deleted": "The script was deleted.",
+      "signed_out": "Signed out on every device.",
+      "device_revoked": "The device was signed out.",
+      "email_changed": "The account's email changed.",
+      "account_deleted": "The account was deleted.",
+      "limit": "Your plan no longer includes phone link.",
+      "replaced": "Another phone took over.",
+      "declined": "The studio didn't accept this phone.",
+      "lapsed": "The studio didn't answer in time.",
+      "left": "You left this studio.",
+      "unknown": "This link ended."
+    },
+    "accept": "Accept",
+    "decline": "Decline",
+    "requestText": "{name} wants to control this studio."
+  },
+  "remote": {
+    "pageTitle": "Phone remote",
+    "heading": "Control the reading from your phone",
+    "enterCode": "Type the code shown in the studio under Connect phone.",
+    "codeLabel": "6-digit code",
+    "connect": "Connect",
+    "connecting": "Connecting…",
+    "codeHelp": "The code works for 5 minutes, once. You don't need an app or an account.",
+    "invalid": "This code doesn't work. Ask the studio for a new one.",
+    "tooMany": "Too many tries. Try again in an hour.",
+    "connected": "Connected to the studio",
+    "studioOffline": "Studio offline",
+    "studioOfflineText": "The studio connection dropped. Your phone reconnects on its own when the network is back, with no new code.",
+    "leave": "Leave",
+    "paragraphOf": "Paragraph {n} of {total}",
+    "wpm": "{n} wpm",
+    "playing": "Reading",
+    "paused": "Paused",
+    "noPreview": "Script text on the phone is turned off.",
+    "waitingState": "Waiting for the studio…",
+    "commands": {
+      "play": "Play",
+      "pause": "Pause",
+      "next": "Next paragraph",
+      "previous": "Previous paragraph",
+      "goto": "Go to paragraph",
+      "restart": "From the start",
+      "faster": "Faster",
+      "slower": "Slower",
+      "speed": "Speed",
+      "textBigger": "Bigger text",
+      "textSmaller": "Smaller text",
+      "recordStart": "Record",
+      "recordStop": "Stop recording"
+    },
+    "textSize": "Text size",
+    "speed": "Speed",
+    "result": {
+      "applied": "Done: {command}",
+      "sending": "Sending: {command}",
+      "notDelivered": "Not delivered: the studio isn't connected"
+    },
+    "refused": {
+      "at_end": "Already at the last paragraph.",
+      "at_start": "Already at the first paragraph.",
+      "not_recording_mode": "Open the recording studio to record.",
+      "devices_off": "Camera and microphone are off.",
+      "already_recording": "Already recording.",
+      "not_recording": "Nothing is recording.",
+      "saving": "The take is being saved.",
+      "limit": "You've reached your plan's limit.",
+      "unsupported": "The studio isn't reading this script right now."
+    },
+    "endedTitle": "Link ended",
+    "newCodeHint": "Ask the studio for a new code.",
+    "enterNewCode": "Enter a new code",
+    "waitingAccept": "Waiting for the studio to accept",
+    "waitingAcceptText": "Another phone controls this studio now. Your request shows there and can be accepted within 2 minutes."
   }
 }

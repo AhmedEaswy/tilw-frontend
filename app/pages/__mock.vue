@@ -6,6 +6,7 @@
 import type { MockBackend } from '~/services/mock'
 import type { MockKnobs } from '~/services/mock/db'
 import { SEED_PASSWORD } from '~/services/mock/seed'
+import type { LinkEndReason } from '~/services/types'
 
 definePageMeta({ layout: false })
 useHead({ title: 'Mock backend · tilw', meta: [{ name: 'robots', content: 'noindex' }], htmlAttrs: { dir: 'ltr', lang: 'en' } })
@@ -132,6 +133,18 @@ function addPhone() {
   refresh()
   show('Added a phone device')
 }
+
+// ---------- feature 004: phone link ----------
+const linkOffline = ref(mock.knobs.linkOffline())
+watch(linkOffline, v => mock.knobs.setLinkOffline(v))
+const endReason = ref<LinkEndReason>('signed_out')
+const END_REASONS: LinkEndReason[] = ['owner', 'remote', 'idle', 'script_deleted', 'signed_out', 'device_revoked', 'email_changed', 'account_deleted', 'limit']
+async function endOpenLink() {
+  const link = await mock.services.links.current().catch(() => null)
+  if (!link) return show('No open phone link for the signed-in account')
+  mock.knobs.endLink(link.id, endReason.value)
+  show(`Ended link ${link.id} (${endReason.value})`)
+}
 </script>
 
 <template>
@@ -161,6 +174,22 @@ function addPhone() {
         <label class="ck"><input v-model="knobs.forceConflictOnNextSave" type="checkbox"> Conflict on next script save</label>
         <label class="ck"><input v-model="knobs.expireTokens" type="checkbox"> Treat reset/invite links as expired</label>
         <label class="ck"><input v-model="knobs.failPositionSave" type="checkbox"> Reading position saves fail</label>
+      </div>
+    </section>
+
+    <section>
+      <h2>Phone link (feature 004)</h2>
+      <p>Open the studio in one tab and <NuxtLink to="/remote">/remote</NuxtLink> in another: they share one link through this browser.</p>
+      <div class="row">
+        <label class="ck"><input v-model="linkOffline" type="checkbox"> This tab is offline for phone link (kept on reload)</label>
+      </div>
+      <div class="row">
+        <label>End reason
+          <select v-model="endReason" aria-label="End reason">
+            <option v-for="r in END_REASONS" :key="r" :value="r">{{ r }}</option>
+          </select>
+        </label>
+        <UiButton size="sm" @click="endOpenLink">End the open link</UiButton>
       </div>
     </section>
 
