@@ -82,7 +82,8 @@ export function createLinkHost(deps: HostDeps) {
 
   let conn: RealtimeConnection | null = null
   let player: LinkPlayer | null = null
-  let seq = 0
+  // Starts from the clock, not 0: a reloaded studio must number its states above the ones the phone already showed.
+  let seq = Date.now()
   let timer: ReturnType<typeof setTimeout> | null = null
   let lastSent = 0
   let holdingTab = false
@@ -128,13 +129,18 @@ export function createLinkHost(deps: HostDeps) {
     c.onState((s) => {
       const was = state.connection
       set({ connection: s })
-      // Back after a drop: the phone may have missed changes.
-      if (s === 'connected' && was !== 'connected') void sendState(true)
+      // Back after a drop: the phone may have missed changes, and the link may have ended while we were away.
+      if (s === 'connected' && was !== 'connected') {
+        void sendState(true)
+        void refresh()
+      }
     })
     // Keep-alive (backend realtime.md): a sign of life every 60 s so a quiet studio isn't ended as idle.
     if (keepAlive) clearInterval(keepAlive)
     keepAlive = setInterval(() => {
-      if (state.link) deps.relay.ping(SESSION, state.link.id).catch((e) => { if (isPortError(e, 'unauthenticated')) endLocal(null) })
+      if (state.link) deps.relay.ping(SESSION, state.link.id).catch((e) => { if (isPortError(e, 'unauthenticated')) void endedElsewhere(null) })
+      // A phone that rejoined without a presence event (same member, old socket not yet closed) still catches up.
+      if (state.partnerPresent) void sendState(true)
     }, 60_000)
     await c.subscribe(hostChannelOf(link.id), onEvent)
     await c.presence(presenceChannelOf(link.id), {
@@ -156,12 +162,30 @@ export function createLinkHost(deps: HostDeps) {
     })
   }
 
+  /**
+   * Ask the service about this link: pick up a new phone or a pending one, or, after the studio was offline, learn that
+   * the link ended meanwhile (its `link.ended` event was missed) and why.
+   */
   async function refresh() {
-    if (!state.link?.scriptId) return
+    const link = state.link
+    if (!link?.scriptId) return
     try {
-      const l = await deps.links.current(state.link.scriptId)
-      if (l && state.link && l.id === state.link.id) set({ link: l, pendingRemote: l.pendingRemote ?? state.pendingRemote })
-    } catch { /* keep what we have */ }
+      const l = await deps.links.current(link.scriptId)
+      if (state.phase !== 'open' || state.link?.id !== link.id) return
+      if (l && l.id === link.id) return set({ link: l, pendingRemote: l.pendingRemote ?? state.pendingRemote })
+      await endedElsewhere('idle')
+    } catch (e) {
+      if (isPortError(e, 'unauthenticated')) endLocal(null)
+      /* otherwise keep what we have */
+    }
+  }
+
+  /** The service no longer knows this link as open: end it here with the reason the service recorded, if it has one. */
+  async function endedElsewhere(fallback: HostState['endReason']) {
+    const link = state.link
+    if (!link || state.phase !== 'open') return
+    const ended = (await deps.links.list().catch(() => [] as PhoneLink[])).find(x => x.id === link.id)
+    if (state.phase === 'open' && state.link?.id === link.id) endLocal(ended?.endReason ?? fallback)
   }
 
   function endLocal(reason: HostState['endReason']) {
@@ -219,7 +243,7 @@ export function createLinkHost(deps: HostDeps) {
       await deps.relay.state(SESSION, link.id, payload)
     } catch (e) {
       if (isPortError(e, 'partner_offline')) set({ partnerPresent: false })
-      else if (isPortError(e, 'unauthenticated')) endLocal(null)
+      else if (isPortError(e, 'unauthenticated')) void endedElsewhere(null)
     }
   }
 

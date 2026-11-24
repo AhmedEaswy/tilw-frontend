@@ -1,5 +1,5 @@
 /**
- * Feature 004, US1 (T020, T021): the studio side (services/link/host.ts) and the phone side (services/link/remote.ts)
+ * Feature 004, US1 (T020, T021) and US2 (T030): the studio side (services/link/host.ts) and the phone side (services/link/remote.ts)
  * talking through the two-tab mock, as the studio page and /remote do.
  */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -252,7 +252,105 @@ describe('phone side (remote)', () => {
     t.store.value!.lastSeenAt = Date.now() - 11 * 60_000
     const stale = createLinkRemote({ relay: t.phoneTab.services.relay, realtime: t.phoneTab.services.realtime, store: t.store })
     await stale.start(null)
-    expect(stale.state.phase).toBe('start')
+    // US2: a pairing kept more than 10 minutes is forgotten and the phone says the link ended (L6 `284:414`).
+    expect(stale.state).toMatchObject({ phase: 'ended', ended: 'idle' })
     expect(t.store.value).toBeNull()
+  })
+})
+
+describe('US2: a dropped signal (T030)', () => {
+  let t: Awaited<ReturnType<typeof setup>>
+  beforeEach(async () => (t = await setup()))
+  afterEach(() => { t.host.reset(); t.remote.dispose() })
+
+  async function paired() {
+    const fake = fakePlayer(t.scriptId)
+    t.host.setPlayer(fake.player)
+    await t.host.open(t.scriptId)
+    await t.remote.pairWithCode(t.host.state.code!.code)
+    await flush()
+    return fake
+  }
+
+  it('shows the phone offline in the studio, then connected again with the full state re-sent', async () => {
+    const { p } = await paired()
+    expect(linkStatus(t.host.state)).toBe('connected')
+    t.phoneTab.hub.setOffline(true)
+    await flush()
+    expect(linkStatus(t.host.state)).toBe('partnerOffline')
+    expect(t.remote.state.connection).toBe('unavailable')
+
+    p.paragraph = 2 // the studio moved on while the phone was away
+    t.phoneTab.hub.setOffline(false)
+    await flush(12)
+    expect(linkStatus(t.host.state)).toBe('connected')
+    expect(t.remote.state.state?.paragraph).toBe(2)
+  })
+
+  it("disables the phone's controls while its own connection is unavailable", async () => {
+    await paired()
+    t.phoneTab.hub.setOffline(true)
+    await flush()
+    const live = t.remote.state.studioPresent && t.remote.state.connection === 'connected'
+    expect(live).toBe(false)
+    await t.remote.send('next')
+    await flush()
+    expect(t.remote.state.lastResult?.outcome).toBe('notDelivered')
+  })
+
+  it('wake(): reconnects a dropped phone, and ends one unused for 10 minutes', async () => {
+    await paired()
+    t.phoneTab.hub.setOffline(true)
+    await flush()
+    t.phoneTab.hub.setOffline(false)
+    await t.remote.wake()
+    await flush(12)
+    expect(t.remote.state).toMatchObject({ phase: 'connected', connection: 'connected', studioPresent: true })
+
+    t.store.value!.lastSeenAt = Date.now() - 11 * 60_000
+    const later = createLinkRemote({ relay: t.phoneTab.services.relay, realtime: t.phoneTab.services.realtime, store: t.store, now: () => Date.now() + 11 * 60_000 })
+    await later.start(null)
+    expect(later.state).toMatchObject({ phase: 'ended', ended: 'idle' })
+    later.dispose()
+  })
+
+  it('a reload whose credential the service refuses (401) forgets the pairing and shows the link ended', async () => {
+    await paired()
+    t.remote.dispose()
+    await t.host.end() // ended while the phone was closed: its event never arrived
+    await flush()
+    const reopened = createLinkRemote({ relay: t.phoneTab.services.relay, realtime: t.phoneTab.services.realtime, store: t.store })
+    await reopened.start(null)
+    expect(reopened.state).toMatchObject({ phase: 'ended', ended: 'unknown' })
+    expect(t.store.value).toBeNull()
+    reopened.dispose()
+  })
+
+  it('the phone takes the states of a reloaded studio, whose numbering starts over', async () => {
+    const { p } = await paired()
+    p.paragraph = 2
+    t.host.changed()
+    await flush()
+    expect(t.remote.state.state?.paragraph).toBe(2)
+    t.host.reset() // the studio tab reloads
+    await flush()
+    const again = createLinkHost({ ...t.studioTab.services, coalesceMs: 0 })
+    const fresh = fakePlayer(t.scriptId) // a reloaded page starts at the first paragraph
+    again.setPlayer(fresh.player)
+    await again.resume(t.scriptId)
+    await flush(12)
+    expect(t.remote.state.state?.paragraph).toBe(0)
+    again.reset()
+  })
+
+  it('a studio back online learns the link ended meanwhile, and why', async () => {
+    await paired()
+    const id = t.host.state.link!.id
+    t.studioTab.hub.setOffline(true)
+    await flush()
+    t.studioTab.knobs.endLink(id, 'idle') // ended while the studio was offline: its event never arrived
+    t.studioTab.hub.setOffline(false)
+    await flush(12)
+    expect(t.host.state).toMatchObject({ phase: 'ended', endReason: 'idle' })
   })
 })

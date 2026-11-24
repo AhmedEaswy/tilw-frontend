@@ -99,9 +99,11 @@ export function createMockHub(opts: MockHubOptions = {}) {
 
   function upsert(channel: string, member: PresenceMember, from: string) {
     const t = table(channel)
-    const had = t.has(member.id)
+    const prev = t.get(member.id)
     t.set(member.id, { member, tab: from, at: now() })
-    if (!had) watchersOf(channel).forEach(w => w.added(member))
+    // A member back from another tab (a reload whose goodbye got lost) counts as joining again, as with Pusher when
+    // the old socket closes before the new one subscribes.
+    if (!prev || prev.tab !== from) watchersOf(channel).forEach(w => w.added(member))
   }
   function drop(channel: string, memberId: string) {
     const t = table(channel)

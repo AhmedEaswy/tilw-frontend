@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Feature 004: the public phone remote (Figma L4 `278:164` / `278:218`, L5 `278:273` / `278:331`).
+ * Feature 004: the public phone remote (Figma L4 `278:164` / `278:218`, L5 `278:273` / `278:331`, L6 section `284:276`).
  * No account. Opened from the studio's QR (the one-time secret is in the hash and removed at once) or by typing the
  * 6-digit code; reconnects on its own with the pairing it kept for up to 10 minutes.
  */
@@ -50,11 +50,21 @@ const endText = computed(() => {
   return r ? t(`link.ended.${r}`) : t('link.ended.unknown')
 })
 
+// US2: keep the screen on while connected, and pick the link back up when the network or the page returns.
+useWakeLock(() => phase.value === 'connected')
+const wake = () => { if (document.visibilityState === 'visible') void remote.wake() }
+
 onMounted(() => {
   // The QR secret is used once: take it out of the address so it isn't kept in history or reused on reload.
   const secret = window.location.hash.slice(1)
   if (secret) history.replaceState(history.state, '', window.location.pathname + window.location.search)
   void remote.start(secret || null)
+  window.addEventListener('online', wake)
+  document.addEventListener('visibilitychange', wake)
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('online', wake)
+  document.removeEventListener('visibilitychange', wake)
 })
 </script>
 
@@ -91,7 +101,7 @@ onMounted(() => {
   <section v-else-if="phase === 'waitingAccept'" class="center" role="status">
     <h1>{{ t('remote.waitingAccept') }}</h1>
     <p class="lede">{{ t('remote.waitingAcceptText') }}</p>
-    <UiButton tone="dark" @click="remote.leave()">{{ t('remote.leave') }}</UiButton>
+    <UiButton tone="ghost" @click="remote.leave()">{{ t('remote.leave') }}</UiButton>
   </section>
 
   <!-- Controls (L5) -->

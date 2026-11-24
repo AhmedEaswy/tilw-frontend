@@ -135,21 +135,21 @@ description: "Task list for Web app — phone link (release 2)"
 
 ### Tests
 
-- [ ] T030 [P] [US2] Extend `tests/unit/link-store.test.ts` and `tests/unit/remote-store.test.ts`:
+- [X] T030 [P] [US2] Extend `tests/unit/link-store.test.ts` and `tests/unit/remote-store.test.ts` *(done in `tests/unit/link-host-remote.test.ts`, where the host and remote logic is tested)*:
   - `member_removed` gives `partnerOffline`, and `member_added` gives connected again with the full state re-sent;
   - the connection going `unavailable` makes the remote's controls disabled;
   - a reload with a stored pairing reconnects;
   - a stored pairing older than 10 minutes, or a `401`, is forgotten and shows "This link ended".
-- [ ] T031 [P] [US2] `tests/e2e/link.spec.ts` (US2 block):
+- [X] T031 [P] [US2] `tests/e2e/link.spec.ts` (US2 block):
   - mark the studio tab offline: the phone shows "Studio offline" within 10 s, and a command shows not delivered and isn't applied after it comes back;
   - reload the phone: it reconnects and shows the current paragraph;
   - move the clock 11 minutes: the phone shows "This link ended".
 
 ### Implementation
 
-- [ ] T032 [US2] Studio: offline status, and reconnecting after the socket recovers, in `app/stores/link.ts` (re-subscribe and send full state). The phone offline state goes in `ConnectPanel.vue` and `LinkIndicator.vue` [L1, L2].
-- [ ] T033 [US2] Remote: the studio offline phase, disabling controls, reconnecting on `online` and `visibilitychange`, refreshing `lastSeenAt` on every event and successful call, and the 10-minute and `401` end screens, in `app/stores/remote.ts` and `app/pages/remote.vue` [L5 offline, L6].
-- [ ] T034 [P] [US2] Create `app/composables/useWakeLock.ts`: request `navigator.wakeLock.request('screen')` while the remote is connected, request it again on `visibilitychange`, release it on end, and do nothing where it's unsupported. Use it in `app/pages/remote.vue`.
+- [X] T032 [US2] Studio: offline status, and reconnecting after the socket recovers, in `app/stores/link.ts` (re-subscribe and send full state). The phone offline state goes in `ConnectPanel.vue` and `LinkIndicator.vue` [L1, L2].
+- [X] T033 [US2] Remote: the studio offline phase, disabling controls, reconnecting on `online` and `visibilitychange`, refreshing `lastSeenAt` on every event and successful call, and the 10-minute and `401` end screens, in `app/stores/remote.ts` and `app/pages/remote.vue` [L5 offline, L6].
+- [X] T034 [P] [US2] Create `app/composables/useWakeLock.ts`: request `navigator.wakeLock.request('screen')` while the remote is connected, request it again on `visibilitychange`, release it on end, and do nothing where it's unsupported. Use it in `app/pages/remote.vue`.
 
 **Checkpoint**: US2 tests pass; a dropped phone recovers on its own.
 

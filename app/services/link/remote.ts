@@ -8,6 +8,7 @@
  *   studio isn't connected). A late answer after the 5 s is ignored; nothing is ever sent again later.
  * - Shows only the newest state (by `seq`).
  * - Forgets the pairing as soon as the link ends, this phone is replaced or declined, or the service refuses it.
+ * - US2: reconnects on its own when the network or the page comes back; a pairing unused for 10 minutes ends as idle.
  */
 import type { LinkRelayPort, RealtimeConnection, RealtimePort } from '../ports'
 import {
@@ -271,8 +272,27 @@ export function createLinkRemote(deps: RemoteDeps) {
         }
         return
       }
-      if (stored) deps.store.clear()
+      // Kept too long without contact: the link has ended as idle (or will); say so rather than show a bare code entry.
+      if (stored) return finish('idle')
       set({ phase: 'start' })
+    },
+
+    /**
+     * The phone is back (network `online`, or the page visible again after the screen was off): end a pairing older
+     * than 10 minutes, otherwise reconnect the socket if it dropped and check in with the service.
+     */
+    async wake() {
+      if (!pairing || state.phase === 'ended') return
+      if (now() - pairing.lastSeenAt >= reconnectMs) return finish('idle')
+      if (!conn || conn.state !== 'connected') {
+        try {
+          await connect()
+        } catch (e) {
+          if (isPortError(e, 'unauthenticated')) return finish('unknown')
+          return set({ connection: 'unavailable' })
+        }
+      }
+      if (!pairing.pending) await ping()
     },
 
     pairWithCode: (code: string) => pair({ code: code.replace(/\D/g, '') }),

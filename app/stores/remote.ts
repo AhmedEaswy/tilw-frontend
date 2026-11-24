@@ -39,6 +39,7 @@ export const useRemoteStore = defineStore('remote', () => {
     pairWithCode: (code: string) => c().pairWithCode(code),
     send: (type: CommandType, extra?: { paragraph?: number; wpm?: number }) => c().send(type, extra),
     leave: () => c().leave(),
+    wake: () => c().wake(),
     again: () => c().again(),
   }
 })
