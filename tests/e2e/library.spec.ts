@@ -1,9 +1,11 @@
 import { expect, test, type Page } from '@playwright/test'
+import { hydrated } from './r2'
 
 // T047 — library flows against the static build and the in-browser mock.
 
 async function signIn(page: Page) {
   await page.goto('/signin')
+  await hydrated(page)
   await page.getByLabel('البريد الإلكتروني').fill('layan@example.com')
   await page.getByLabel('كلمة المرور', { exact: true }).fill('password123')
   await page.getByRole('button', { name: 'تسجيل الدخول' }).click()
@@ -17,8 +19,10 @@ test('lists seeded scripts with the last opened card', async ({ page }) => {
   await expect(page.getByRole('link', { name: /رسالة إلى المستمع/ })).toBeVisible()
 })
 
-test('search filters by body text', async ({ page }) => {
+test('search filters by body text', async ({ page, isMobile }) => {
   await signIn(page)
+  // Phone (6:20) folds the search field behind its toggle.
+  if (isMobile) await page.getByRole('button', { name: 'ابحث في نصوصك' }).click()
   await page.getByPlaceholder('ابحث في نصوصك').fill('المستمع')
   await expect(page.getByRole('link', { name: /رسالة إلى المستمع/ })).toBeVisible()
   await expect(page.getByRole('link', { name: /وراء الكواليس/ })).toHaveCount(0)
@@ -28,7 +32,7 @@ test('sort by title, pin, and archive / restore', async ({ page }) => {
   await signIn(page)
   await page.getByRole('button', { name: 'الأحدث أولاً' }).click()
   await page.getByText('حسب العنوان').click()
-  await page.getByRole('button', { name: 'تم' }).click()
+  await page.getByRole('button', { name: 'تم', exact: true }).click() // not "خيارات رسالة إلى المستمع"
   await expect(page.getByRole('button', { name: 'حسب العنوان' })).toBeVisible()
 
   await page.getByRole('button', { name: 'خيارات وراء الكواليس' }).click()
@@ -46,13 +50,15 @@ test('sort by title, pin, and archive / restore', async ({ page }) => {
   await expect(page.getByText('لا نصوص في الأرشيف.')).toBeVisible()
 })
 
-test('new script opens the editor; import rejects non-text files', async ({ page }) => {
+test('new script opens the editor; import rejects non-text files', async ({ page, isMobile }) => {
   await signIn(page)
   await page.getByRole('button', { name: 'نص جديد' }).first().click()
   await page.getByLabel('عنوان النص').fill('نص تجريبي')
   await page.getByRole('button', { name: 'فتح المحرر' }).click()
   await expect(page).toHaveURL(/\/app\/scripts\/s_/)
 
+  // Phone (6:20) has no import in the library header; it is offered on the empty library only.
+  if (isMobile) return
   await page.goto('/app/scripts')
   await page.getByRole('button', { name: 'استيراد ملف' }).click()
   const chooser = page.waitForEvent('filechooser')

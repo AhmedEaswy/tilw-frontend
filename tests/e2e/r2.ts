@@ -4,8 +4,20 @@ import { expect, type Page } from '@playwright/test'
 
 export const DAY = 86_400_000
 
+/**
+ * Wait until Nuxt has hydrated a prerendered page. Text typed into its form before then is reset by v-model when the
+ * page hydrates (the email field ends up empty and sign-in shows "اكتب بريدك الإلكتروني").
+ */
+export async function hydrated(page: Page) {
+  await page.waitForFunction(() => {
+    const app = (document.querySelector('#__nuxt') as (Element & { __vue_app__?: { $nuxt?: { isHydrating?: boolean } } }) | null)?.__vue_app__
+    return !!app && app.$nuxt?.isHydrating === false
+  })
+}
+
 export async function signIn(page: Page, next = /\/app\/scripts$/) {
   await page.goto('/signin')
+  await hydrated(page)
   await page.getByLabel('البريد الإلكتروني').fill('layan@example.com')
   await page.getByLabel('كلمة المرور', { exact: true }).fill('password123')
   await page.getByRole('button', { name: 'تسجيل الدخول' }).click()

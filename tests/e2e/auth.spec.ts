@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { hydrated } from './r2'
 
 // T026 / T033 — auth flows against the static build and the in-browser mock.
 // Each test starts from a fresh mock (empty localStorage in a new context).
@@ -7,6 +8,7 @@ const SEED = { email: 'layan@example.com', password: 'password123' }
 
 async function signIn(page: Page, email = SEED.email, password = SEED.password) {
   await page.goto('/signin')
+  await hydrated(page)
   await page.getByLabel('البريد الإلكتروني').fill(email)
   await page.getByLabel('كلمة المرور', { exact: true }).fill(password)
   await page.getByRole('button', { name: 'تسجيل الدخول' }).click()

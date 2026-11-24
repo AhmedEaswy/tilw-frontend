@@ -66,3 +66,9 @@ Notes:
   and falls back to `200.html`. With that server, 15 desktop and 21 phone release-1 specs fail on `HEAD` (before
   release 2) for reasons outside this feature (404 status, axe title/lang on SPA routes, strict-mode locators, URL
   encoding); release 2 adds no new failures and fixes two sign-in races in `auth.spec.ts` and `settings.spec.ts`.
+  **Fixed (2026-11-24)**: the SPA shell `200.html` now carries `lang="ar" dir="rtl"` and a default title
+  (`nuxt.config.ts` `app.head`); `tests/e2e/static-server.mjs` answers unknown non-app paths with `404.html` and a 404
+  (hosts need the same rewrite: `/app/**`, `/confirm-email`, `/invite/*`, `/remote`, `/__mock` → `200.html`, the rest
+  → `404.html`); the specs read `next` as a parameter (the router leaves `/` unescaped), use exact or role-scoped
+  locators, follow the phone layouts (folded search, no header import, no WPM chip or devices label), and wait for
+  hydration before typing on prerendered pages.
