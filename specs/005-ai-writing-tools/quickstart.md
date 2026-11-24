@@ -38,3 +38,11 @@ npx nuxi typecheck
 ```powershell
 $env:E2E_PORT='3140'; $env:NUXT_PUBLIC_SERVICES_MODE='mock'; npx playwright test
 ```
+
+## Results (2026-11-24)
+
+- Vitest: 248 passed, 13 skipped (the live suite needs a running backend).
+- `nuxi typecheck`: clean.
+- Playwright on port 3140 (mock): 203 passed, 1 skipped (New from audio on phones, gaps G-A3), desktop and phone projects.
+- Visual check against frames A1, A2 (cost, preview), A3 and A6 on desktop and phone: matches.
+- Not run: against the backend with `AI_FAKE=true`, and against real Deepgram from a browser.

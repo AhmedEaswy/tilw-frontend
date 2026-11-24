@@ -66,3 +66,4 @@ Pin / archive / rename are `update` patches (`pinned`, `archivedAt`, `title`).
 
 ## Later deltas
 - **Feature 004 (phone link)** adds `LinkPort`, `LinkRelayPort` and `RealtimePort`, and the `/__mock` phone-link knobs (offline tab, end reason, mock Tilw app). See `specs/004-phone-link/contracts/ports.md`.
+- **Feature 005 (AI writing tools)** adds `AiPort` and `SpeechPort`, and the `/__mock` AI knobs (formatting mode, speech provider, own key refused, grant, set balance, edit from another device, expire suggestion). See `specs/005-ai-writing-tools/contracts/ports.md`.

@@ -66,8 +66,8 @@ description: "Task list for Web app — AI writing tools (release 2)"
 
 ## Phase 8: Polish
 
-- [ ] T027 [P] Docs: README pointer to this feature, quickstart check, `specs/005-ai-writing-tools/gaps.md` final notes.
-- [ ] T028 Run `npx vitest run`, `npx nuxi typecheck` and the full Playwright suite on port 3140; fix what fails.
+- [X] T027 [P] Docs: README pointer to this feature, quickstart check, `specs/005-ai-writing-tools/gaps.md` final notes.
+- [X] T028 Run `npx vitest run`, `npx nuxi typecheck` and the full Playwright suite on port 3140; fix what fails.
 
 ## Dependencies
 
