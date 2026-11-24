@@ -22,6 +22,7 @@ beforeEach(() => {
   vi.stubGlobal('useUploadsStore', () => uploads)
   vi.stubGlobal('useScriptsStore', () => reset)
   vi.stubGlobal('usePlanStore', () => reset)
+  vi.stubGlobal('useLinkStore', () => reset) // feature 004: setUser also resets the link host
 })
 
 describe('auth.init', () => {

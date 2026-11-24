@@ -6,6 +6,8 @@
  * Then the countdown (6:42 / 6:54) and the capture screen with the prompter (6:44 / 6:56).
  * Takes are saved to IndexedDB; a take that stops on its own (the plan's take length, device lost, storage full) is
  * still saved (G8). Camera and microphone are requested only from the enable button (constitution IV).
+ * Feature 004 US3 (T037): a linked phone can Record and Stop through this page's own Start / Stop (Figma L5 recording
+ * `286:424`); the link never stops a take by itself.
  */
 import type { FinishedTake } from '~/composables/useRecorder'
 
@@ -15,6 +17,7 @@ const route = useRoute()
 const reader = useReaderStore()
 const takes = useTakesStore()
 const plan = usePlanStore()
+const link = useLinkStore()
 
 // ---------- release 2: plan-based take length (R2-6) ----------
 // Start waits until the plan is read (or the read failed: then the last known limit applies).
@@ -80,6 +83,8 @@ function closePreview() {
 onMounted(async () => {
   await reader.load(id.value)
   engine.seek(0)
+  // Feature 004: a phone linked to this script before a reload reconnects without a new code.
+  if (reader.status === 'ready') void link.resume(id.value)
   void takes.load().catch(() => {})
   if (!plan.my) void plan.load()
   if (!plan.plans.length) void plan.loadPublic().catch(() => {})
@@ -139,6 +144,8 @@ async function beginTake() {
     return
   }
   phase.value = 'recording'
+  takeStartedAt.value = new Date().toISOString()
+  takeSaved.value = false
   engine.seek(0)
   if (settings.value.mode === 'constant') engine.play({ countdown: false })
 }
@@ -168,6 +175,8 @@ async function keep(take: FinishedTake) {
     })
     media.stop()
     phase.value = 'setup'
+    takeSaved.value = true
+    saving.value = false // stored: the phone may show "saved" now
     // Auto sync: the take starts uploading once the studio is back on setup (R2-6).
     if (autoSync.value) void uploads.enqueue(meta.id)
     const msg = take.reason === 'limit'
@@ -178,6 +187,8 @@ async function keep(take: FinishedTake) {
           ? t('studio.savedQuota')
           : t('studio.saved', { n: meta.number })
     show(msg, take.reason === 'user' ? 'success' : 'info', 7000)
+    // A linked phone sees "saved" before this page hands over to the recordings list.
+    await player.flush().catch(() => {})
     await navigateTo('/app/recordings')
   } catch {
     unsaved.value = { blob: take.blob, mimeType: take.mimeType }
@@ -223,6 +234,85 @@ useShortcuts(
     prev: () => engine.prev(),
   },
   { direction: computed(() => reader.direction), enabled: computed(() => phase.value !== 'setup') },
+)
+
+// ---------- feature 004 US3: Connect phone and phone Record / Stop (T037) ----------
+const takeStartedAt = ref<string | null>(null)
+const takeSaved = ref(false)
+const linkOpen = ref(false)
+const linkPanel = ref<{ focus: () => void }>()
+const linkBtn = ref<{ $el: HTMLElement }>()
+function openLink() {
+  linkOpen.value = true
+  if (link.status === 'idle' || (link.status === 'ended' && link.link?.scriptId !== id.value)) void link.open(id.value)
+  nextTick(() => linkPanel.value?.focus())
+}
+function closeLink() {
+  if (!linkOpen.value) return
+  linkOpen.value = false
+  if (link.status === 'ended') link.reset()
+  nextTick(() => linkBtn.value?.$el.focus())
+}
+// Shortcuts are off during setup, so the panel listens for Esc itself.
+useEventListener(document, 'keydown', (e: KeyboardEvent) => {
+  if (e.key === 'Escape' && linkOpen.value) closeLink()
+})
+// Requests wait in the panel during a countdown or a take (research R13); the setup page is the only one showing them.
+const requestQuiet = computed(() => phase.value !== 'setup')
+// ---------- feature 004 US4: requests (Figma L3) and the studio as remote (L7) ----------
+const linkRequest = computed(() => {
+  if (linkOpen.value || requestQuiet.value) return null
+  if (link.pendingRemote) return { kind: 'remote' as const, name: link.pendingRemote.name, expiresAt: null }
+  const rr = link.state?.roleRequest
+  return rr ? { kind: 'roles' as const, player: rr.player, expiresAt: rr.expiresAt } : null
+})
+const linkBadge = computed(() => !!link.pendingRemote || !!link.state?.roleRequest)
+function acceptRequest() {
+  if (linkRequest.value?.kind === 'remote') void link.acceptRemote()
+  else void link.answerRoles(true)
+}
+function declineRequest() {
+  if (linkRequest.value?.kind === 'remote') void link.declineRemote()
+  else void link.answerRoles(false)
+}
+
+const scriptReady = computed(() => reader.status === 'ready' && reader.paragraphs.length > 0)
+const player = useLinkPlayer(() => ({
+  scriptId: id.value,
+  apply: cmd => (cmd.type === 'recordStart' || cmd.type === 'recordStop')
+    ? applyRecordCommand(cmd, {
+        phase: phase.value,
+        devicesOn: live.value,
+        // A take that failed to save waits in its download dialog: nothing new starts until it is dealt with here.
+        saving: saving.value || !!unsaved.value,
+        ready: scriptReady.value,
+        start: () => { takeSaved.value = false; startCountdown() },
+        stop: () => void stopTake(),
+        cancelCountdown,
+      })
+    : applyReadingCommand(cmd, {
+        engine,
+        settings: settings.value,
+        update: patch => reader.updateSettings(patch),
+        ready: scriptReady.value,
+        // The prompter is on screen only while a take runs.
+        blocked: phase.value !== 'recording',
+      }),
+  snapshot: () => readingSnapshot({
+    title: reader.script?.title,
+    paragraphs: reader.paragraphs,
+    engine,
+    settings: settings.value,
+    recording: recordingState({
+      phase: phase.value, devicesOn: live.value, saving: saving.value, saved: takeSaved.value,
+      failed: !!unsaved.value, startedAt: takeStartedAt.value,
+    }),
+  }),
+}))
+watch(
+  () => [phase.value, saving.value, live.value, takeSaved.value, !!unsaved.value, engine.paragraph.value, engine.playing.value,
+    settings.value.wpm, settings.value.fontSize, reader.script?.title, reader.paragraphs.length],
+  () => player.changed(),
 )
 
 // ---------- permission help ----------
@@ -289,10 +379,33 @@ const firstLine = computed(() => reader.paragraphs[0] ?? '')
       <NuxtLink to="/app/scripts" class="brand" :aria-label="t('nav.scripts')"><BrandSignature :width="143" /></NuxtLink>
       <p class="mast-title">{{ t('studio.title') }}</p>
       <h1 class="phone-title">{{ t('studio.setup') }}</h1>
+      <div class="link-ind">
+        <LinkIndicator
+          ref="linkBtn"
+          :status="link.status"
+          :badge="linkBadge"
+          :expanded="linkOpen"
+          @open="linkOpen ? closeLink() : openLink()"
+        />
+        <LinkRequest
+          v-if="linkRequest"
+          :kind="linkRequest.kind"
+          :name="linkRequest.kind === 'remote' ? linkRequest.name : undefined"
+          :player="linkRequest.kind === 'roles' ? linkRequest.player : undefined"
+          :expires-at="linkRequest.expiresAt"
+          @accept="acceptRequest"
+          @decline="declineRequest"
+        />
+      </div>
       <NuxtLink :to="editorPath" class="round" :aria-label="t('studio.backToScript')"><UiGlyph name="back" :size="20" /></NuxtLink>
     </header>
+    <div v-if="linkOpen" class="scrim" aria-hidden="true" @click="closeLink" />
+    <ConnectPanel v-if="linkOpen" ref="linkPanel" class="link-side" :script-id="id" :busy="phase !== 'setup' || saving" @close="closeLink" />
 
-    <main class="wrap">
+    <main v-if="link.studioIsRemote" class="wrap">
+      <StudioRemote />
+    </main>
+    <main v-else class="wrap">
       <div class="head">
         <h1>{{ t('studio.setup') }}</h1>
         <NuxtLink :to="editorPath" class="link">{{ t('studio.backToScript') }}</NuxtLink>
@@ -422,6 +535,28 @@ const firstLine = computed(() => reader.paragraphs[0] ?? '')
 }
 .brand {
   display: flex;
+}
+/* Feature 004: Connect phone in the setup masthead; the panel opens over the page as on rehearsal (Figma L1, L2). */
+.link-ind {
+  position: relative;
+  margin-inline-start: auto;
+}
+.link-ind + .round {
+  margin-inline-start: 0;
+}
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 19;
+  background: rgba(10, 18, 22, 0.45);
+}
+.link-side {
+  position: fixed;
+  inset-block: 0;
+  inset-inline-start: 0;
+  z-index: 20;
+  inline-size: min(428px, 100vw);
+  box-shadow: var(--tilw-shadow-pop);
 }
 .mast-title {
   margin: 0;

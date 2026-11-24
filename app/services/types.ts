@@ -246,6 +246,8 @@ export type PortErrorCode =
   | 'limit_reached'
   | 'storage_full'
   | 'storage_not_linked'
+  /** Feature 004 (phone link): the other side of the link isn't connected, so nothing was delivered. */
+  | 'partner_offline'
 
 export class PortError extends Error {
   constructor(
@@ -263,3 +265,152 @@ export class PortError extends Error {
 
 export const isPortError = (e: unknown, code?: PortErrorCode): e is PortError =>
   e instanceof PortError && (!code || e.code === code)
+
+// ---------------------------------------------------------------------------------------------------------------
+// Feature 004: phone link (backend 003-phone-link). Shapes as the API sends them; see specs/004-phone-link/data-model.md.
+// ---------------------------------------------------------------------------------------------------------------
+
+export type LinkParty = 'host' | 'remote'
+export type LinkStateName = 'waiting' | 'connected' | 'ended'
+export type LinkEndReason = 'owner' | 'remote' | 'idle' | 'script_deleted' | 'signed_out' | 'device_revoked'
+  | 'email_changed' | 'account_deleted' | 'limit'
+
+export interface PairingCode {
+  /** 6 digits. */
+  code: string
+  /** `<frontend>/remote#<secret>`, for the QR. */
+  url: string
+  expiresAt: string
+}
+
+export interface LinkRemote {
+  id: string
+  kind: 'browser' | 'app'
+  name: string
+  status: 'pending' | 'active' | 'replaced' | 'declined' | 'ended'
+  connected: boolean
+  lastSeenAt: string | null
+}
+
+export interface PhoneLink {
+  id: string
+  scriptId: string | null
+  scriptTitle: string | null
+  host: { kind: 'web' | 'app'; label: string; connected: boolean }
+  player: LinkParty
+  previews: boolean
+  state: LinkStateName
+  remote: LinkRemote | null
+  pendingRemote: LinkRemote | null
+  startedAt: string
+  lastUsedAt: string
+  endedAt: string | null
+  endReason: LinkEndReason | null
+}
+
+export interface PhoneLinkWithCode extends PhoneLink {
+  code: PairingCode
+}
+
+/** What a Pusher-protocol client needs to reach the realtime server. */
+export interface RealtimeSettings {
+  key: string
+  host: string
+  port: number
+  scheme: 'http' | 'https'
+}
+
+export interface Pairing {
+  link: PhoneLink
+  remote: LinkRemote
+  /** `rl_…` for a phone browser; null for the app. */
+  credential: string | null
+  channels: { own: string; presence: string }
+  realtime: RealtimeSettings
+}
+
+export type CommandType = 'play' | 'pause' | 'next' | 'previous' | 'goto' | 'restart' | 'faster' | 'slower' | 'speed'
+  | 'textBigger' | 'textSmaller' | 'recordStart' | 'recordStop'
+
+export interface LinkCommand {
+  /** uuid */
+  id: string
+  type: CommandType
+  /** goto only, 0-based. */
+  paragraph?: number
+  /** speed only, 60–220. */
+  wpm?: number
+}
+
+export type RefusalReason = 'at_end' | 'at_start' | 'not_recording_mode' | 'devices_off' | 'already_recording'
+  | 'not_recording' | 'saving' | 'limit' | 'unsupported'
+
+export interface LinkAck {
+  commandId: string
+  result: 'applied' | 'refused'
+  reason?: RefusalReason
+}
+
+export type RecordingStateName = 'unavailable' | 'idle' | 'countdown' | 'recording' | 'saving' | 'saved' | 'failed'
+
+export interface StudioState {
+  /** Increases with every change; receivers drop older ones. */
+  seq: number
+  scriptTitle: string | null
+  /** 0-based. */
+  paragraph: number
+  paragraphCount: number
+  playing: boolean
+  mode: 'constant' | 'manual'
+  wpm: number
+  fontSize: 'S' | 'M' | 'L' | 'XL'
+  recording: { state: RecordingStateName; startedAt?: string }
+  /** At most 120 characters each; absent when previews are off. */
+  preview?: { current: string; next: string | null }
+}
+
+/** Who is calling a link route: the signed-in studio, or a phone browser with its `rl_` credential. */
+export type LinkAuth = { kind: 'session' } | { kind: 'remote'; credential: string }
+
+export type LinkEvent =
+  | { name: 'command'; data: LinkCommand }
+  | { name: 'ack'; data: LinkAck }
+  | { name: 'state'; data: StudioState }
+  | { name: 'remote.requested'; data: { remote: LinkRemote } }
+  | { name: 'remote.replaced'; data: { reason: 'replaced' } }
+  | { name: 'remote.accepted'; data: { player: LinkParty } }
+  | { name: 'remote.declined'; data: { reason: 'declined' | 'lapsed' } }
+  | { name: 'roles.requested'; data: { player: LinkParty; expiresAt: string } }
+  | { name: 'roles.declined'; data: { reason: 'recording' | 'declined' | 'lapsed' } }
+  | { name: 'roles.changed'; data: { player: LinkParty } }
+  | { name: 'link.updated'; data: { previews: boolean } }
+  | { name: 'link.ended'; data: { reason: LinkEndReason } }
+
+export const LINK_EVENTS: readonly LinkEvent['name'][] = [
+  'command', 'ack', 'state', 'remote.requested', 'remote.replaced', 'remote.accepted', 'remote.declined',
+  'roles.requested', 'roles.declined', 'roles.changed', 'link.updated', 'link.ended',
+]
+
+export interface PresenceMember {
+  /** `host` or `remote:<remoteId>`. */
+  id: string
+  party: LinkParty
+  remoteId: string | null
+}
+
+export type ConnectionState = 'connecting' | 'connected' | 'unavailable' | 'disconnected'
+
+/** Phone-link timings and sizes from backend 003 (config/tilw.php `phone_link`). */
+export const LINK_RULES = {
+  codeMinutes: 5,
+  reconnectMinutes: 10,
+  pendingRemoteMinutes: 2,
+  roleRequestSeconds: 30,
+  previewChars: 120,
+  ackTimeoutMs: 5000,
+  wpmMin: 60,
+  wpmMax: 220,
+  wrongCodes: 5,
+  wrongWindowMinutes: 15,
+  blockMinutes: 60,
+} as const

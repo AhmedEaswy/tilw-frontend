@@ -7,6 +7,7 @@
  * script history, linked storage with a fake Google Drive (mock/drive.ts), take records, devices, email change and
  * the 14-day deletion grace. The clock can be moved from /__mock (`knobs.clockOffsetMs`).
  */
+import { startMockApp } from './app'
 import type { Services } from '../ports'
 import {
   DEFAULT_READING,
@@ -26,6 +27,8 @@ import { MockDb, type KV, type MockToken } from './db'
 import { createFakeDrive, DRIVE_OTHER_BYTES, DRIVE_TOTAL_BYTES, idbBlobStore, memoryBlobStore, usedBytes, type BlobStore } from './drive'
 import { allLimits, limitValue, periodEnd, publicPlan, requestReference, type LimitContext, type RawLimit } from './plans'
 import { LEGACY_SCRIPTS, mockPhone } from './seed'
+import { createMockLinks } from './link'
+import { broadcastBus, createMockHub, createMockRealtime, type MockHub } from './realtime'
 
 const RESET_TTL = 60 * 60_000
 const EMAIL_CHANGE_TTL = 24 * 60 * 60_000
@@ -48,6 +51,8 @@ export interface MockOptions {
   locale?: () => Locale
   /** Where the fake Drive keeps uploaded files (IndexedDB in the browser, memory in tests). */
   blobs?: BlobStore
+  /** Feature 004: the fake realtime hub between tabs (a BroadcastChannel in the browser, a memory network in tests). */
+  hub?: MockHub
 }
 
 export function createMockServices(kv: KV, opts: MockOptions = {}) {
@@ -236,7 +241,29 @@ export function createMockServices(kv: KV, opts: MockOptions = {}) {
     sleep,
   })
 
+  // ---------- feature 004: phone link ----------
+  const hub = opts.hub ?? createMockHub({
+    bus: broadcastBus(),
+    offline: typeof sessionStorage !== 'undefined' && sessionStorage.getItem('tilw:mock:link-offline') === '1',
+  })
+  const phone = createMockLinks({
+    kv,
+    hub,
+    now,
+    call,
+    origin,
+    sessionUserId: () => sessionUser()?.id ?? null,
+    limit: (userId, key) => limit(userId, key),
+    script: (userId, scriptId) => {
+      const s = userScripts(userId).find(x => x.id === scriptId)
+      return s ? { id: s.id, title: s.title } : null
+    },
+  })
+
   const services: Services = {
+    links: phone.links,
+    relay: phone.relay,
+    realtime: createMockRealtime(hub, phone.server),
     auth: {
       me: () => call(() => {
         const u = sessionUser()
@@ -434,6 +461,8 @@ export function createMockServices(kv: KV, opts: MockOptions = {}) {
           list.splice(i, 1)
           delete s.versions[id]
         })
+        // Feature 004 (backend Script deleting hook): a deleted script can't be read with a remote any more.
+        phone.endForScript(id)
       }),
       savePosition: (id, position) => call(() => {
         if (db.knobs.failPositionSave) throw new PortError('network')
@@ -795,9 +824,25 @@ export function createMockServices(kv: KV, opts: MockOptions = {}) {
     addPhone(userId: string) {
       db.write(s => (s.devices[userId] ??= []).push(mockPhone(now())))
     },
+    /** Feature 004: this tab loses (or gets back) its realtime connection; kept across reloads of this tab. */
+    setLinkOffline(off: boolean) {
+      if (typeof sessionStorage !== 'undefined') {
+        if (off) sessionStorage.setItem('tilw:mock:link-offline', '1')
+        else sessionStorage.removeItem('tilw:mock:link-offline')
+      }
+      hub.setOffline(off)
+    },
+    linkOffline: () => hub.offline,
+    /** Feature 004: end a link as the backend would for an account action (signed_out, script_deleted…). */
+    endLink: phone.endWith,
+    /** Feature 004 US4: pair a stand-in Tilw app with a studio's code; it runs in this tab (see mock/app.ts). */
+    async pairMockApp(code: string) {
+      const pairing = await phone.pairApp(code)
+      return startMockApp({ relay: phone.relay, realtime: services.realtime, pairing })
+    },
   }
 
-  return { services, db, knobs }
+  return { services, db, knobs, hub }
 }
 
 export type MockBackend = ReturnType<typeof createMockServices>
