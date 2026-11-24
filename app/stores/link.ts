@@ -16,6 +16,7 @@ export const useLinkStore = defineStore('link', () => {
     const services = useServices()
     host = createLinkHost({
       links: services.links,
+      quietLinks: useNuxtApp().$servicesQuiet.links,
       relay: services.relay,
       realtime: services.realtime,
       tab: import.meta.client ? useHostTab() : undefined,

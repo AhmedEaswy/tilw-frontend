@@ -9,6 +9,7 @@ import type { CommandType } from '~/services/types'
 definePageMeta({ layout: 'remote' })
 const { t } = useI18n()
 const remote = useRemoteStore()
+const router = useRouter()
 useHead({ title: () => `${t('remote.pageTitle')} · tilwprompter`, meta: [{ name: 'robots', content: 'noindex' }] })
 
 const s = computed(() => remote.state)
@@ -57,7 +58,8 @@ const wake = () => { if (document.visibilityState === 'visible') void remote.wak
 onMounted(() => {
   // The QR secret is used once: take it out of the address so it isn't kept in history or reused on reload.
   const secret = window.location.hash.slice(1)
-  if (secret) history.replaceState(history.state, '', window.location.pathname + window.location.search)
+  // Through the router, so its own record of the current location (history.state) loses the secret too.
+  if (secret) void router.replace({ path: '/remote', query: {}, hash: '' })
   void remote.start(secret || null)
   window.addEventListener('online', wake)
   document.addEventListener('visibilitychange', wake)

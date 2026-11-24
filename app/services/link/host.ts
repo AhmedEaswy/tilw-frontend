@@ -53,6 +53,11 @@ export interface HostState {
 
 export interface HostDeps {
   links: LinkPort
+  /**
+   * The same port without the app's "session ended → sign in" redirect, for checks the host makes on its own
+   * (after a reconnect, on a refused call). A redirect from those could leave the record page mid-take (SC-005).
+   */
+  quietLinks?: Pick<LinkPort, 'current' | 'list'>
   relay: LinkRelayPort
   realtime: RealtimePort
   tab?: HostTab
@@ -72,6 +77,7 @@ export function linkStatus(s: HostState): LinkStatus {
 
 export function createLinkHost(deps: HostDeps) {
   const coalesceMs = deps.coalesceMs ?? 150
+  const quiet = deps.quietLinks ?? deps.links
   const state: HostState = {
     phase: 'idle', link: null, code: null, endReason: null, pendingRemote: null, roleRequest: null,
     partnerPresent: false, partnerSince: null, connection: 'disconnected', error: null, limitError: null,
@@ -82,8 +88,10 @@ export function createLinkHost(deps: HostDeps) {
 
   let conn: RealtimeConnection | null = null
   let player: LinkPlayer | null = null
-  // Starts from the clock, not 0: a reloaded studio must number its states above the ones the phone already showed.
-  let seq = Date.now()
+  // Numbered from the clock and never reset: a reloaded studio, or a tab taking the link back, must number its states
+  // above the ones the phone already showed (it drops anything not newer).
+  let seq = 0
+  const nextSeq = () => (seq = Math.max(seq + 1, Date.now()))
   let timer: ReturnType<typeof setTimeout> | null = null
   let lastSent = 0
   let holdingTab = false
@@ -103,15 +111,19 @@ export function createLinkHost(deps: HostDeps) {
     holdingTab = false
   }
 
+  /** This tab now holds the lock: give the link up when another tab asks for it ("Move here" there). */
+  function held() {
+    holdingTab = true
+    offRelease?.()
+    offRelease = deps.tab!.onReleaseRequested(() => {
+      teardown()
+      set({ phase: 'otherTab', partnerPresent: false, connection: 'disconnected' })
+    })
+  }
+
   async function claimTab(): Promise<boolean> {
     if (!deps.tab || holdingTab) return true
-    holdingTab = await deps.tab.acquire()
-    if (holdingTab) {
-      offRelease = deps.tab.onReleaseRequested(() => {
-        teardown()
-        set({ phase: 'otherTab', partnerPresent: false, connection: 'disconnected' })
-      })
-    }
+    if (await deps.tab.acquire()) held()
     return holdingTab
   }
 
@@ -170,7 +182,7 @@ export function createLinkHost(deps: HostDeps) {
     const link = state.link
     if (!link?.scriptId) return
     try {
-      const l = await deps.links.current(link.scriptId)
+      const l = await quiet.current(link.scriptId)
       if (state.phase !== 'open' || state.link?.id !== link.id) return
       if (l && l.id === link.id) return set({ link: l, pendingRemote: l.pendingRemote ?? state.pendingRemote })
       await endedElsewhere('idle')
@@ -184,7 +196,7 @@ export function createLinkHost(deps: HostDeps) {
   async function endedElsewhere(fallback: HostState['endReason']) {
     const link = state.link
     if (!link || state.phase !== 'open') return
-    const ended = (await deps.links.list().catch(() => [] as PhoneLink[])).find(x => x.id === link.id)
+    const ended = (await quiet.list().catch(() => [] as PhoneLink[])).find(x => x.id === link.id)
     if (state.phase === 'open' && state.link?.id === link.id) endLocal(ended?.endReason ?? fallback)
   }
 
@@ -235,7 +247,7 @@ export function createLinkHost(deps: HostDeps) {
     if (!link || state.phase !== 'open' || !player || player.scriptId !== link.scriptId) return
     if (!full && !state.partnerPresent) return
     const snap = player.snapshot()
-    const payload: StudioState = { ...snap, seq: ++seq }
+    const payload: StudioState = { ...snap, seq: nextSeq() }
     // With previews off, no script text other than the title leaves the studio (the server strips it too).
     if (!link.previews) delete payload.preview
     lastSent = Date.now()
@@ -289,6 +301,7 @@ export function createLinkHost(deps: HostDeps) {
         set({ link, code, pendingRemote: link.pendingRemote, phase: 'open' })
         await connect(link)
       } catch (e) {
+        teardown()
         if (isPortError(e, 'limit_reached')) set({ phase: 'locked', limitError: e })
         else set({ phase: 'error', error: e })
       }
@@ -312,6 +325,7 @@ export function createLinkHost(deps: HostDeps) {
       try {
         await connect(l)
       } catch (e) {
+        teardown()
         set({ phase: 'error', error: e })
       }
     },
@@ -362,8 +376,8 @@ export function createLinkHost(deps: HostDeps) {
     /** Another studio tab holds the link: take it over here. */
     async moveHere(scriptId: string) {
       if (!deps.tab) return
-      holdingTab = await deps.tab.takeOver()
-      if (!holdingTab) return
+      if (!(await deps.tab.takeOver())) return
+      held()
       set({ phase: 'idle' })
       await this.resume(scriptId)
     },
@@ -371,7 +385,6 @@ export function createLinkHost(deps: HostDeps) {
     /** Panel closed after an end, or the person left the studio for good (sign-out). */
     reset() {
       teardown()
-      seq = 0
       set({
         phase: 'idle', link: null, code: null, endReason: null, pendingRemote: null, roleRequest: null,
         partnerPresent: false, partnerSince: null, connection: 'disconnected', error: null, limitError: null,

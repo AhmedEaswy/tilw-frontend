@@ -263,9 +263,10 @@ const player = useLinkPlayer(() => ({
     ? applyRecordCommand(cmd, {
         phase: phase.value,
         devicesOn: live.value,
-        saving: saving.value,
+        // A take that failed to save waits in its download dialog: nothing new starts until it is dealt with here.
+        saving: saving.value || !!unsaved.value,
         ready: scriptReady.value,
-        start: () => { takeSaved.value = false; unsaved.value = null; startCountdown() },
+        start: () => { takeSaved.value = false; startCountdown() },
         stop: () => void stopTake(),
         cancelCountdown,
       })

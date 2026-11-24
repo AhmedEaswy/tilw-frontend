@@ -91,6 +91,8 @@ export default defineNuxtPlugin((nuxtApp) => {
   return {
     provide: {
       services,
+      // Feature 004: the link host's own background checks, without the sign-in redirect (it could stop a take).
+      servicesQuiet: { links: base.links } as Pick<Services, 'links'>,
       // Only the mock has knobs and an outbox (the /__mock dev page); null when talking to the real API.
       mock: mock as MockBackend | null,
     },

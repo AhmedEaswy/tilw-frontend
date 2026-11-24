@@ -23,11 +23,11 @@ export function useHostTab(): HostTab {
     tab.release()
   })
 
-  function request(wait: boolean): Promise<boolean> {
+  function request(wait: boolean, signal?: AbortSignal): Promise<boolean> {
     if (!locks) return Promise.resolve(true)
     if (release) return Promise.resolve(true)
     return new Promise((resolve) => {
-      void locks.request(LOCK, wait ? {} : { ifAvailable: true }, (lock) => {
+      void locks.request(LOCK, wait ? { signal } : { ifAvailable: true }, (lock) => {
         if (!lock) {
           resolve(false)
           return undefined
@@ -35,7 +35,7 @@ export function useHostTab(): HostTab {
         resolve(true)
         // Held until release() is called (or the tab closes).
         return new Promise<void>(r => (release = r))
-      })
+      }).catch(() => resolve(false)) // aborted while queued
     })
   }
 
@@ -52,7 +52,12 @@ export function useHostTab(): HostTab {
     async takeOver() {
       channel?.postMessage({ kind: 'release' })
       // Wait for the holder to let go (it does so as soon as it hears the message).
-      return Promise.race([request(true), new Promise<boolean>(r => setTimeout(() => r(false), 3000))])
+      // A queued request that outlives the wait is withdrawn, so this tab never ends up holding the lock unused.
+      const ac = new AbortController()
+      const timer = setTimeout(() => ac.abort(), 3000)
+      const ok = await request(true, ac.signal)
+      clearTimeout(timer)
+      return ok
     },
   }
   instance = tab

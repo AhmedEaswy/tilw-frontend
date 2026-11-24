@@ -117,6 +117,8 @@ export function createLinkRemote(deps: RemoteDeps) {
   let conn: RealtimeConnection | null = null
   let presenceOff: (() => void) | null = null
   let keepAlive: ReturnType<typeof setInterval> | null = null
+  let retry: ReturnType<typeof setTimeout> | null = null
+  let retryMs = 2_000
   const timers = new Map<string, ReturnType<typeof setTimeout>>()
 
   const auth = (): LinkAuth => ({ kind: 'remote', credential: pairing!.credential })
@@ -136,7 +138,32 @@ export function createLinkRemote(deps: RemoteDeps) {
     conn = null
   }
 
+  function stopRetry() {
+    if (retry) clearTimeout(retry)
+    retry = null
+    retryMs = 2_000
+  }
+
+  /** Connect, or keep trying (2 s, 4 s … 30 s) while the service is reachable but the channel isn't. */
+  async function connectOrRetry() {
+    try {
+      await connect()
+      stopRetry()
+    } catch (e) {
+      if (isPortError(e, 'unauthenticated')) return finish('unknown')
+      teardown()
+      set({ connection: 'unavailable', studioPresent: false })
+      if (retry || !pairing) return
+      retry = setTimeout(() => {
+        retry = null
+        retryMs = Math.min(retryMs * 2, 30_000)
+        void connectOrRetry()
+      }, retryMs)
+    }
+  }
+
   function finish(reason: RemoteEnd) {
+    stopRetry()
     teardown()
     pairing = null
     deps.store.clear()
@@ -223,12 +250,7 @@ export function createLinkRemote(deps: RemoteDeps) {
     }
     deps.store.save(pairing)
     set({ phase: pairing.pending ? 'waitingAccept' : 'connected', previews: p.link.previews, ended: null, pairError: null, state: null })
-    try {
-      await connect()
-    } catch (e) {
-      if (isPortError(e, 'unauthenticated')) finish('unknown')
-      else set({ connection: 'unavailable' })
-    }
+    await connectOrRetry()
   }
 
   async function pair(input: { code: string } | { secret: string }) {
@@ -264,12 +286,7 @@ export function createLinkRemote(deps: RemoteDeps) {
           if (isPortError(e, 'unauthenticated')) return finish('unknown')
           // A pending phone can't ping yet; anything else (network) is retried by the socket.
         }
-        try {
-          await connect()
-        } catch (e) {
-          if (isPortError(e, 'unauthenticated')) return finish('unknown')
-          set({ connection: 'unavailable' })
-        }
+        await connectOrRetry()
         return
       }
       // Kept too long without contact: the link has ended as idle (or will); say so rather than show a bare code entry.
@@ -284,13 +301,10 @@ export function createLinkRemote(deps: RemoteDeps) {
     async wake() {
       if (!pairing || state.phase === 'ended') return
       if (now() - pairing.lastSeenAt >= reconnectMs) return finish('idle')
-      if (!conn || conn.state !== 'connected') {
-        try {
-          await connect()
-        } catch (e) {
-          if (isPortError(e, 'unauthenticated')) return finish('unknown')
-          return set({ connection: 'unavailable' })
-        }
+      if (!conn || conn.state !== 'connected' || state.connection !== 'connected') {
+        stopRetry()
+        await connectOrRetry()
+        if ((state.phase as RemotePhase) === 'ended') return // connectOrRetry may have ended it
       }
       if (!pairing.pending) await ping()
     },
@@ -329,7 +343,10 @@ export function createLinkRemote(deps: RemoteDeps) {
       finish('left')
     },
 
-    dispose: teardown,
+    dispose() {
+      stopRetry()
+      teardown()
+    },
   }
 }
 
