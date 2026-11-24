@@ -228,7 +228,7 @@ describe('http link adapter', () => {
     const phone: LinkAuth = { kind: 'remote', credential: 'rl_abc' }
     const host: LinkAuth = { kind: 'session' }
     await s.links.start('S1')
-    await s.links.current()
+    await s.links.current('S1')
     await s.links.list()
     await s.links.newCode('L1')
     await s.links.update('L1', { previews: false })
@@ -246,7 +246,7 @@ describe('http link adapter', () => {
     await s.relay.answerRoles(host, 'L1', false)
 
     expect(api.calls.map(c => `${c.method} ${c.url}`)).toEqual([
-      'POST /api/links', 'GET /api/links/current', 'GET /api/links', 'POST /api/links/L1/codes', 'PATCH /api/links/L1',
+      'POST /api/links', 'GET /api/links/current?scriptId=S1', 'GET /api/links', 'POST /api/links/L1/codes', 'PATCH /api/links/L1',
       'DELETE /api/links/L1', 'POST /api/links/L1/remotes/R2/accept', 'POST /api/links/L1/remotes/R2/decline',
       'POST /api/links/pair', 'POST /api/links/L1/commands', 'POST /api/links/L1/acks', 'PUT /api/links/L1/state',
       'POST /api/links/L1/ping', 'POST /api/links/L1/leave', 'POST /api/links/L1/roles', 'POST /api/links/L1/roles/accept',

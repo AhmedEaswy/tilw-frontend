@@ -134,7 +134,8 @@ export interface AdminPort {
 export interface LinkPort {
   /** Starts (or reuses) the open link for this script and studio, with a fresh code. */
   start(scriptId: string): Promise<PhoneLinkWithCode>
-  current(): Promise<PhoneLink | null>
+  /** The open link for this script and studio, if any (rejoin after a reload). */
+  current(scriptId: string): Promise<PhoneLink | null>
   /** Open links and links ended within 30 days, newest first. */
   list(): Promise<PhoneLink[]>
   newCode(linkId: string): Promise<PairingCode>

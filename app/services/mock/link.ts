@@ -250,9 +250,9 @@ export function createMockLinks(d: MockLinkDeps): { links: LinkPort; relay: Link
       const code = makeCode(s, l)
       return { ...view(l), code } as PhoneLinkWithCode
     })),
-    current: () => run(() => tx((s) => {
+    current: scriptId => run(() => tx((s) => {
       const userId = owner()
-      const open = s.links.filter(x => x.userId === userId && x.state !== 'ended').sort((a, b) => b.lastUsedAt - a.lastUsedAt)
+      const open = s.links.filter(x => x.userId === userId && x.scriptId === scriptId && x.state !== 'ended').sort((a, b) => b.lastUsedAt - a.lastUsedAt)
       return open[0] ? view(open[0]) : null
     })),
     list: () => run(() => tx((s) => {

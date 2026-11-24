@@ -9,7 +9,7 @@ Additions to the service ports (`app/services/ports.ts`) on top of [001's ports.
 | Method | HTTP (backend 003) | Resolves | Rejects |
 |---|---|---|---|
 | `start(scriptId)` | `POST /api/links` | `PhoneLinkWithCode` (an open link for this script and studio is reused with a fresh code) | `limit_reached` (`phone_link.allowed`), `not_found`, `rate_limited` |
-| `current()` | `GET /api/links/current` | `PhoneLink \| null` | |
+| `current(scriptId)` | `GET /api/links/current?scriptId=` | `PhoneLink \| null` | |
 | `list()` | `GET /api/links` | `PhoneLink[]`, open and ended ≤ 30 days, newest first | |
 | `newCode(linkId)` | `POST /api/links/{id}/codes` | `PairingCode` | `not_found`, `rate_limited` |
 | `update(linkId, { previews })` | `PATCH /api/links/{id}` | `PhoneLink` | `not_found` |

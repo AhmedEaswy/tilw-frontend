@@ -157,8 +157,9 @@ export function createLinkHost(deps: HostDeps) {
   }
 
   async function refresh() {
+    if (!state.link?.scriptId) return
     try {
-      const l = await deps.links.current()
+      const l = await deps.links.current(state.link.scriptId)
       if (l && state.link && l.id === state.link.id) set({ link: l, pendingRemote: l.pendingRemote ?? state.pendingRemote })
     } catch { /* keep what we have */ }
   }
@@ -273,7 +274,7 @@ export function createLinkHost(deps: HostDeps) {
       if (!deps.realtime.settings()) return
       let l: PhoneLink | null = null
       try {
-        l = await deps.links.current()
+        l = await deps.links.current(scriptId)
       } catch {
         return
       }
@@ -290,7 +291,7 @@ export function createLinkHost(deps: HostDeps) {
     },
 
     async newCode() {
-      if (!state.link) return
+      if (!state.link?.scriptId) return
       try {
         set({ code: await deps.links.newCode(state.link.id), error: null })
       } catch (e) {
@@ -299,7 +300,7 @@ export function createLinkHost(deps: HostDeps) {
     },
 
     async setPreviews(on: boolean) {
-      if (!state.link) return
+      if (!state.link?.scriptId) return
       const before = state.link.previews
       set({ link: { ...state.link, previews: on } })
       try {
@@ -311,7 +312,7 @@ export function createLinkHost(deps: HostDeps) {
     },
 
     async end() {
-      if (!state.link) return
+      if (!state.link?.scriptId) return
       try {
         await deps.links.end(state.link.id)
       } catch (e) {

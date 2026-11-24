@@ -140,7 +140,7 @@ watch(linkOffline, v => mock.knobs.setLinkOffline(v))
 const endReason = ref<LinkEndReason>('signed_out')
 const END_REASONS: LinkEndReason[] = ['owner', 'remote', 'idle', 'script_deleted', 'signed_out', 'device_revoked', 'email_changed', 'account_deleted', 'limit']
 async function endOpenLink() {
-  const link = await mock.services.links.current().catch(() => null)
+  const link = (await mock.services.links.list().catch(() => [])).find(l => l.state !== 'ended')
   if (!link) return show('No open phone link for the signed-in account')
   mock.knobs.endLink(link.id, endReason.value)
   show(`Ended link ${link.id} (${endReason.value})`)

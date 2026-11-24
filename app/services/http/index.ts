@@ -130,7 +130,7 @@ export function createHttpServices(opts: HttpClientOptions & { realtime?: Realti
     // ---------- feature 004: phone link (backend specs/003-phone-link/contracts/openapi.yaml) ----------
     links: {
       start: scriptId => api.post<PhoneLinkWithCode>('/api/links', { scriptId }),
-      current: () => api.get<PhoneLink | null>('/api/links/current'),
+      current: scriptId => api.get<PhoneLink | null>(`/api/links/current?scriptId=${seg(scriptId)}`),
       list: async () => {
         const res = await api.get<PhoneLink[] | { data: PhoneLink[] }>('/api/links')
         return Array.isArray(res) ? res : (res?.data ?? [])
