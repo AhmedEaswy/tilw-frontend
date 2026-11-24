@@ -19,9 +19,11 @@ const props = defineProps<{
   /** Feature 005 (A1 `293:150`): the cost line under "Format for reading", or the waiting/working state. */
   formatHint?: string
   formatState?: 'idle' | 'waiting' | 'working'
+  /** Feature 005 (US3): the browser can record, so Dictate is offered. */
+  canDictate?: boolean
 }>()
 const query = defineModel<string>('query', { required: true })
-const emit = defineEmits<{ marks: []; undo: []; redo: []; download: []; next: []; prev: []; history: []; format: [] }>()
+const emit = defineEmits<{ marks: []; undo: []; redo: []; download: []; next: []; prev: []; history: []; format: []; dictate: [] }>()
 
 const { t, locale } = useI18n()
 const searchOpen = ref(false)
@@ -68,6 +70,12 @@ defineExpose({ openSearch: () => !searchOpen.value && toggleSearch() })
         <p id="format-hint" class="hint" :class="{ live: formatState && formatState !== 'idle' }">
           {{ formatState === 'working' ? t('ai.tools.formatting') : formatState === 'waiting' ? t('ai.tools.waiting') : formatHint }}
         </p>
+      </li>
+      <li v-if="canDictate">
+        <button type="button" aria-describedby="dictate-hint" :disabled="readOnly" data-testid="tools-dictate" @click="emit('dictate')">
+          <UiGlyph name="mic" :size="18" />{{ t('ai.tools.dictate') }}
+        </button>
+        <p id="dictate-hint" class="hint">{{ t('ai.tools.dictateHint') }}</p>
       </li>
       <li class="sep" aria-hidden="true" />
       <li>

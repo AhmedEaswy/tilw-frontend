@@ -50,9 +50,9 @@ description: "Task list for Web app — AI writing tools (release 2)"
 
 ## Phase 5: User Story 3 — Turn speech into script text (P2)
 
-- [ ] T020 [P] [US3] e2e `tests/e2e/ai-speech.spec.ts`: dictate with the fake microphone → cost → text inserted at the caret, balance reduced; new from audio with a generated WAV → Save as new script; a file too large refused before any call; speech failure message; axe.
-- [ ] T021 [US3] `useAudioLength.ts`, `useDictation.ts` (research R3, R10) and `app/components/ai/TranscribePanel.vue` (cost, language, own-key note, steps, result/failure).
-- [ ] T022 [US3] `DictateDialog.vue` (A3) in the editor (Dictate item hidden without MediaRecorder; insert at caret as one undo step) and `AudioImportDialog.vue` (A4) on the library page ("New from audio").
+- [X] T020 [P] [US3] e2e `tests/e2e/ai-speech.spec.ts`: dictate with the fake microphone → cost → text inserted at the caret, balance reduced; new from audio with a generated WAV → Save as new script; a file too large refused before any call; speech failure message; axe.
+- [X] T021 [US3] `useAudioLength.ts`, `useDictation.ts` (research R3, R10) and `app/components/ai/TranscribePanel.vue` (cost, language, own-key note, steps, result/failure).
+- [X] T022 [US3] `DictateDialog.vue` (A3) in the editor (Dictate item hidden without MediaRecorder; insert at caret as one undo step) and `AudioImportDialog.vue` (A4) on the library page ("New from audio").
 
 ## Phase 6: User Story 4 — Use my own AI key (P2)
 
