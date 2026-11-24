@@ -14,7 +14,7 @@ const types = {
 }
 
 /** Routes rendered in the browser that have no prerendered file (routeRules ssr:false, dynamic pages). */
-const SPA_ROUTES = [/^\/app(\/|$)/, /^\/confirm-email\/?$/, /^\/invite\/[^/]+\/?$/, /^\/remote\/?$/, /^\/__mock\/?$/]
+const SPA_ROUTES = [/^\/app(\/|$)/, /^\/admin(\/|$)/, /^\/confirm-email\/?$/, /^\/invite\/[^/]+\/?$/, /^\/remote\/?$/, /^\/__mock\/?$/]
 
 async function file(p) {
   try {

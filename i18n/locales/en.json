@@ -116,7 +116,10 @@
     "storageNotLinked": "Google Drive isn't linked. Link it in Storage settings.",
     "partnerOffline": "The other device isn't connected right now.",
     "ownKeyRefused": "The provider refused your own key. No credits were used.",
-    "aiUnavailable": "AI is unavailable right now. Your credits were refunded."
+    "aiUnavailable": "AI is unavailable right now. Your credits were refunded.",
+    "accountSuspended": "This account is suspended.",
+    "accountSuspendedContact": "This account is suspended. Contact support at {email}.",
+    "signupClosed": "Sign-up is by invitation only right now."
   },
   "placeholder": {
     "title": "{screen}",
@@ -522,46 +525,6 @@
   "offline": {
     "text": "You're offline. What you write stays on this device and saves to your account when you're back online.",
     "back": "Back online."
-  },
-  "admin": {
-    "title": "Admin",
-    "inviteButton": "Invite someone",
-    "tabWaitlist": "Waitlist",
-    "tabInvitations": "Invitations",
-    "search": "Search by email",
-    "colEmail": "Email",
-    "colJoined": "Joined the list",
-    "colStatus": "Status",
-    "colDate": "Date",
-    "waiting": "Waiting for an invitation",
-    "invited": "Invited",
-    "invitationSent": "Invitation sent",
-    "invite": "Invite",
-    "resend": "Resend",
-    "withdraw": "Withdraw",
-    "inviteAgain": "Invite again",
-    "filterLabel": "Status",
-    "filterAll": "All",
-    "state": {
-      "pending": "Pending",
-      "used": "Joined",
-      "expired": "Expired",
-      "withdrawn": "Withdrawn"
-    },
-    "emptyWaitlist": "Nobody is on the waitlist yet.",
-    "emptyInvitations": "No invitations yet.",
-    "noMatches": "Nothing matches that search.",
-    "loadFailed": "The list could not be loaded.",
-    "inviteTitle": "Invite someone",
-    "emailLabel": "Email",
-    "send": "Send invitation",
-    "alreadyMember": "This email already has an account or a pending invitation.",
-    "invalidEmail": "Enter a valid email address.",
-    "toastInvited": "Invitation sent to {email}",
-    "toastResent": "Invitation resent to {email}",
-    "toastWithdrawn": "Invitation to {email} withdrawn",
-    "withdrawTitle": "Withdraw this invitation?",
-    "withdrawText": "The link for {email} will stop working. You can invite them again later."
   },
   "limits": {
     "activeCount": "{n} of {max} active scripts",
@@ -1282,5 +1245,15 @@
       "speechNote": "Own keys are for formatting only. Speech always uses Tilw credits.",
       "invalid": "A key is 20 to 300 characters."
     }
+  },
+  "signup": {
+    "title": "Create your account",
+    "lede": "Sign-up is open. You start on the free plan.",
+    "submit": "Create account",
+    "welcome": "Welcome, {name}.",
+    "emailTaken": "This email already has an account. Sign in instead.",
+    "link": "Create an account",
+    "closedTitle": "Sign-up is by invitation for now",
+    "closedLede": "We open Tilw in batches. Leave your email on the waitlist and we will write when your invitation is ready. Have an invitation? Open the link in your email."
   }
 }

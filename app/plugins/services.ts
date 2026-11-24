@@ -7,48 +7,59 @@
  */
 import type { Services } from '~/services/ports'
 import { createHttpServices } from '~/services/http'
-import { createMockServices, type MockBackend } from '~/services/mock'
-import { memoryKV } from '~/services/mock/db'
+import type { MockBackend } from '~/services/mock'
 import { isPortError, type RealtimeSettings } from '~/services/types'
 
-export default defineNuxtPlugin((nuxtApp) => {
+export default defineNuxtPlugin(async (nuxtApp) => {
   const config = useRuntimeConfig()
   const mode = config.public.servicesMode
   if (mode !== 'mock' && mode !== 'http') {
     throw new Error(`Unknown servicesMode "${mode}" (use "mock" or "http").`)
   }
 
-  // Mock: during prerender there is no localStorage; the app pages render client-side anyway.
-  const kv = import.meta.client ? window.localStorage : memoryKV()
-  const mock: MockBackend | null = mode === 'mock'
-    ? createMockServices(kv, {
-        origin: import.meta.client ? window.location.origin : '',
-        locale: (): 'ar' | 'en' => ((nuxtApp.$i18n as unknown as { locale: { value: string } } | undefined)?.locale.value === 'en' ? 'en' : 'ar'),
-      })
-    : null
+  // A path base (`/_api`, the dev proxy) needs the page's origin when fetching on the server.
+  // (Read before the `await` below: composables need the Nuxt context, which an await may drop on the server.)
+  const apiBase = config.public.apiBaseUrl as string
+  const baseUrl = apiBase.startsWith('/') && import.meta.server ? useRequestURL().origin + apiBase : apiBase
+  // Mock: loaded only in mock mode (feature 006 review, gaps G-D10), so an HTTP build never ships the in-browser
+  // backend in its entry chunk. During prerender there is no localStorage; the app pages render client-side anyway.
+  let mock: MockBackend | null = null
+  if (mode === 'mock') {
+    const [{ createMockServices }, { memoryKV }] = await Promise.all([import('~/services/mock'), import('~/services/mock/db')])
+    const kv = import.meta.client ? window.localStorage : memoryKV()
+    mock = createMockServices(kv, {
+      origin: import.meta.client ? window.location.origin : '',
+      locale: (): 'ar' | 'en' => ((nuxtApp.$i18n as unknown as { locale: { value: string } } | undefined)?.locale.value === 'en' ? 'en' : 'ar'),
+    })
+  }
   // Release 2: another tab of the mock may upload or change plans; pick up what it wrote (the real API needs nothing).
   if (mock && import.meta.client) {
     window.addEventListener('storage', (e) => {
       if (e.key === 'tilw:mock:v1' || e.key === 'tilw:mock:knobs') mock.db.reload()
     })
   }
-  // A path base (`/_api`, the dev proxy) needs the page's origin when fetching on the server.
-  const apiBase = config.public.apiBaseUrl as string
-  const baseUrl = apiBase.startsWith('/') && import.meta.server ? useRequestURL().origin + apiBase : apiBase
   const base: Services = mock
     ? mock.services
     : createHttpServices({ baseUrl, realtime: (config.public.realtime as RealtimeSettings | undefined) ?? null }).services
 
   let redirecting = false
-  async function onUnauthenticated() {
+  /**
+   * The session ended (or, feature 006, the account was suspended: the API ends the session with `account_suspended`
+   * on any signed-in call). Studio and admin pages go to sign-in; a suspension says so there instead of a toast.
+   */
+  async function onUnauthenticated(suspended = false) {
     if (redirecting || !import.meta.client) return
     const route = nuxtApp.$router.currentRoute.value
-    if (!route.path.startsWith('/app')) return
+    if (!route.path.startsWith('/app') && !route.path.startsWith('/admin')) return
     redirecting = true
     await nuxtApp.runWithContext(async () => {
       useAuthStore().setUser(null)
-      useToast().show((nuxtApp.$i18n as { t: (k: string) => string }).t('errors.sessionEnded'), 'info')
-      await navigateTo({ path: '/signin', query: { next: route.fullPath } }, { replace: true })
+      if (suspended) {
+        await navigateTo({ path: '/signin', query: { suspended: '1' } }, { replace: true })
+      } else {
+        useToast().show((nuxtApp.$i18n as { t: (k: string) => string }).t('errors.sessionEnded'), 'info')
+        await navigateTo({ path: '/signin', query: { next: route.fullPath } }, { replace: true })
+      }
     })
     redirecting = false
   }
@@ -64,6 +75,7 @@ export default defineNuxtPlugin((nuxtApp) => {
           if (!out || typeof (out as Promise<unknown>).catch !== 'function') return out
           return (out as Promise<unknown>).catch((e: unknown) => {
             if (isPortError(e, 'unauthenticated')) void onUnauthenticated()
+            else if (isPortError(e, 'account_suspended')) void onUnauthenticated(true)
             throw e
           })
         }
@@ -89,6 +101,8 @@ export default defineNuxtPlugin((nuxtApp) => {
     // Feature 005: AI routes behave like any account port; the speech port talks to the provider only.
     ai: guard(base.ai),
     speech: base.speech,
+    // Feature 006: public settings need no sign-in.
+    settings: base.settings,
   }
 
   return {

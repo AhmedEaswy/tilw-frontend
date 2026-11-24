@@ -19,6 +19,10 @@ export interface MockToken {
   email: string
   expiresAt: number
   usedAt: number | null
+  /** Feature 006 (invitations): id, when it was made, and a withdrawal (the link stops working). */
+  id?: string
+  createdAt?: number
+  withdrawnAt?: number | null
 }
 
 export interface OutboxMail {
@@ -44,7 +48,7 @@ export interface MockState {
   /** userId → limit key → value. */
   overrides: Record<string, Record<string, RawLimit>>
   subscriptions: MockSubscription[]
-  requests: (UpgradeRequest & { userId: string })[]
+  requests: (UpgradeRequest & { userId: string; handledBy?: string | null; handledAt?: string | null; note?: string | null; subscriptionId?: string | null })[]
   /** userId → the plan key last reported, for the one-time pro_started / pro_ended notices. */
   seenPlan: Record<string, string>
   /** scriptId → snapshots, oldest first. */

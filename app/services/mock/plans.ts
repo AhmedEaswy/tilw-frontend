@@ -21,6 +21,9 @@ export interface MockPlan {
   priceMonthlyCents: number
   priceYearlyCents: number
   limits: Record<string, RawLimit>
+  /** Feature 006: inactive plans stay for people on them but leave the public catalogue. */
+  active?: boolean
+  sort?: number
 }
 
 export interface MockSubscription {
@@ -30,6 +33,14 @@ export interface MockSubscription {
   period: 'monthly' | 'yearly' | 'custom'
   startsAt: number
   endsAt: number
+  /** Feature 006: where it came from and how it ended (the admin console's subscription list). */
+  source?: 'request' | 'admin' | 'provider'
+  requestId?: string | null
+  grantedBy?: string | null
+  note?: string | null
+  createdAt?: number
+  endedAt?: number | null
+  endedReason?: 'refund' | 'cancelled' | 'other' | 'plan_change' | null
 }
 
 export const LIMIT_DEFINITIONS: MockLimitDefinition[] = [

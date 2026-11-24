@@ -5,13 +5,14 @@
 import type { Services } from '../ports'
 import { createDriveUploader } from '../drive/uploader'
 import {
-  PortError, isPortError, type Device, type Invitation, type MyPlan, type PendingEmail, type Plan, type RemoteTake, type Script,
+  PortError, isPortError, type Device, type MyPlan, type PendingEmail, type Plan, type RemoteTake, type Script,
   type ScriptSummary, type ScriptVersion, type ScriptVersionSummary, type StorageStatus, type SyncMode, type UpgradeRequest,
-  type UploadToken, type User, type WaitlistEntry,
+  type UploadToken, type User,
 } from '../types'
 import type { LinkAuth, Pairing, PairingCode, PhoneLink, PhoneLinkWithCode, RealtimeSettings } from '../types'
 import { createHttpClient, type HttpClientOptions } from './client'
 import { createHttpRealtime } from './realtime'
+import { createHttpAdmin, createHttpSettings } from './admin'
 import { createSpeech } from '../ai/speech'
 import type { Credits, FormatEstimate, FormatSuggestion, OwnKey, Transcription, TranscriptionEstimate, TranscriptionPermission } from '../types'
 
@@ -57,6 +58,8 @@ export function createHttpServices(opts: HttpClientOptions & { realtime?: Realti
         notice = null
         return n
       },
+      // Feature 006: public sign-up, a cookie route like /login (CSRF first).
+      signUp: input => api.post<User>('/register', input),
     },
 
     waitlist: {
@@ -93,13 +96,8 @@ export function createHttpServices(opts: HttpClientOptions & { realtime?: Realti
       revokeDevice: id => api.del<void>(`/api/user/devices/${seg(id)}`),
     },
 
-    admin: {
-      waitlist: () => api.get<WaitlistEntry[]>('/api/admin/waitlist'),
-      invitations: () => api.get<Invitation[]>('/api/admin/invitations'),
-      invite: input => api.post<Invitation>('/api/admin/invitations', input),
-      resend: id => api.post<Invitation>(`/api/admin/invitations/${seg(id)}/resend`),
-      withdraw: id => api.del<void>(`/api/admin/invitations/${seg(id)}`),
-    },
+    admin: createHttpAdmin(api),
+    settings: createHttpSettings(api),
 
     // Device-only: the old app's browser keys are not defined for the real service, so there is nothing to offer.
     legacy: {

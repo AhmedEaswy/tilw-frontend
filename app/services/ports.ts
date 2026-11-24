@@ -10,6 +10,11 @@ import type {
   PresenceMember, RealtimeSettings, StudioState,
   AiProvider, Credits, FormatEstimate, FormatSuggestion, OwnKey, SpeechLanguage, SpeechPurpose, SpeechResult, SpeechUpload,
   Transcription, TranscriptionEstimate, TranscriptionPermission,
+  AddCreditsInput, AdminDashboard, AdminOverride, AdminPlan, AdminPlanLimit, AdminSettings, AdminSubscription, AdminSubscriptionRow,
+  AdminUpgradeRequest, AdminUserDetail, AdminUserFilters, AdminUserRow, AdminAiCall, AiCallFilters, AiKeyState, AiUsage, AuditAction,
+  AuditEntry, AuditFilters, ChangePlanInput, CreditEntry, FeatureFlag, GrantSubscriptionInput, LedgerEntry, LedgerFilters,
+  LimitDefinition, OverrideInput, Page, PaymentsPage, Period, PlanInput, PublicSettings, SignupMode, SubscriptionFilters,
+  SubscriptionPatch, UsageGroupBy, AdminLimitValue, Locale,
 } from './types'
 
 export interface AuthPort {
@@ -26,6 +31,13 @@ export interface AuthPort {
   confirmEmail(token: string): Promise<{ email: string }>
   /** One-time notice from the last sign-in (`deletion_cancelled`), cleared when read. */
   lastNotice(): 'deletion_cancelled' | null
+  /** Feature 006: public sign-up, signs in. `signup_closed` while the mode is invite-only; email taken → `validation` on `email`. */
+  signUp(input: { name: string; email: string; password: string; locale: Locale }): Promise<User>
+}
+
+/** Feature 006: sign-up mode and feature flags. Public (no sign-in). */
+export interface SettingsPort {
+  public(): Promise<PublicSettings>
 }
 
 export interface WaitlistPort {
@@ -119,17 +131,73 @@ export interface LegacyPort {
 }
 
 /**
- * Admin area: who is waiting, and the invitations sent. Admins only; anyone else gets `not_found`, as if the area did
- * not exist. The in-browser mock has no admins, so every call rejects with `not_found` there.
+ * Admin console (feature 006, backend 005). Admins only; anyone else gets `not_found`, as if the area did not exist.
+ * Contract: specs/006-admin-console/contracts/ports.md.
  */
 export interface AdminPort {
-  waitlist(): Promise<WaitlistEntry[]>
+  // ---------- joining (001, 005 filters) ----------
+  waitlist(filters?: { q?: string; invited?: boolean }): Promise<WaitlistEntry[]>
+  removeWaitlist(id: string): Promise<void>
   invitations(): Promise<Invitation[]>
   /** From the waitlist or a new email. Rejects with `conflict` when the email has an account or a pending invitation. */
   invite(input: { email: string }): Promise<Invitation>
   /** New link and expiry for a pending invitation; the old link stops working. */
   resend(id: string): Promise<Invitation>
   withdraw(id: string): Promise<void>
+
+  // ---------- dashboard and people ----------
+  dashboard(days: number): Promise<AdminDashboard>
+  users(filters: AdminUserFilters, cursor?: string | null, limit?: number): Promise<Page<AdminUserRow>>
+  user(id: string): Promise<AdminUserDetail>
+  suspend(id: string, reason: string): Promise<AdminUserDetail>
+  unsuspend(id: string): Promise<AdminUserDetail>
+  sendPasswordReset(id: string): Promise<{ sentTo: string }>
+  changePlan(id: string, input: ChangePlanInput): Promise<AdminUserDetail>
+  grantAdmin(id: string): Promise<AdminUserDetail>
+  revokeAdmin(id: string): Promise<AdminUserDetail>
+  scheduleDeletion(id: string, reason: string): Promise<AdminUserDetail>
+  cancelDeletion(id: string): Promise<AdminUserDetail>
+  /** `idempotencyKey`: one per form opening, so a retry or double-click applies once. */
+  addCredits(id: string, input: AddCreditsInput, idempotencyKey?: string): Promise<CreditEntry>
+  setOverride(id: string, key: string, input: OverrideInput): Promise<AdminOverride>
+  removeOverride(id: string, key: string): Promise<void>
+  userSubscriptions(id: string): Promise<AdminSubscription[]>
+  grantSubscription(id: string, input: GrantSubscriptionInput): Promise<AdminSubscription>
+
+  // ---------- plans and quotas (002) ----------
+  plans(): Promise<AdminPlan[]>
+  createPlan(input: PlanInput & { key: string; nameAr: string; nameEn: string; priceMonthlyCents: number; priceYearlyCents: number }): Promise<AdminPlan>
+  updatePlan(id: string, input: PlanInput): Promise<AdminPlan>
+  setPlanLimit(id: string, key: string, value: AdminLimitValue): Promise<AdminPlanLimit>
+  unsetPlanLimit(id: string, key: string): Promise<void>
+  limitDefinitions(): Promise<LimitDefinition[]>
+  defineLimit(input: { key: string; type: 'int' | 'bool' | 'list'; default?: AdminLimitValue; counted?: boolean; labelAr: string; labelEn: string }): Promise<LimitDefinition>
+
+  // ---------- money ----------
+  subscriptions(filters: SubscriptionFilters, cursor?: string | null): Promise<Page<AdminSubscriptionRow>>
+  updateSubscription(id: string, patch: SubscriptionPatch): Promise<AdminSubscription>
+  requests(filters?: { q?: string; state?: AdminUpgradeRequest['state'] }): Promise<AdminUpgradeRequest[]>
+  fulfilRequest(id: string, input?: { startsAt?: string; endsAt?: string; note?: string }): Promise<AdminSubscription>
+  rejectRequest(id: string, note?: string): Promise<AdminUpgradeRequest>
+  payments(filters: Period & { userId?: string }, cursor?: string | null): Promise<PaymentsPage>
+
+  // ---------- AI ----------
+  aiUsage(period: Period, groupBy: UsageGroupBy): Promise<AiUsage>
+  aiCalls(filters: AiCallFilters, cursor?: string | null): Promise<Page<AdminAiCall>>
+  ledger(filters: LedgerFilters, cursor?: string | null): Promise<Page<LedgerEntry>>
+
+  // ---------- settings ----------
+  settings(): Promise<AdminSettings>
+  setSignupMode(mode: SignupMode): Promise<AdminSettings>
+  /** The key is sent once and never comes back; only last4 does. */
+  setAiKey(provider: AiKeyState['provider'], input: { key: string; project?: string }): Promise<AiKeyState>
+  removeAiKey(provider: AiKeyState['provider']): Promise<AiKeyState>
+  setFlag(key: string, input: { enabled: boolean; description?: string | null }): Promise<FeatureFlag>
+  removeFlag(key: string): Promise<void>
+
+  // ---------- audit ----------
+  auditLog(filters: AuditFilters, cursor?: string | null): Promise<Page<AuditEntry>>
+  auditActions(): Promise<AuditAction[]>
 }
 
 /** Feature 004: the owner's phone links (session). Contract: specs/004-phone-link/contracts/ports.md. */
@@ -232,4 +300,5 @@ export interface Services {
   realtime: RealtimePort
   ai: AiPort
   speech: SpeechPort
+  settings: SettingsPort
 }

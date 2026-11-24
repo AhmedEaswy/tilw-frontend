@@ -29,6 +29,7 @@ import { allLimits, limitValue, periodEnd, publicPlan, requestReference, type Li
 import { LEGACY_SCRIPTS, mockPhone } from './seed'
 import { createMockLinks } from './link'
 import { createMockAi } from './ai'
+import { createMockAdmin } from './admin'
 import { broadcastBus, createMockHub, createMockRealtime, type MockHub } from './realtime'
 
 const RESET_TTL = 60 * 60_000
@@ -85,6 +86,13 @@ export function createMockServices(kv: KV, opts: MockOptions = {}) {
   function currentUser() {
     const u = sessionUser()
     if (!u) throw new PortError('unauthenticated')
+    // Feature 006 (backend 005 review fix): a suspended account is refused on every signed-in call, and the
+    // session ends with it.
+    if (adminMock.hooks.isSuspended(u.id)) {
+      db.write(s => (s.sessionUserId = null))
+      throw new PortError('account_suspended')
+    }
+    adminMock.hooks.touch(u.id)
     return u
   }
   const locale = (): Locale => sessionUser()?.locale ?? opts.locale?.() ?? 'ar'
@@ -99,7 +107,7 @@ export function createMockServices(kv: KV, opts: MockOptions = {}) {
   }
   function validToken(list: MockToken[], t: string) {
     const rec = list.find(x => x.token === t)
-    if (!rec || rec.usedAt) throw new PortError('token_invalid')
+    if (!rec || rec.usedAt || rec.withdrawnAt) throw new PortError('token_invalid')
     if (db.knobs.expireTokens || rec.expiresAt < Date.now()) throw new PortError('token_expired')
     return rec
   }
@@ -293,7 +301,22 @@ export function createMockServices(kv: KV, opts: MockOptions = {}) {
     },
   })
 
+  // ---------- feature 006: admin console ----------
+  const adminMock = createMockAdmin({
+    kv,
+    db,
+    now,
+    call,
+    origin,
+    sessionUserId: () => sessionUser()?.id ?? null,
+    mail,
+    token,
+    ai: aiMock.controls,
+  })
+
   const services: Services = {
+    admin: adminMock.admin,
+    settings: adminMock.settings,
     ai: aiMock.ai,
     speech: aiMock.speech,
     links: phone.links,
@@ -302,11 +325,12 @@ export function createMockServices(kv: KV, opts: MockOptions = {}) {
     auth: {
       me: () => call(() => {
         const u = sessionUser()
-        return u ? publicUser(u) : null
+        return u ? publicUser(currentUser()) : null
       }),
       signIn: ({ email, password }) => call(() => {
         const u = db.s.users.find(x => x.email === normalizeEmail(email))
         if (!u || u.password !== password) throw new PortError('invalid_credentials')
+        if (adminMock.hooks.isSuspended(u.id)) throw new PortError('account_suspended')
         const due = db.s.deletion[u.id]
         if (due !== undefined && due <= now()) {
           // The grace period is over: the account is gone.
@@ -318,12 +342,14 @@ export function createMockServices(kv: KV, opts: MockOptions = {}) {
           throw new PortError('invalid_credentials')
         }
         db.write((s) => {
-          if (due !== undefined) {
+          // Feature 006: a deletion an admin scheduled is not cancelled by signing in (only an admin can).
+          if (due !== undefined && !adminMock.hooks.deletionByAdmin(u.id)) {
             delete s.deletion[u.id]
             notice = 'deletion_cancelled'
           }
           s.sessionUserId = u.id
         })
+        adminMock.hooks.touch(u.id)
         return publicUser(u)
       }),
       signOut: () => call(() => void db.write(s => (s.sessionUserId = null))),
@@ -341,6 +367,9 @@ export function createMockServices(kv: KV, opts: MockOptions = {}) {
       resetPassword: ({ token: t, password }) => call(() => {
         const rec = validToken(db.s.resets, t)
         checkPassword(password)
+        // Feature 006: a suspended account can't finish a reset; the link stays unused.
+        const owner = db.s.users.find(x => x.email === rec.email)
+        if (owner && adminMock.hooks.isSuspended(owner.id)) throw new PortError('account_suspended')
         return db.write((s) => {
           rec.usedAt = Date.now()
           const u = s.users.find(x => x.email === rec.email)
@@ -395,6 +424,23 @@ export function createMockServices(kv: KV, opts: MockOptions = {}) {
         notice = null
         return n
       },
+      // Feature 006: public sign-up, only while the sign-up mode is open.
+      signUp: ({ name, email, password, locale: lang }) => call(() => {
+        if (adminMock.hooks.signupMode() !== 'open') throw new PortError('signup_closed')
+        const n = (name ?? '').trim()
+        const e = normalizeEmail(email)
+        if (!n || n.length > 120) throw new PortError('validation', { name: n ? 'max' : 'required' })
+        if (!isEmail(e)) throw new PortError('validation', { email: 'invalid' })
+        checkPassword(password)
+        if (db.s.users.some(u => u.email === e)) throw new PortError('validation', { email: 'taken' })
+        return db.write((s) => {
+          const u = { id: uid('u'), name: n, email: e, password, locale: lang === 'en' ? 'en' as const : 'ar' as const, theme: 'system' as const, reading: { ...DEFAULT_READING }, createdAt: new Date(now()).toISOString() }
+          s.users.push(u)
+          s.scripts[u.id] = []
+          s.sessionUserId = u.id
+          return publicUser(u)
+        })
+      }),
     },
 
     waitlist: {
@@ -611,15 +657,6 @@ export function createMockServices(kv: KV, opts: MockOptions = {}) {
       }),
     },
 
-    // The mock has no admins: the admin area does not exist here, like for any non-admin on the real API.
-    admin: {
-      waitlist: () => call(() => { throw new PortError('not_found') }),
-      invitations: () => call(() => { throw new PortError('not_found') }),
-      invite: () => call(() => { throw new PortError('not_found') }),
-      resend: () => call(() => { throw new PortError('not_found') }),
-      withdraw: () => call(() => { throw new PortError('not_found') }),
-    },
-
     // Phase 1 stands in for the old app's browser keys with fixed sample scripts.
     legacy: {
       scan: () => call(() => {
@@ -631,7 +668,7 @@ export function createMockServices(kv: KV, opts: MockOptions = {}) {
     plans: {
       listPlans: () => call(() => {
         if (db.knobs.plansDown) throw new PortError('network')
-        return db.s.plans.map(p => publicPlan(p, db.s.limitDefinitions, locale()))
+        return db.s.plans.filter(p => p.active !== false).map(p => publicPlan(p, db.s.limitDefinitions, locale()))
       }),
       myPlan: () => call((): MyPlan => {
         const u = currentUser()
@@ -799,6 +836,8 @@ export function createMockServices(kv: KV, opts: MockOptions = {}) {
     now,
     /** Feature 005: AI knobs, grants and balance. */
     ai: aiMock.controls,
+    /** Feature 006: admin console knobs (sign-up mode, suspend, lists fail, empty dashboard). */
+    admin: adminMock.controls,
     /** Feature 005: an edit from another device (the apply conflict). */
     bumpScript(userId: string, scriptId: string) {
       const s = userScripts(userId).find(x => x.id === scriptId)

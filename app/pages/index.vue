@@ -24,6 +24,9 @@ const { plans } = usePublicPlans();
 const period = ref<"monthly" | "yearly">("yearly");
 // Signed out, the route guard sends this through sign-in and back to the upgrade sheet.
 const getPro = () => navigateTo("/app/settings/plan?upgrade=1");
+// Feature 006 (owner decision): while sign-up is open, the join section offers "Create account" instead of the
+// waitlist form. The prerendered page shows the waitlist (invite-only default) and swaps after the settings load.
+const { signupOpen } = usePublicSettings();
 
 onMounted(() => {
   initHero();
@@ -244,9 +247,10 @@ onMounted(() => {
 <section class="jn-sec" id="join"><div class="wrap">
   <div class="jn-band" id="jn-band">
     <svg class="jn-beam" id="jn-beam" aria-hidden="true"><path id="jn-path"/></svg>
-    <div class="jn-half jn-copy"><span class="jn-chip"><i></i>بالدعوة حالياً</span><h2>افتتاحيتك القادمة تبدأ هنا<span class="jn-dot" id="jn-dot">.</span></h2><p>التسجيل متاح بالدعوة حالياً. اترك بريدك لنخبرك عند فتح مكان لك.</p></div>
+    <div class="jn-half jn-copy"><span class="jn-chip"><i></i>{{ signupOpen ? "التسجيل مفتوح" : "بالدعوة حالياً" }}</span><h2>افتتاحيتك القادمة تبدأ هنا<span class="jn-dot" id="jn-dot">.</span></h2><p v-if="signupOpen">التسجيل مفتوح الآن. أنشئ حسابك في دقيقة وابدأ على الخطة المجانية.</p><p v-else>التسجيل متاح بالدعوة حالياً. اترك بريدك لنخبرك عند فتح مكان لك.</p></div>
     <div class="jn-half">
-      <div class="jn-card" id="jn-card">
+      <div v-if="signupOpen" class="jn-card jn-open" data-testid="join-open" style="display:grid;gap:14px;justify-items:start"><a class="jn-go" href="/signup" style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none">أنشئ حساباً</a><a href="/signin" style="color:inherit">لديك حساب؟ سجّل الدخول</a></div>
+      <div v-show="!signupOpen" class="jn-card" id="jn-card">
         <form class="jn-form" id="jn-form" novalidate><label for="jn-email">بريدك الإلكتروني</label><input id="jn-email" type="email" placeholder="name@example.com" autocomplete="email"><button class="jn-go" id="jn-go" type="submit">اطلب دعوة</button><span class="jn-err" id="jn-err" aria-live="polite"></span></form>
         <p class="jn-done" role="status"><i><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></i>وصل طلبك. سنخبرك عند فتح مكان لك.</p>
       </div>

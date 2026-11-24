@@ -4,11 +4,12 @@
  * - Guest-only pages send signed-in users to the library.
  * Runs on the client only: the static build has no server session to check.
  */
-const GUEST_ONLY = new Set(['/signin', '/waitlist', '/forgot-password', '/forgot-password/sent'])
+const GUEST_ONLY = new Set(['/signin', '/signup', '/waitlist', '/forgot-password', '/forgot-password/sent'])
 
 export default defineNuxtRouteMiddleware(async (to) => {
   if (import.meta.server) return
-  const needsAuth = to.path === '/app' || to.path.startsWith('/app/')
+  // Feature 006: the admin console needs a session too (the admin middleware then checks the flag).
+  const needsAuth = to.path === '/app' || to.path.startsWith('/app/') || to.path === '/admin' || to.path.startsWith('/admin/')
   const guestOnly = GUEST_ONLY.has(to.path.replace(/\/$/, ''))
   if (!needsAuth && !guestOnly) return
 
@@ -27,6 +28,8 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   await auth.init()
 
+  // Feature 006: the session check found the account suspended; sign-in says why.
+  if (needsAuth && auth.suspended) return navigateTo({ path: '/signin', query: { suspended: '1' } }, { replace: true })
   if (needsAuth && auth.status !== 'authed') {
     return navigateTo({ path: '/signin', query: to.fullPath !== '/app' ? { next: to.fullPath } : {} }, { replace: true })
   }
