@@ -186,69 +186,82 @@ async function removeFlag() {
     <AdminListState :loading="!data && !error" :loaded="!!data" :error="error" :empty="false" @retry="load" />
 
     <template v-if="data">
-      <section class="adm-card adm-card-pad" aria-labelledby="mode-h">
-        <div class="adm-card-head">
+      <section class="adm-group" aria-labelledby="mode-h">
+        <div class="adm-ghead">
           <h2 id="mode-h">{{ t('admin.settings.mode.title') }}</h2>
-          <span class="adm-chip" data-testid="signup-mode">{{ t(`admin.settings.mode.${data.signupMode}`) }}</span>
+          <span class="adm-chip adm-end" data-testid="signup-mode">{{ t(`admin.settings.mode.${data.signupMode}`) }}</span>
         </div>
-        <UiToggle v-model="openSignup" class="mode" :label="t('admin.settings.mode.toggle')" :busy="modeBusy" data-testid="signup-toggle" />
-        <p class="adm-muted">{{ t('admin.settings.mode.explain') }}</p>
+        <div class="adm-panel">
+          <UiToggle v-model="openSignup" class="adm-line mode" :label="t('admin.settings.mode.toggle')" :description="t('admin.settings.mode.explain')" :busy="modeBusy" data-testid="signup-toggle" />
+        </div>
       </section>
 
-      <section class="adm-card adm-card-pad" aria-labelledby="keys-h">
-        <h2 id="keys-h">{{ t('admin.settings.keys.title') }}</h2>
-        <p class="adm-muted">{{ t('admin.settings.keys.explain') }}</p>
-        <div v-for="k in data.aiKeys" :key="k.provider" class="key" :data-testid="`key-${k.provider}`">
-          <div class="adm-card-head">
-            <span class="prov"><ProviderMark :provider="k.provider" :size="22" /><span class="adm-person"><b class="adm-ltr">{{ PROVIDER_NAMES[k.provider] }}</b><small>{{ t(`admin.settings.keys.use.${k.provider}`) }}{{ k.project ? ` · ${k.project}` : '' }}</small></span></span>
-            <span class="state">
-              <span class="adm-chip" :class="SOURCE_TONE[k.source]">{{ t(`admin.settings.keys.source.${k.source}`) }}</span>
-              <span v-if="k.last4" class="adm-ltr">…{{ k.last4 }}</span>
-              <span v-if="k.updatedAt" class="adm-muted" :title="utc(k.updatedAt)">{{ dateTime(k.updatedAt, locale) }}</span>
+      <section class="adm-group" aria-labelledby="keys-h">
+        <div class="adm-ghead stack">
+          <h2 id="keys-h">{{ t('admin.settings.keys.title') }}</h2>
+          <p class="adm-gsub">{{ t('admin.settings.keys.explain') }}</p>
+        </div>
+        <div class="adm-panel">
+          <div v-for="k in data.aiKeys" :key="k.provider" class="adm-line key" :data-testid="`key-${k.provider}`">
+            <span class="prov">
+              <ProviderMark :provider="k.provider" :size="22" />
+              <span class="adm-lab"><b class="adm-ltr">{{ PROVIDER_NAMES[k.provider] }}</b><small>{{ t(`admin.settings.keys.use.${k.provider}`) }}{{ k.project ? ` · ${k.project}` : '' }}</small></span>
             </span>
+            <span class="adm-ctl">
+              <span class="state">
+                <span class="adm-chip" :class="SOURCE_TONE[k.source]">{{ t(`admin.settings.keys.source.${k.source}`) }}</span>
+                <span v-if="k.last4" class="adm-ltr last4">…{{ k.last4 }}</span>
+                <span v-if="k.updatedAt" class="adm-muted" :title="utc(k.updatedAt)">{{ dateTime(k.updatedAt, locale) }}</span>
+              </span>
+              <template v-if="editing !== k.provider">
+                <button type="button" class="adm-btn" @click="startKey(k.provider)">{{ k.set ? t('admin.settings.keys.replace') : t('admin.settings.keys.add') }}</button>
+                <button v-if="k.source === 'stored'" type="button" class="adm-link danger" @click="removing = k.provider">{{ t('admin.settings.keys.remove') }}</button>
+              </template>
+            </span>
+            <form v-if="editing === k.provider" class="adm-subform" autocomplete="off" @submit.prevent="saveKey(k.provider)">
+              <label class="adm-fcol grow"><span class="adm-flab">{{ t('admin.settings.keys.newKey') }}</span>
+                <input v-model="keyText" class="adm-input adm-ltr" type="password" autocomplete="new-password" spellcheck="false" minlength="8" maxlength="500" required>
+              </label>
+              <label v-if="k.provider === 'deepgram'" class="adm-fcol proj"><span class="adm-flab">{{ t('admin.settings.keys.project') }}</span>
+                <input v-model="project" class="adm-input adm-ltr" type="text" maxlength="100" autocomplete="off">
+              </label>
+              <span class="acts">
+                <button type="submit" class="adm-btn primary" :disabled="keyText.trim().length < 8 || keyBusy">{{ t('common.save') }}</button>
+                <button type="button" class="adm-btn" @click="cancelKey">{{ t('common.cancel') }}</button>
+              </span>
+              <p v-if="keyError" class="adm-err full" role="alert">{{ keyError }}</p>
+            </form>
           </div>
-          <form v-if="editing === k.provider" class="adm-row" autocomplete="off" @submit.prevent="saveKey(k.provider)">
-            <label class="adm-label">{{ t('admin.settings.keys.newKey') }}
-              <input v-model="keyText" class="adm-input adm-ltr" type="password" autocomplete="new-password" spellcheck="false" minlength="8" maxlength="500" required>
-            </label>
-            <label v-if="k.provider === 'deepgram'" class="adm-label proj">{{ t('admin.settings.keys.project') }}
-              <input v-model="project" class="adm-input adm-ltr" type="text" maxlength="100" autocomplete="off">
-            </label>
-            <button type="submit" class="adm-btn primary" :disabled="keyText.trim().length < 8 || keyBusy">{{ t('common.save') }}</button>
-            <button type="button" class="adm-btn" @click="cancelKey">{{ t('common.cancel') }}</button>
-          </form>
-          <p v-if="editing === k.provider && keyError" class="adm-err" role="alert">{{ keyError }}</p>
-          <div v-if="editing !== k.provider" class="adm-row">
-            <button type="button" class="adm-btn" @click="startKey(k.provider)">{{ k.set ? t('admin.settings.keys.replace') : t('admin.settings.keys.add') }}</button>
-            <button v-if="k.source === 'stored'" type="button" class="adm-link danger" @click="removing = k.provider">{{ t('admin.settings.keys.remove') }}</button>
-          </div>
+          <p class="adm-foot">{{ t('admin.settings.keys.cleared') }}</p>
         </div>
-        <p class="adm-hint">{{ t('admin.settings.keys.cleared') }}</p>
       </section>
 
-      <section class="adm-card" aria-labelledby="flags-h">
-        <div class="adm-toolbar"><h2 id="flags-h" class="adm-card-title">{{ t('admin.settings.flags.title') }}</h2><span class="adm-grow adm-muted">{{ t('admin.settings.flags.explain') }}</span></div>
-        <div v-if="data.flags.length" class="adm-scroll">
-          <table class="adm-tbl">
-            <caption>{{ t('admin.settings.flags.title') }}</caption>
-            <thead><tr><th scope="col">{{ t('admin.settings.flags.key') }}</th><th scope="col">{{ t('admin.settings.flags.changed') }}</th><th scope="col">{{ t('admin.settings.flags.on') }}</th><th scope="col" class="act"><span class="adm-muted">{{ t('admin.list.actions') }}</span></th></tr></thead>
-            <tbody>
-              <tr v-for="f in data.flags" :key="f.key">
-                <td><span class="adm-person"><b class="adm-ltr">{{ f.key }}</b><small>{{ f.description ?? '' }}</small></span></td>
-                <td class="nowrap" :title="utc(f.updatedAt)">{{ dateTime(f.updatedAt, locale) }}</td>
-                <td><UiToggle :model-value="pendingFlags.get(f.key) ?? f.enabled" :label="f.key" hide-label size="sm" :busy="pendingFlags.has(f.key)" @update:model-value="toggleFlag(f.key, $event)" /></td>
-                <td class="act"><button type="button" class="adm-link danger" :aria-label="`${t('admin.settings.flags.remove')} ${f.key}`" @click="removingFlag = f.key">{{ t('admin.settings.flags.remove') }}</button></td>
-              </tr>
-            </tbody>
-          </table>
+      <section class="adm-group" aria-labelledby="flags-h">
+        <div class="adm-ghead">
+          <h2 id="flags-h">{{ t('admin.settings.flags.title') }}</h2>
+          <span class="adm-gsub">{{ t('admin.settings.flags.explain') }}</span>
         </div>
-        <form class="adm-row add" @submit.prevent="addFlag">
-          <label class="adm-label">{{ t('admin.settings.flags.key') }}<input v-model="newKey" class="adm-input adm-ltr" placeholder="ai.captions" maxlength="64"></label>
-          <label class="adm-label">{{ t('admin.settings.flags.description') }}<input v-model="newDesc" class="adm-input" dir="auto" maxlength="200"></label>
-          <UiToggle v-model="newOn" class="chk" :label="t('admin.settings.flags.on')" size="sm" label-position="end" />
-          <button type="submit" class="adm-btn primary" :disabled="addBusy">{{ t('admin.settings.flags.add') }}</button>
-        </form>
-        <p class="adm-hint pad" :class="{ 'adm-err': flagError }" role="status">{{ flagError || t('admin.settings.flags.keyRule') }}</p>
+        <div class="adm-panel">
+          <ul v-if="data.flags.length" class="adm-list" :aria-label="t('admin.settings.flags.title')">
+            <li v-for="f in data.flags" :key="f.key" class="adm-line">
+              <span class="adm-lab"><b class="adm-ltr">{{ f.key }}</b><small v-if="f.description">{{ f.description }}</small></span>
+              <span class="adm-ctl">
+                <span class="adm-meta">{{ t('admin.settings.flags.changed') }} <span class="nowrap" :title="utc(f.updatedAt)">{{ dateTime(f.updatedAt, locale) }}</span></span>
+                <UiToggle :model-value="pendingFlags.get(f.key) ?? f.enabled" :label="f.key" hide-label :busy="pendingFlags.has(f.key)" @update:model-value="toggleFlag(f.key, $event)" />
+                <button type="button" class="adm-link danger" :aria-label="`${t('admin.settings.flags.remove')} ${f.key}`" @click="removingFlag = f.key">{{ t('admin.settings.flags.remove') }}</button>
+              </span>
+            </li>
+          </ul>
+          <div class="adm-foot stack">
+            <form class="adm-addrow add" @submit.prevent="addFlag">
+              <label class="adm-fcol"><span class="adm-flab">{{ t('admin.settings.flags.key') }}</span><input v-model="newKey" class="adm-input adm-ltr fkey" placeholder="ai.captions" maxlength="64"></label>
+              <label class="adm-fcol grow"><span class="adm-flab">{{ t('admin.settings.flags.description') }}</span><input v-model="newDesc" class="adm-input" dir="auto" maxlength="200"></label>
+              <UiToggle v-model="newOn" class="chk" :label="t('admin.settings.flags.on')" size="sm" label-position="end" />
+              <button type="submit" class="adm-btn primary" :disabled="addBusy">{{ t('admin.settings.flags.add') }}</button>
+            </form>
+            <p class="adm-hint" :class="{ 'adm-err': flagError }" role="status">{{ flagError || t('admin.settings.flags.keyRule') }}</p>
+          </div>
+        </div>
       </section>
     </template>
 
@@ -282,35 +295,43 @@ async function removeFlag() {
 </template>
 
 <style scoped>
-.key {
-  display: grid;
-  gap: 10px;
-  padding-block: 14px;
-  border-block-start: 1px solid var(--tilw-hairline);
+.prov {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-inline-size: 0;
 }
 .state {
-  display: flex;
-  gap: 8px;
+  display: inline-flex;
   align-items: center;
+  gap: 8px;
 }
-.proj {
-  flex: 0 1 220px !important;
+.last4 {
+  color: var(--tilw-text-ink);
+  font-family: var(--tilw-font-mono);
 }
-.add {
-  padding: 12px 16px 0;
+.proj .adm-input {
+  inline-size: 200px;
 }
-.pad {
-  padding: 6px 16px 12px;
+.acts {
+  display: inline-flex;
+  gap: 8px;
+}
+.full {
+  flex-basis: 100%;
+}
+.fkey {
+  inline-size: 200px;
 }
 .chk {
   align-self: center;
+  block-size: 36px;
 }
-.mode {
-  max-inline-size: 420px;
+.mode :deep(.label) {
+  font: 600 14.5px/1.45 var(--tilw-font-ar);
 }
-.prov {
-  display: flex;
-  gap: 10px;
-  align-items: center;
+.mode :deep(.desc) {
+  max-inline-size: 64ch;
+  font: 500 13px/1.6 var(--tilw-font-ar);
 }
 </style>

@@ -58,11 +58,11 @@ async function withdraw() {
       <div class="adm-actions"><button type="button" class="adm-btn primary" @click="inviting = true">{{ t('admin.inviteButton') }}</button></div>
     </div>
 
+    <div class="adm-filter">
+      <UiSearchField v-model="query" kind="email" size="sm" :debounce="0" :placeholder="t('admin.search')" :label="t('admin.search')" />
+      <span class="adm-field"><label for="f-state">{{ t('admin.filterLabel') }}</label><UiSelect id="f-state" v-model="statusModel" :options="statusOptions" size="sm" /></span>
+    </div>
     <section class="adm-card">
-      <div class="adm-toolbar">
-        <UiSearchField v-model="query" kind="email" size="sm" :debounce="0" :placeholder="t('admin.search')" :label="t('admin.search')" />
-        <span class="adm-field"><label for="f-state">{{ t('admin.filterLabel') }}</label><UiSelect id="f-state" v-model="statusModel" :options="statusOptions" size="sm" /></span>
-      </div>
       <div v-if="rows.length" class="adm-scroll">
         <table class="adm-tbl">
           <caption>{{ t('admin.nav.invitations') }}</caption>

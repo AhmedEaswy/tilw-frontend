@@ -207,6 +207,7 @@
       "active": "آخر نشاط {date}",
       "neverActive": "لم ينشط بعد",
       "actions": "إجراءات الحساب",
+      "moreActions": "إجراءات الحساب الأخرى",
       "a": {
         "changePlan": "تغيير الخطة",
         "credits": "منح رصيد",

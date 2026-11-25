@@ -78,6 +78,9 @@ const allowed = computed(() => ({
   admins: can('admins', 'edit') && !isSuperTarget.value,
 }))
 const anyAction = computed(() => allowed.value.users || allowed.value.money || allowed.value.ai || allowed.value.admins)
+/** The header row: the main actions sit beside the name, the rest in the row under it. */
+const moreActions = computed(() => allowed.value.users || (allowed.value.admins && !!(avail.value?.makeAdmin.shown || avail.value?.revokeAdmin.shown)))
+const initial = computed(() => (d.value?.name ?? '').trim().charAt(0) || '?')
 const name = (ar: string | null, en: string | null) => (locale.value === 'ar' ? ar : en) ?? '—'
 const tone = computed(() => (d.value?.status === 'active' ? 'success' : d.value?.status === 'suspended' ? 'error' : 'warning'))
 const limitValue = (l: AdminLimitRow) => (l.type === 'bool' ? (l.value ? t('admin.limits.on') : t('admin.limits.off')) : l.type === 'list' ? (Array.isArray(l.value) && l.value.length ? l.value.join(', ') : '—') : l.value === null ? t('admin.limits.unlimited') : num(l.value as number))
@@ -140,35 +143,44 @@ const firstLimit = computed(() => d.value?.limits[0] ?? null)
 
     <template v-if="d && !user.gone">
       <div class="adm-head">
-        <div>
-          <p class="adm-crumb"><NuxtLink to="/admin/users">{{ t('admin.nav.users') }}</NuxtLink> / {{ d.name }}</p>
-          <div class="title">
-            <h1>{{ d.name }}</h1>
-            <span class="adm-chip" :class="tone" data-testid="status">{{ t(`admin.status.${d.status}`) }}</span>
-            <span class="adm-chip info">{{ name(d.plan.nameAr, d.plan.nameEn) }}</span>
-            <span v-if="d.adminRole === 'super'" class="adm-chip warning" data-testid="super-chip">{{ t('admin.admins.super') }}</span>
-            <span v-else-if="d.isAdmin" class="adm-chip info">{{ t('admin.status.admin') }}</span>
-          </div>
-          <p class="adm-sub">
-            <span class="adm-ltr">{{ d.email }}</span> · {{ t('admin.detail.joined', { date: dateOnly(d.createdAt, locale) }) }}
-            · {{ d.lastActiveAt ? t('admin.detail.active', { date: dateTime(d.lastActiveAt, locale) }) : t('admin.detail.neverActive') }} · {{ d.locale === 'ar' ? 'العربية' : 'English' }}
-          </p>
-        </div>
+        <p class="adm-crumb"><NuxtLink to="/admin/users">{{ t('admin.nav.users') }}</NuxtLink> / {{ d.name }}</p>
       </div>
 
-      <div v-if="anyAction" class="actions" role="group" :aria-label="t('admin.detail.actions')">
-        <button v-if="allowed.money" type="button" class="adm-btn" @click="planOpen = true">{{ t('admin.detail.a.changePlan') }}</button>
-        <button v-if="allowed.ai" type="button" class="adm-btn" @click="creditsOpen = true">{{ t('admin.detail.a.credits') }}</button>
-        <button v-if="allowed.users" type="button" class="adm-btn" :disabled="!avail?.reset.enabled" :title="why('reset')" @click="ask('reset')">{{ t('admin.detail.a.reset') }}</button>
-        <button v-if="allowed.admins && avail?.makeAdmin.shown" type="button" class="adm-btn ghost" :disabled="!avail.makeAdmin.enabled" :title="why('makeAdmin')" @click="ask('makeAdmin')">{{ t('admin.detail.a.makeAdmin') }}</button>
-        <button v-if="allowed.admins && avail?.revokeAdmin.shown" type="button" class="adm-btn ghost" :disabled="!avail.revokeAdmin.enabled" :title="why('revokeAdmin')" @click="ask('revokeAdmin')">{{ t('admin.detail.a.revokeAdmin') }}</button>
-        <template v-if="allowed.users">
-          <button v-if="avail?.unsuspend.shown" type="button" class="adm-btn" @click="ask('unsuspend')">{{ t('admin.detail.a.unsuspend') }}</button>
-          <button v-if="avail?.suspend.shown" type="button" class="adm-btn danger" :disabled="!avail.suspend.enabled || isSuperTarget" :title="why('suspend')" @click="ask('suspend')">{{ t('admin.detail.a.suspend') }}</button>
-          <button v-if="avail?.cancelDeletion.shown" type="button" class="adm-btn" @click="ask('cancelDeletion')">{{ t('admin.detail.a.cancelDeletion') }}</button>
-          <button v-if="avail?.scheduleDeletion.shown" type="button" class="adm-btn danger" :disabled="!avail.scheduleDeletion.enabled || isSuperTarget" :title="why('scheduleDeletion')" @click="ask('scheduleDeletion')">{{ t('admin.detail.a.scheduleDeletion') }}</button>
-        </template>
-      </div>
+      <!-- Header row: the avatar initial, name with its chips and the contact line, the main actions at the end. -->
+      <section class="adm-panel uhead" aria-labelledby="u-name">
+        <div class="adm-uhead">
+          <span class="adm-av" aria-hidden="true">{{ initial }}</span>
+          <div class="adm-ident">
+            <div class="title">
+              <h1 id="u-name">{{ d.name }}</h1>
+              <span class="adm-chip" :class="tone" data-testid="status">{{ t(`admin.status.${d.status}`) }}</span>
+              <span class="adm-chip info">{{ name(d.plan.nameAr, d.plan.nameEn) }}</span>
+              <span v-if="d.adminRole === 'super'" class="adm-chip warning" data-testid="super-chip">{{ t('admin.admins.super') }}</span>
+              <span v-else-if="d.isAdmin" class="adm-chip info">{{ t('admin.status.admin') }}</span>
+            </div>
+            <p class="adm-sub">
+              <span class="adm-ltr">{{ d.email }}</span> · {{ t('admin.detail.joined', { date: dateOnly(d.createdAt, locale) }) }}
+              · {{ d.lastActiveAt ? t('admin.detail.active', { date: dateTime(d.lastActiveAt, locale) }) : t('admin.detail.neverActive') }} · {{ d.locale === 'ar' ? 'العربية' : 'English' }}
+            </p>
+          </div>
+          <div v-if="allowed.money || allowed.ai" class="adm-ctl" role="group" :aria-label="t('admin.detail.actions')">
+            <button v-if="allowed.money" type="button" class="adm-btn" @click="planOpen = true">{{ t('admin.detail.a.changePlan') }}</button>
+            <button v-if="allowed.ai" type="button" class="adm-btn" @click="creditsOpen = true">{{ t('admin.detail.a.credits') }}</button>
+          </div>
+        </div>
+        <div v-if="moreActions" class="adm-foot adm-uhead-more" role="group" :aria-label="t('admin.detail.moreActions')">
+          <button v-if="allowed.users" type="button" class="adm-btn" :disabled="!avail?.reset.enabled" :title="why('reset')" @click="ask('reset')">{{ t('admin.detail.a.reset') }}</button>
+          <button v-if="allowed.admins && avail?.makeAdmin.shown" type="button" class="adm-btn ghost" :disabled="!avail.makeAdmin.enabled" :title="why('makeAdmin')" @click="ask('makeAdmin')">{{ t('admin.detail.a.makeAdmin') }}</button>
+          <button v-if="allowed.admins && avail?.revokeAdmin.shown" type="button" class="adm-btn ghost" :disabled="!avail.revokeAdmin.enabled" :title="why('revokeAdmin')" @click="ask('revokeAdmin')">{{ t('admin.detail.a.revokeAdmin') }}</button>
+          <template v-if="allowed.users">
+            <span class="spacer" />
+            <button v-if="avail?.unsuspend.shown" type="button" class="adm-btn" @click="ask('unsuspend')">{{ t('admin.detail.a.unsuspend') }}</button>
+            <button v-if="avail?.suspend.shown" type="button" class="adm-btn danger" :disabled="!avail.suspend.enabled || isSuperTarget" :title="why('suspend')" @click="ask('suspend')">{{ t('admin.detail.a.suspend') }}</button>
+            <button v-if="avail?.cancelDeletion.shown" type="button" class="adm-btn" @click="ask('cancelDeletion')">{{ t('admin.detail.a.cancelDeletion') }}</button>
+            <button v-if="avail?.scheduleDeletion.shown" type="button" class="adm-btn danger" :disabled="!avail.scheduleDeletion.enabled || isSuperTarget" :title="why('scheduleDeletion')" @click="ask('scheduleDeletion')">{{ t('admin.detail.a.scheduleDeletion') }}</button>
+          </template>
+        </div>
+      </section>
       <p v-if="allowed.users && avail && (isSuperTarget || !avail.suspend.enabled || !avail.scheduleDeletion.enabled || !avail.reset.enabled)" class="adm-note" data-testid="why">
         {{ why('suspend') ?? why('scheduleDeletion') ?? why('reset') }}
       </p>
@@ -191,110 +203,125 @@ const firstLimit = computed(() => d.value?.limits[0] ?? null)
 
       <div v-show="tab === 'overview'" class="grid">
         <div class="col">
-          <section v-if="can('money')" class="adm-card adm-card-pad">
-            <h2>{{ t('admin.detail.plan') }}</h2>
-            <dl class="adm-kv">
-              <div><dt>{{ t('admin.detail.planInForce') }}</dt><dd>{{ name(d.plan.nameAr, d.plan.nameEn) }}{{ d.plan.subscription ? ` · ${t(`admin.period.${d.plan.subscription.period}`)}` : '' }}</dd></div>
-              <div v-if="d.plan.subscription"><dt>{{ t('admin.detail.from') }}</dt><dd>{{ dateOnly(d.plan.subscription.startsAt, locale) }}</dd></div>
-              <div v-if="d.plan.subscription"><dt>{{ t('admin.detail.to') }}</dt><dd>{{ dateOnly(d.plan.subscription.endsAt, locale) }}</dd></div>
-              <div v-if="d.plan.subscription"><dt>{{ t('admin.detail.source') }}</dt><dd>{{ t(`admin.source.${d.plan.subscription.source}`) }}</dd></div>
-              <div><dt>{{ t('admin.detail.upcoming') }}</dt><dd>{{ d.plan.upcoming.length ? d.plan.upcoming.map(u => `${u.plan} · ${dateOnly(u.startsAt, locale)}`).join(', ') : t('admin.detail.none') }}</dd></div>
-              <div><dt>{{ t('admin.detail.pendingRequest') }}</dt><dd><span v-if="d.plan.pendingRequest" class="adm-ltr">{{ d.plan.pendingRequest.reference }} · {{ money(d.plan.pendingRequest.priceCents) }}</span><span v-else>{{ t('admin.detail.none') }}</span></dd></div>
-            </dl>
-            <div v-if="history.length" class="adm-scroll">
-              <table class="adm-tbl">
-                <caption>{{ t('admin.detail.history') }}</caption>
-                <thead><tr><th scope="col">{{ t('admin.users.plan') }}</th><th scope="col">{{ t('admin.detail.period') }}</th><th scope="col">{{ t('admin.detail.source') }}</th><th scope="col">{{ t('admin.users.status') }}</th></tr></thead>
-                <tbody>
-                  <tr v-for="s in history" :key="s.id">
-                    <td>{{ s.plan }}</td>
-                    <td class="nowrap">{{ dateOnly(s.startsAt, locale) }} – {{ dateOnly(s.endsAt, locale) }}</td>
-                    <td>{{ t(`admin.source.${s.source}`) }}</td>
-                    <td><span class="adm-chip" :class="s.state === 'active' ? 'success' : s.state === 'scheduled' ? 'info' : ''">{{ t(`admin.subState.${s.state}`) }}</span></td>
-                  </tr>
-                </tbody>
-              </table>
+          <section v-if="can('money')" class="adm-group" aria-labelledby="ov-plan">
+            <div class="adm-ghead"><h2 id="ov-plan">{{ t('admin.detail.plan') }}</h2></div>
+            <div class="adm-panel">
+              <dl class="adm-kv">
+                <div><dt>{{ t('admin.detail.planInForce') }}</dt><dd>{{ name(d.plan.nameAr, d.plan.nameEn) }}{{ d.plan.subscription ? ` · ${t(`admin.period.${d.plan.subscription.period}`)}` : '' }}</dd></div>
+                <div v-if="d.plan.subscription"><dt>{{ t('admin.detail.from') }}</dt><dd>{{ dateOnly(d.plan.subscription.startsAt, locale) }}</dd></div>
+                <div v-if="d.plan.subscription"><dt>{{ t('admin.detail.to') }}</dt><dd>{{ dateOnly(d.plan.subscription.endsAt, locale) }}</dd></div>
+                <div v-if="d.plan.subscription"><dt>{{ t('admin.detail.source') }}</dt><dd>{{ t(`admin.source.${d.plan.subscription.source}`) }}</dd></div>
+                <div><dt>{{ t('admin.detail.upcoming') }}</dt><dd>{{ d.plan.upcoming.length ? d.plan.upcoming.map(u => `${u.plan} · ${dateOnly(u.startsAt, locale)}`).join(', ') : t('admin.detail.none') }}</dd></div>
+                <div><dt>{{ t('admin.detail.pendingRequest') }}</dt><dd><span v-if="d.plan.pendingRequest" class="adm-ltr">{{ d.plan.pendingRequest.reference }} · {{ money(d.plan.pendingRequest.priceCents) }}</span><span v-else>{{ t('admin.detail.none') }}</span></dd></div>
+              </dl>
+              <div v-if="history.length" class="adm-scroll">
+                <table class="adm-tbl">
+                  <caption>{{ t('admin.detail.history') }}</caption>
+                  <thead><tr><th scope="col">{{ t('admin.users.plan') }}</th><th scope="col">{{ t('admin.detail.period') }}</th><th scope="col">{{ t('admin.detail.source') }}</th><th scope="col">{{ t('admin.users.status') }}</th></tr></thead>
+                  <tbody>
+                    <tr v-for="s in history" :key="s.id">
+                      <td>{{ s.plan }}</td>
+                      <td class="nowrap">{{ dateOnly(s.startsAt, locale) }} – {{ dateOnly(s.endsAt, locale) }}</td>
+                      <td>{{ t(`admin.source.${s.source}`) }}</td>
+                      <td><span class="adm-chip" :class="s.state === 'active' ? 'success' : s.state === 'scheduled' ? 'info' : ''">{{ t(`admin.subState.${s.state}`) }}</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </section>
 
-          <section class="adm-card">
-            <div class="adm-toolbar">
-              <h2 class="adm-card-title">{{ t('admin.detail.limits') }}</h2>
-              <button v-if="allowed.plans" type="button" class="adm-link adm-grow" :disabled="!firstLimit" @click="overrideFor = firstLimit">{{ t('admin.detail.addOverride') }}</button>
+          <section class="adm-group" aria-labelledby="ov-limits">
+            <div class="adm-ghead">
+              <h2 id="ov-limits">{{ t('admin.detail.limits') }}</h2>
+              <button v-if="allowed.plans" type="button" class="adm-link adm-end" :disabled="!firstLimit" @click="overrideFor = firstLimit">{{ t('admin.detail.addOverride') }}</button>
             </div>
-            <div class="adm-scroll">
-              <table class="adm-tbl">
-                <caption>{{ t('admin.detail.limits') }}</caption>
-                <thead><tr><th scope="col">{{ t('admin.limits.limit') }}</th><th scope="col">{{ t('admin.limits.value') }}</th><th scope="col" class="n">{{ t('admin.limits.usage') }}</th><th v-if="allowed.plans" scope="col" class="act"><span class="sr">{{ t('admin.limits.edit') }}</span></th></tr></thead>
-                <tbody>
-                  <tr v-for="l in d.limits" :key="l.key">
-                    <td><span class="adm-person"><b>{{ locale === 'ar' ? l.labelAr : l.labelEn }}</b><small class="adm-ltr">{{ l.key }}</small></span></td>
-                    <td>
-                      {{ limitValue(l) }}
-                      <span v-if="l.overridden" class="adm-chip info">{{ override(l.key)?.endsAt ? t('admin.limits.overrideUntil', { date: dateOnly(override(l.key)!.endsAt, locale) }) : t('admin.limits.override') }}</span>
-                    </td>
-                    <td class="n">{{ l.usage ?? '—' }}</td>
-                    <td v-if="allowed.plans" class="act"><button type="button" class="adm-link" :aria-label="`${t('admin.limits.edit')} · ${locale === 'ar' ? l.labelAr : l.labelEn}`" @click="overrideFor = l">{{ t('admin.limits.edit') }}</button></td>
-                  </tr>
-                </tbody>
-              </table>
+            <div class="adm-panel">
+              <div class="adm-scroll">
+                <table class="adm-tbl">
+                  <caption>{{ t('admin.detail.limits') }}</caption>
+                  <thead><tr><th scope="col">{{ t('admin.limits.limit') }}</th><th scope="col">{{ t('admin.limits.value') }}</th><th scope="col" class="n">{{ t('admin.limits.usage') }}</th><th v-if="allowed.plans" scope="col" class="act"><span class="sr">{{ t('admin.limits.edit') }}</span></th></tr></thead>
+                  <tbody>
+                    <tr v-for="l in d.limits" :key="l.key">
+                      <td><span class="adm-person"><b>{{ locale === 'ar' ? l.labelAr : l.labelEn }}</b><small class="adm-ltr">{{ l.key }}</small></span></td>
+                      <td>
+                        {{ limitValue(l) }}
+                        <span v-if="l.overridden" class="adm-chip info">{{ override(l.key)?.endsAt ? t('admin.limits.overrideUntil', { date: dateOnly(override(l.key)!.endsAt, locale) }) : t('admin.limits.override') }}</span>
+                      </td>
+                      <td class="n">{{ l.usage ?? '—' }}</td>
+                      <td v-if="allowed.plans" class="act"><button type="button" class="adm-link" :aria-label="`${t('admin.limits.edit')} · ${locale === 'ar' ? l.labelAr : l.labelEn}`" @click="overrideFor = l">{{ t('admin.limits.edit') }}</button></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </section>
 
-          <section v-if="can('audit')" class="adm-card">
-            <div class="adm-toolbar">
-              <h2 class="adm-card-title">{{ t('admin.detail.activity') }}</h2>
-              <NuxtLink class="adm-link adm-grow" :to="`/admin/audit?targetType=User&targetId=${encodeURIComponent(d.id)}`">{{ t('admin.detail.fullLog') }}</NuxtLink>
+          <section v-if="can('audit')" class="adm-group" aria-labelledby="ov-activity">
+            <div class="adm-ghead">
+              <h2 id="ov-activity">{{ t('admin.detail.activity') }}</h2>
+              <NuxtLink class="adm-link adm-end" :to="`/admin/audit?targetType=User&targetId=${encodeURIComponent(d.id)}`">{{ t('admin.detail.fullLog') }}</NuxtLink>
             </div>
-            <AuditTable v-if="activity.length" :entries="activity" compact />
-            <p v-else class="adm-empty">{{ t('admin.detail.noActivity') }}</p>
+            <div class="adm-panel">
+              <AuditTable v-if="activity.length" :entries="activity" compact />
+              <p v-else class="adm-empty">{{ t('admin.detail.noActivity') }}</p>
+            </div>
           </section>
         </div>
 
         <aside class="side">
-          <section class="adm-card adm-card-pad">
-            <div class="adm-card-head"><h2>{{ t('admin.detail.credits') }}</h2><button v-if="allowed.ai" type="button" class="adm-link" @click="creditsOpen = true">{{ t('admin.detail.a.credits') }}</button></div>
-            <dl class="adm-kv">
-              <div><dt>{{ t('admin.detail.balance') }}</dt><dd class="adm-ltr" data-testid="balance">{{ num(d.credits.balance) }}</dd></div>
-              <div><dt>{{ t('admin.detail.monthly') }}</dt><dd>{{ t('admin.detail.monthlyLeft', { n: d.credits.monthly, left: d.credits.monthlyLeft }) }}</dd></div>
-              <div><dt>{{ t('admin.detail.granted') }}</dt><dd>{{ num(d.credits.granted) }}</dd></div>
-              <div><dt>{{ t('admin.detail.month') }}</dt><dd class="adm-ltr">{{ d.credits.month }}</dd></div>
-            </dl>
+          <section class="adm-group" aria-labelledby="ov-credits">
+            <div class="adm-ghead"><h2 id="ov-credits">{{ t('admin.detail.credits') }}</h2><button v-if="allowed.ai" type="button" class="adm-link adm-end" @click="creditsOpen = true">{{ t('admin.detail.a.credits') }}</button></div>
+            <div class="adm-panel">
+              <dl class="adm-kv">
+                <div><dt>{{ t('admin.detail.balance') }}</dt><dd class="adm-ltr" data-testid="balance">{{ num(d.credits.balance) }}</dd></div>
+                <div><dt>{{ t('admin.detail.monthly') }}</dt><dd>{{ t('admin.detail.monthlyLeft', { n: d.credits.monthly, left: d.credits.monthlyLeft }) }}</dd></div>
+                <div><dt>{{ t('admin.detail.granted') }}</dt><dd>{{ num(d.credits.granted) }}</dd></div>
+                <div><dt>{{ t('admin.detail.month') }}</dt><dd class="adm-ltr">{{ d.credits.month }}</dd></div>
+              </dl>
+            </div>
           </section>
-          <section class="adm-card adm-card-pad">
-            <h2>{{ t('admin.detail.storage') }}</h2>
-            <dl class="adm-kv">
-              <div><dt>Google Drive</dt><dd class="adm-ltr">{{ d.storage.linked ? d.storage.accountEmail : t('admin.detail.notLinked') }}</dd></div>
-              <div v-if="d.storage.linkedAt"><dt>{{ t('admin.detail.linkedSince') }}</dt><dd>{{ dateOnly(d.storage.linkedAt, locale) }}</dd></div>
-              <div><dt>{{ t('admin.detail.takes') }}</dt><dd>{{ num(d.storage.takes) }} · {{ formatBytes(d.storage.bytes, locale) }}</dd></div>
-            </dl>
+          <section class="adm-group" aria-labelledby="ov-storage">
+            <div class="adm-ghead"><h2 id="ov-storage">{{ t('admin.detail.storage') }}</h2></div>
+            <div class="adm-panel">
+              <dl class="adm-kv">
+                <div><dt>Google Drive</dt><dd class="adm-ltr">{{ d.storage.linked ? d.storage.accountEmail : t('admin.detail.notLinked') }}</dd></div>
+                <div v-if="d.storage.linkedAt"><dt>{{ t('admin.detail.linkedSince') }}</dt><dd>{{ dateOnly(d.storage.linkedAt, locale) }}</dd></div>
+                <div><dt>{{ t('admin.detail.takes') }}</dt><dd>{{ num(d.storage.takes) }} · {{ formatBytes(d.storage.bytes, locale) }}</dd></div>
+              </dl>
+            </div>
           </section>
-          <section class="adm-card adm-card-pad">
-            <h2>{{ t('admin.detail.sessions') }}</h2>
-            <dl class="adm-kv">
-              <div><dt>{{ t('admin.detail.web') }}</dt><dd>{{ d.sessions.web }}</dd></div>
-              <div v-for="dev in d.sessions.devices" :key="dev.id"><dt>{{ dev.name }} · {{ dev.platform }}</dt><dd :title="utc(dev.lastUsedAt)">{{ dev.lastUsedAt ? dateTime(dev.lastUsedAt, locale) : '—' }}</dd></div>
-            </dl>
+          <section class="adm-group" aria-labelledby="ov-sessions">
+            <div class="adm-ghead"><h2 id="ov-sessions">{{ t('admin.detail.sessions') }}</h2></div>
+            <div class="adm-panel">
+              <dl class="adm-kv">
+                <div><dt>{{ t('admin.detail.web') }}</dt><dd>{{ d.sessions.web }}</dd></div>
+                <div v-for="dev in d.sessions.devices" :key="dev.id"><dt>{{ dev.name }} · {{ dev.platform }}</dt><dd :title="utc(dev.lastUsedAt)">{{ dev.lastUsedAt ? dateTime(dev.lastUsedAt, locale) : '—' }}</dd></div>
+              </dl>
+            </div>
           </section>
-          <section class="adm-card adm-card-pad">
-            <h2>{{ t('admin.detail.scripts') }}</h2>
-            <dl class="adm-kv">
-              <div><dt>{{ t('admin.detail.activeScripts') }}</dt><dd>{{ d.scripts.active }}</dd></div>
-              <div><dt>{{ t('admin.detail.archived') }}</dt><dd>{{ d.scripts.archived }}</dd></div>
-            </dl>
+          <section class="adm-group" aria-labelledby="ov-scripts">
+            <div class="adm-ghead"><h2 id="ov-scripts">{{ t('admin.detail.scripts') }}</h2></div>
+            <div class="adm-panel">
+              <dl class="adm-kv">
+                <div><dt>{{ t('admin.detail.activeScripts') }}</dt><dd>{{ d.scripts.active }}</dd></div>
+                <div><dt>{{ t('admin.detail.archived') }}</dt><dd>{{ d.scripts.archived }}</dd></div>
+              </dl>
+            </div>
           </section>
-          <section class="adm-card adm-card-pad">
-            <h2>{{ t('admin.detail.ai') }}</h2>
-            <dl class="adm-kv">
-              <div><dt>{{ t('admin.dash.calls') }}</dt><dd>{{ d.ai.calls }}</dd></div>
-              <div><dt>{{ t('admin.detail.failed') }}</dt><dd>{{ d.ai.failed }}</dd></div>
-              <div><dt>{{ t('admin.dash.creditsUsed') }}</dt><dd>{{ d.ai.credits }}</dd></div>
-              <div><dt>{{ t('admin.detail.ownKey') }}</dt><dd class="adm-ltr">{{ d.ai.ownKey ? `${d.ai.ownKey.provider} · …${d.ai.ownKey.last4}` : t('admin.detail.none') }}</dd></div>
-            </dl>
+          <section class="adm-group" aria-labelledby="ov-ai">
+            <div class="adm-ghead"><h2 id="ov-ai">{{ t('admin.detail.ai') }}</h2></div>
+            <div class="adm-panel">
+              <dl class="adm-kv">
+                <div><dt>{{ t('admin.dash.calls') }}</dt><dd>{{ d.ai.calls }}</dd></div>
+                <div><dt>{{ t('admin.detail.failed') }}</dt><dd>{{ d.ai.failed }}</dd></div>
+                <div><dt>{{ t('admin.dash.creditsUsed') }}</dt><dd>{{ d.ai.credits }}</dd></div>
+                <div><dt>{{ t('admin.detail.ownKey') }}</dt><dd class="adm-ltr">{{ d.ai.ownKey ? `${d.ai.ownKey.provider} · …${d.ai.ownKey.last4}` : t('admin.detail.none') }}</dd></div>
+              </dl>
+            </div>
           </section>
         </aside>
       </div>
-
       <AdminConfirmDialog
         v-model:open="confirmOpen"
         :title="confirm ? t(`admin.detail.confirm.${confirm}.title`, { name: d.name }) : ''"
@@ -318,28 +345,35 @@ const firstLimit = computed(() => d.value?.limits[0] ?? null)
 .title {
   display: flex;
   align-items: center;
-  gap: 10px;
   flex-wrap: wrap;
+  gap: 6px 10px;
+}
+.title h1 {
+  font: 700 22px/1.35 var(--tilw-font-ar);
+}
+.uhead .spacer {
+  flex: 1;
 }
 .tabs {
   justify-self: start;
   flex-wrap: wrap;
 }
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
 .grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 340px;
-  gap: 16px;
+  gap: 24px;
   align-items: start;
 }
 .col,
 .side {
   display: grid;
-  gap: 16px;
+  gap: 28px;
+}
+.side .adm-panel > .adm-kv > div {
+  padding-inline: 18px;
+}
+.side .adm-panel > .adm-kv > div + div::before {
+  inset-inline: 18px;
 }
 .sr {
   position: absolute;

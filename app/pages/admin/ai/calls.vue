@@ -47,16 +47,16 @@ const tone = (s: string) => (s === 'failed' ? 'error' : s === 'succeeded' ? 'suc
         <span class="adm-field"><label for="f-range">{{ t('admin.range.label') }}</label><UiDatePicker id="f-range" v-model="range" mode="range" size="sm" :max="today" /></span>
       </div>
     </div>
-    <section class="adm-card">
-      <div class="adm-toolbar">
-        <div class="adm-seg" role="group" :aria-label="t('admin.users.status')">
-          <button type="button" :aria-pressed="!filters.status" @click="filters.status = undefined">{{ t('admin.list.all') }}</button>
-          <button type="button" :aria-pressed="filters.status === 'failed'" @click="filters.status = 'failed'">{{ t('admin.ai.failures') }}</button>
-        </div>
-        <span class="adm-field"><label for="f-provider">{{ t('admin.ai.provider') }}</label><UiSelect id="f-provider" v-model="provider" :options="providerOptions" size="sm" /></span>
-        <span class="adm-field"><label for="f-capability">{{ t('admin.ai.capabilityLabel') }}</label><UiSelect id="f-capability" v-model="capability" :options="capabilityOptions" size="sm" /></span>
-        <span v-if="filters.userId" class="adm-chip info">{{ t('admin.subs.onePerson') }} <button type="button" class="adm-link" :aria-label="t('common.close')" @click="filters.userId = undefined">×</button></span>
+    <div class="adm-filter">
+      <div class="adm-seg" role="group" :aria-label="t('admin.users.status')">
+        <button type="button" :aria-pressed="!filters.status" @click="filters.status = undefined">{{ t('admin.list.all') }}</button>
+        <button type="button" :aria-pressed="filters.status === 'failed'" @click="filters.status = 'failed'">{{ t('admin.ai.failures') }}</button>
       </div>
+      <span class="adm-field"><label for="f-provider">{{ t('admin.ai.provider') }}</label><UiSelect id="f-provider" v-model="provider" :options="providerOptions" size="sm" /></span>
+      <span class="adm-field"><label for="f-capability">{{ t('admin.ai.capabilityLabel') }}</label><UiSelect id="f-capability" v-model="capability" :options="capabilityOptions" size="sm" /></span>
+      <span v-if="filters.userId" class="adm-chip info">{{ t('admin.subs.onePerson') }} <button type="button" class="adm-link" :aria-label="t('common.close')" @click="filters.userId = undefined">×</button></span>
+    </div>
+    <section class="adm-card">
       <div v-if="list.items.value.length" class="adm-scroll">
         <table class="adm-tbl">
           <caption>{{ t('admin.nav.calls') }}</caption>

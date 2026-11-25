@@ -39,13 +39,13 @@ const planName = (key: string | null) => {
       </div>
     </div>
 
+    <div class="adm-filter">
+      <UiSearchField v-model="q" size="sm" :placeholder="t('admin.users.search')" :label="t('admin.users.search')" />
+      <span class="adm-field"><label for="f-plan">{{ t('admin.users.plan') }}</label><AdminPlanSelect id="f-plan" v-model="plan" :plans="admin.plans ?? []" :all-label="t('admin.list.all')" /></span>
+      <span class="adm-field"><label for="f-status">{{ t('admin.users.status') }}</label><UiSelect id="f-status" v-model="status" :options="statusOptions" size="sm" /></span>
+      <span class="adm-grow adm-muted">{{ t('admin.users.newest') }}</span>
+    </div>
     <section class="adm-card">
-      <div class="adm-toolbar">
-        <UiSearchField v-model="q" size="sm" :placeholder="t('admin.users.search')" :label="t('admin.users.search')" />
-        <span class="adm-field"><label for="f-plan">{{ t('admin.users.plan') }}</label><AdminPlanSelect id="f-plan" v-model="plan" :plans="admin.plans ?? []" :all-label="t('admin.list.all')" /></span>
-        <span class="adm-field"><label for="f-status">{{ t('admin.users.status') }}</label><UiSelect id="f-status" v-model="status" :options="statusOptions" size="sm" /></span>
-        <span class="adm-grow adm-muted">{{ t('admin.users.newest') }}</span>
-      </div>
       <div class="adm-scroll">
         <table class="adm-tbl">
           <caption>{{ t('admin.nav.users') }}</caption>

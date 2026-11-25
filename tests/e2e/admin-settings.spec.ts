@@ -86,13 +86,13 @@ test.describe('desktop settings', () => {
 
     await page.getByLabel('المفتاح', { exact: true }).fill('ai.captions')
     await page.getByRole('button', { name: 'إضافة', exact: true }).click()
-    await expect(page.getByRole('row').filter({ hasText: 'ai.captions' })).toBeVisible()
+    await expect(page.getByRole('listitem').filter({ hasText: 'ai.captions' })).toBeVisible()
     await page.getByRole('button', { name: 'حذف ai.captions' }).click()
     // Removing a flag asks first (review fix); nothing changes until it is confirmed.
     await expect(page.getByRole('dialog')).toContainText('حذف المفتاح ai.captions؟')
-    await expect(page.getByRole('row').filter({ hasText: 'ai.captions' })).toHaveCount(1)
+    await expect(page.getByRole('listitem').filter({ hasText: 'ai.captions' })).toHaveCount(1)
     await page.getByRole('dialog').getByRole('button', { name: 'حذف', exact: true }).click()
-    await expect(page.getByRole('row').filter({ hasText: 'ai.captions' })).toHaveCount(0)
+    await expect(page.getByRole('listitem').filter({ hasText: 'ai.captions' })).toHaveCount(0)
   })
 
   test('the account menu switches appearance and language, and links to the website', async ({ page }) => {

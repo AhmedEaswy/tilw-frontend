@@ -13,7 +13,7 @@ test('plans: a price change is saved and reaches the public catalogue; a limit g
   await expect(page.getByRole('region', { name: 'pro' }).getByText('$9.50 / $77')).toBeVisible()
   await page.reload()
   await expect(page.getByLabel('شهريًا (دولار) pro')).toHaveValue('9.50')
-  await expect(page.getByRole('checkbox', { name: /مفعّلة/ }).first()).toBeDisabled()
+  await expect(page.getByRole('switch', { name: /مفعّلة/ }).first()).toBeDisabled()
 
   await page.getByRole('button', { name: 'مدة المحاولة (دقائق) · pro: 60' }).click()
   await page.getByRole('dialog').getByRole('spinbutton').fill('90')

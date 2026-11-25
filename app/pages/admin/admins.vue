@@ -146,9 +146,8 @@ async function remove() {
         </table>
       </div>
       <AdminListState :loading="loading" :loaded="!!data" :error="error" :empty="!data?.admins.length" @retry="load" />
+      <p v-if="data" class="adm-foot">{{ t('admin.admins.lockNote') }}</p>
     </section>
-
-    <p v-if="allowed && data" class="adm-muted foot">{{ t('admin.admins.lockNote') }}</p>
 
     <AdminPermissionsDialog v-model:open="dialogOpen" :admin="editing" @saved="saved" />
     <AdminConfirmDialog
