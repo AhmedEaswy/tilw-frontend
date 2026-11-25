@@ -477,6 +477,18 @@
     "fwd10": "تقدّم ١٠ ثوانٍ",
     "failed": "تعذّر تشغيل هذا التسجيل."
   },
+  "takeActions": {
+    "play": "تشغيل",
+    "view": "عرض",
+    "sync": "مزامنة مع Google Drive",
+    "withdraw": "سحب من المزامنة",
+    "unsync": "إلغاء المزامنة مع Drive",
+    "unsyncTitle": "حذف النسخة من Drive؟",
+    "unsyncLede": "ستُحذف النسخة الموجودة في Google Drive، ويبقى الملف الأصلي محفوظًا في هذا المتصفح.",
+    "syncStarted": "جارٍ النسخ إلى Google Drive.",
+    "withdrawn": "توقّف النسخ إلى Drive، وتبقى المحاولة على هذا الجهاز.",
+    "unsynced": "حُذفت نسخة Drive، والمحاولة ما زالت على هذا الجهاز."
+  },
   "settings": {
     "account": "الحساب",
     "themeLight": "فاتح",

@@ -105,6 +105,16 @@ export const useTakesStore = defineStore('takes', () => {
     await remove(id)
   }
 
+  /** Remove a device take's copy from Drive (and its record); the original stays in this browser. */
+  async function unsync(id: string) {
+    const t = find(id)
+    if (!t || t.driveOnly || !t.remote?.id) return
+    await useServices().remoteTakes.remove(t.remote.id, { remote: true })
+    remote.value = remote.value.filter(r => r.id !== t.remote!.id)
+    const meta = await useTakesRepo().update(id, { remote: undefined })
+    list.value = list.value.map(x => (x.id === id ? meta : x))
+  }
+
   async function setStarred(id: string, starred: boolean) {
     const t = find(id)
     if (t?.driveOnly) {
@@ -170,7 +180,7 @@ export const useTakesStore = defineStore('takes', () => {
 
   return {
     list, loaded, estimate, free, lowStorage, groups, remote, remoteLoaded, all,
-    load, refreshEstimate, save, remove, removeTake, setStarred, setPoster, forScript, nextNumber,
+    load, refreshEstimate, save, remove, removeTake, unsync, setStarred, setPoster, forScript, nextNumber,
     loadRemote, find, blobFor, markUnreachable, refreshOne, reset,
   }
 })

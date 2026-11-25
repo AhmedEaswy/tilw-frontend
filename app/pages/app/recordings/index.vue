@@ -31,6 +31,19 @@ function meta(take: TakeMeta, withNumber = true) {
     .join('  ·  ')
 }
 const latest = computed(() => takes.all[0] ?? null)
+
+// "…" on each take opens its actions (play, view, sync / withdraw / unsync), like the script list.
+const actionsTake = ref<TakeMeta | null>(null)
+const actionsOpen = ref(false)
+function openActions(take: TakeMeta) {
+  actionsTake.value = take
+  actionsOpen.value = true
+}
+// Follow the take as its Drive state changes while the sheet is open.
+watch(() => takes.all, (all) => {
+  if (actionsTake.value) actionsTake.value = all.find(x => x.id === actionsTake.value!.id) ?? null
+})
+const moreLabel = (take: TakeMeta) => t('library.actionsFor', { title: take.driveOnly ? take.scriptTitle : `${take.scriptTitle} · ${t('recordings.take', { n: num(take.number) })}` })
 const modeLine = computed(() => {
   if (!storage.status) return null
   if (!storage.linked) return t('uploads.modeLine.none')
@@ -69,6 +82,7 @@ const modeLine = computed(() => {
 
     <!-- 6:103 phone -->
     <template v-else-if="phone && latest">
+      <div class="feature-wrap">
       <NuxtLink :to="`/app/recordings/${latest.id}`" class="feature">
         <TakeCover class="f-cover" :take="latest" :bars="14" />
         <span class="f-txt">
@@ -77,6 +91,8 @@ const modeLine = computed(() => {
           <span class="f-btn">{{ t('recordings.review') }}</span>
         </span>
       </NuxtLink>
+      <button type="button" class="more on-stage" :aria-label="moreLabel(latest)" data-testid="take-more" @click="openActions(latest)"><UiGlyph name="more" :size="20" /></button>
+      </div>
       <TakeStorageStatus class="f-status" :take="latest" actions />
       <h2 v-if="takes.all.length > 1" class="all">{{ t('recordings.all') }}</h2>
       <ul v-if="takes.all.length > 1" class="rows">
@@ -87,8 +103,8 @@ const modeLine = computed(() => {
               <b dir="auto">{{ take.scriptTitle }}<span v-if="take.starred" class="star">{{ t('recordings.best') }}</span></b>
               <small>{{ meta(take) }}</small>
             </span>
-            <UiGlyph class="go" name="play" :size="16" />
           </NuxtLink>
+          <button type="button" class="more on-row" :aria-label="moreLabel(take)" data-testid="take-more" @click="openActions(take)"><UiGlyph name="more" :size="20" /></button>
           <TakeStorageStatus class="r-status" :take="take" actions />
         </li>
       </ul>
@@ -97,24 +113,31 @@ const modeLine = computed(() => {
     <!-- 6:74 desktop -->
     <div v-else class="grid">
       <section v-for="group in takes.groups" :key="group[0]!.scriptId" class="group">
+        <div class="card-wrap">
         <NuxtLink :to="`/app/recordings/${group[0]!.id}`" class="card">
           <TakeCover class="cover" :take="group[0]!" />
           <span class="c-txt">
             <b dir="auto">{{ group[0]!.scriptTitle }}</b>
             <small>{{ meta(group[0]!) }}<span v-if="group[0]!.starred" class="star">{{ t('recordings.best') }}</span></small>
-            <span class="c-link">{{ group[0]!.kind === 'video' ? t('recordings.reviewTake') : t('recordings.reviewRecording') }}</span>
           </span>
         </NuxtLink>
+        <button type="button" class="more on-card" :aria-label="moreLabel(group[0]!)" data-testid="take-more" @click="openActions(group[0]!)"><UiGlyph name="more" :size="20" /></button>
+        </div>
         <TakeStorageStatus class="c-status" :take="group[0]!" actions />
         <template v-for="take in group.slice(1)" :key="take.id">
+          <div class="older-wrap">
           <NuxtLink :to="`/app/recordings/${take.id}`" class="older">
             <b>{{ take.driveOnly ? take.scriptTitle : t('recordings.take', { n: num(take.number) }) }}<template v-if="take.label">  ·  {{ take.label }}</template><span v-if="take.starred" class="star">{{ t('recordings.best') }}</span></b>
             <small>{{ kindLabel(take.kind) }}  ·  {{ formatDuration(take.durationMs) }}</small>
           </NuxtLink>
+          <button type="button" class="more on-row" :aria-label="moreLabel(take)" data-testid="take-more" @click="openActions(take)"><UiGlyph name="more" :size="20" /></button>
+          </div>
           <TakeStorageStatus class="o-status" :take="take" actions />
         </template>
       </section>
     </div>
+
+    <TakeActionsDialog v-model:open="actionsOpen" :take="actionsTake" />
   </div>
 </template>
 
@@ -189,12 +212,60 @@ const modeLine = computed(() => {
   font: 400 17px/1.36 var(--tilw-font-ar);
   white-space: pre;
 }
-.c-link {
-  color: var(--tilw-action-primary);
-  font: 500 17px/1.36 var(--tilw-font-ar);
+/* "…" actions (same button as the script rows), laid over each take's link. */
+.card-wrap,
+.older-wrap,
+.feature-wrap,
+.rows li {
+  position: relative;
 }
-.card:hover .c-link {
-  text-decoration: underline;
+.card-wrap .c-txt,
+.older-wrap .older,
+.rows li .row {
+  padding-inline-end: 64px;
+}
+.more {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  inline-size: var(--tilw-hit);
+  block-size: var(--tilw-hit);
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--tilw-text-ink);
+  cursor: pointer;
+}
+.more:hover {
+  background: var(--tilw-surface-quiet);
+}
+.more:focus-visible {
+  outline: 2px solid var(--tilw-focus-ring);
+  outline-offset: 2px;
+}
+.more.on-card {
+  inset-block-end: 16px;
+  inset-inline-end: 12px;
+}
+.more.on-row {
+  inset-block-start: 14px;
+  inset-inline-end: 10px;
+}
+.older-wrap .more.on-row {
+  inset-block-start: calc(50% - var(--tilw-hit) / 2);
+}
+.more.on-stage {
+  inset-block-start: 10px;
+  inset-inline-end: 10px;
+  background: color-mix(in srgb, var(--tilw-stage-background) 70%, transparent);
+  color: var(--tilw-stage-text);
+}
+.more.on-stage:hover {
+  background: var(--tilw-stage-background);
+}
+.card:hover .c-txt b {
+  color: var(--tilw-action-primary);
 }
 .older {
   display: grid;
@@ -371,12 +442,6 @@ const modeLine = computed(() => {
   color: var(--tilw-text-muted);
   font: 400 14px/1.36 var(--tilw-font-ar);
   white-space: pre;
-}
-.go {
-  color: var(--tilw-action-primary);
-}
-:dir(rtl) .go {
-  transform: scaleX(-1);
 }
 
 @media (max-width: 760px) {

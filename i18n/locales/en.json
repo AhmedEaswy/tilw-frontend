@@ -477,6 +477,18 @@
     "fwd10": "Forward 10 seconds",
     "failed": "Couldn't play this recording."
   },
+  "takeActions": {
+    "play": "Play",
+    "view": "View",
+    "sync": "Sync to Google Drive",
+    "withdraw": "Withdraw from syncing",
+    "unsync": "Unsync from Drive",
+    "unsyncTitle": "Remove the Drive copy?",
+    "unsyncLede": "The copy in Google Drive will be deleted. The original stays saved in this browser.",
+    "syncStarted": "Copying to Google Drive.",
+    "withdrawn": "Copy to Drive stopped. The take stays on this device.",
+    "unsynced": "Drive copy removed. The take is still on this device."
+  },
   "settings": {
     "account": "Account",
     "themeLight": "Light",
