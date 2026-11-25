@@ -27,12 +27,12 @@ const bars = computed(() => props.data.map((d, i) => {
       <span>{{ data[0]?.label }}</span>
       <span>{{ data.at(-1)?.label }}</span>
     </div>
-    <table class="sr">
+    <div class="sr"><table>
       <caption>{{ caption }}</caption>
       <tbody>
         <tr v-for="d in data" :key="d.label"><th scope="row">{{ d.label }}</th><td>{{ d.value }}</td></tr>
       </tbody>
-    </table>
+    </table></div>
   </figure>
 </template>
 

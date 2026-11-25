@@ -39,12 +39,12 @@ const segs = computed(() => {
         <span class="pct adm-ltr">{{ share(p.value) }}%</span>
       </li>
     </ul>
-    <table class="sr">
+    <div class="sr"><table>
       <caption>{{ caption }}</caption>
       <tbody>
         <tr v-for="p in parts" :key="p.key"><th scope="row">{{ p.label }}</th><td>{{ p.value }}</td><td>{{ share(p.value) }}%</td></tr>
       </tbody>
-    </table>
+    </table></div>
   </figure>
 </template>
 
