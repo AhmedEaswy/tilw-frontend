@@ -1,0 +1,214 @@
+/*
+ * Tilw theme for flatpickr's calendar, used by components/ui/UiDatePicker.vue (imported there, so it ships with the
+ * date picker only). Everything is scoped under .ui-date-pop and uses design tokens, so it follows light and dark.
+ * flatpickr's own base CSS (dist/flatpickr.css) is loaded lazily with the library; these rules are more specific.
+ * flatpickr has no RTL support: the base forces `direction: ltr`; here the calendar inherits the page direction
+ * and the month arrows swap sides and mirror.
+ */
+.ui-date-pop .flatpickr-calendar {
+  --fp-cell: 40px;
+  inline-size: calc(var(--fp-cell) * 7);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--tilw-text-ink);
+  direction: inherit;
+  font: 500 14px/1 var(--tilw-font-ar);
+}
+.ui-date-pop .flatpickr-calendar.inline {
+  inset-block-start: 0;
+}
+.ui-date-pop .flatpickr-calendar::before,
+.ui-date-pop .flatpickr-calendar::after {
+  display: none;
+}
+
+/* month bar */
+.ui-date-pop .flatpickr-months {
+  align-items: center;
+  block-size: 44px;
+}
+.ui-date-pop .flatpickr-months .flatpickr-month {
+  block-size: 44px;
+  background: transparent;
+  color: var(--tilw-text-ink);
+  fill: var(--tilw-text-ink);
+}
+.ui-date-pop .flatpickr-current-month {
+  inset-inline-start: 0;
+  inline-size: 100%;
+  padding-block-start: 10px;
+  font: 600 15px/1.4 var(--tilw-font-ar);
+}
+.ui-date-pop .flatpickr-current-month .cur-month {
+  font-weight: 600;
+}
+.ui-date-pop .flatpickr-current-month .numInputWrapper {
+  inline-size: 7ch;
+}
+.ui-date-pop .flatpickr-current-month input.cur-year {
+  color: var(--tilw-text-ink);
+  font: 600 15px/1.4 var(--tilw-font-lat);
+}
+.ui-date-pop .numInputWrapper:hover {
+  background: var(--tilw-surface-quiet);
+}
+.ui-date-pop .numInputWrapper span.arrowUp::after {
+  border-bottom-color: var(--tilw-text-muted);
+}
+.ui-date-pop .numInputWrapper span.arrowDown::after {
+  border-top-color: var(--tilw-text-muted);
+}
+.ui-date-pop .flatpickr-months .flatpickr-prev-month,
+.ui-date-pop .flatpickr-months .flatpickr-next-month {
+  display: grid;
+  place-items: center;
+  inline-size: 36px;
+  block-size: 36px;
+  inset-block-start: 4px;
+  padding: 0;
+  border-radius: var(--tilw-radius-pill);
+  color: var(--tilw-text-ink);
+  fill: var(--tilw-text-ink);
+}
+.ui-date-pop .flatpickr-months .flatpickr-prev-month:hover,
+.ui-date-pop .flatpickr-months .flatpickr-next-month:hover {
+  background: var(--tilw-surface-quiet);
+}
+.ui-date-pop .flatpickr-months .flatpickr-prev-month:hover svg,
+.ui-date-pop .flatpickr-months .flatpickr-next-month:hover svg {
+  fill: var(--tilw-action-primary);
+}
+.ui-date-pop .flatpickr-months .flatpickr-prev-month svg,
+.ui-date-pop .flatpickr-months .flatpickr-next-month svg {
+  inline-size: 12px;
+  block-size: 12px;
+}
+.ui-date-pop .flatpickr-months .flatpickr-disabled {
+  opacity: 0.3;
+}
+.ui-date-pop:dir(rtl) .flatpickr-months .flatpickr-prev-month {
+  left: auto;
+  right: 0;
+}
+.ui-date-pop:dir(rtl) .flatpickr-months .flatpickr-next-month {
+  right: auto;
+  left: 0;
+}
+.ui-date-pop:dir(rtl) .flatpickr-months .flatpickr-prev-month svg,
+.ui-date-pop:dir(rtl) .flatpickr-months .flatpickr-next-month svg {
+  transform: scaleX(-1);
+}
+
+/* weekdays + days */
+.ui-date-pop .flatpickr-weekdays {
+  block-size: 32px;
+  background: transparent;
+}
+.ui-date-pop .flatpickr-weekdaycontainer {
+  direction: inherit;
+}
+.ui-date-pop span.flatpickr-weekday {
+  background: transparent;
+  color: var(--tilw-text-muted);
+  font: 600 11px/1 var(--tilw-font-ar);
+}
+.ui-date-pop .flatpickr-days,
+.ui-date-pop .dayContainer {
+  inline-size: calc(var(--fp-cell) * 7);
+  min-inline-size: calc(var(--fp-cell) * 7);
+  max-inline-size: calc(var(--fp-cell) * 7);
+}
+.ui-date-pop .flatpickr-innerContainer,
+.ui-date-pop .flatpickr-rContainer {
+  direction: inherit;
+}
+.ui-date-pop .dayContainer {
+  direction: inherit;
+  padding-block-end: 4px;
+}
+.ui-date-pop .flatpickr-day {
+  max-inline-size: var(--fp-cell);
+  block-size: calc(var(--fp-cell) - 4px);
+  margin-block: 2px;
+  border: 1px solid transparent;
+  border-radius: var(--tilw-radius-row);
+  color: var(--tilw-text-ink);
+  font: 500 14px/calc(var(--fp-cell) - 6px) var(--tilw-font-lat);
+}
+.ui-date-pop .flatpickr-day:hover,
+.ui-date-pop .flatpickr-day:focus,
+.ui-date-pop .flatpickr-day.prevMonthDay:hover,
+.ui-date-pop .flatpickr-day.nextMonthDay:hover {
+  border-color: transparent;
+  background: var(--tilw-surface-quiet);
+  color: var(--tilw-text-ink);
+}
+.ui-date-pop .flatpickr-day:focus-visible {
+  outline: 2px solid var(--tilw-focus-ring);
+  outline-offset: -2px;
+}
+.ui-date-pop .flatpickr-day.today {
+  border-color: var(--tilw-border-strong);
+}
+.ui-date-pop .flatpickr-day.today:hover,
+.ui-date-pop .flatpickr-day.today:focus {
+  border-color: var(--tilw-border-strong);
+  background: var(--tilw-surface-quiet);
+  color: var(--tilw-text-ink);
+}
+.ui-date-pop .flatpickr-day.prevMonthDay,
+.ui-date-pop .flatpickr-day.nextMonthDay {
+  color: var(--tilw-text-muted);
+  opacity: 0.6;
+}
+.ui-date-pop .flatpickr-day.inRange,
+.ui-date-pop .flatpickr-day.prevMonthDay.inRange,
+.ui-date-pop .flatpickr-day.nextMonthDay.inRange,
+.ui-date-pop .flatpickr-day.today.inRange {
+  border-color: transparent;
+  border-radius: 0;
+  background: var(--tilw-surface-selected);
+  box-shadow: none;
+  color: var(--tilw-text-ink);
+}
+.ui-date-pop .flatpickr-day.selected,
+.ui-date-pop .flatpickr-day.startRange,
+.ui-date-pop .flatpickr-day.endRange,
+.ui-date-pop .flatpickr-day.selected:hover,
+.ui-date-pop .flatpickr-day.startRange:hover,
+.ui-date-pop .flatpickr-day.endRange:hover,
+.ui-date-pop .flatpickr-day.selected:focus,
+.ui-date-pop .flatpickr-day.startRange:focus,
+.ui-date-pop .flatpickr-day.endRange:focus,
+.ui-date-pop .flatpickr-day.selected.prevMonthDay,
+.ui-date-pop .flatpickr-day.selected.nextMonthDay {
+  border-color: var(--tilw-action-solid);
+  background: var(--tilw-action-solid);
+  box-shadow: none;
+  color: var(--tilw-text-on-solid);
+  opacity: 1;
+}
+/* range ends: round only the outer side (logical, so it flips in RTL) */
+.ui-date-pop .flatpickr-day.startRange:not(.endRange) {
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+}
+.ui-date-pop .flatpickr-day.endRange:not(.startRange) {
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+}
+.ui-date-pop .flatpickr-day.selected.startRange + .endRange:not(:nth-child(7n + 1)),
+.ui-date-pop .flatpickr-day.startRange.startRange + .endRange:not(:nth-child(7n + 1)),
+.ui-date-pop .flatpickr-day.endRange.startRange + .endRange:not(:nth-child(7n + 1)) {
+  box-shadow: none;
+}
+.ui-date-pop .flatpickr-day.flatpickr-disabled,
+.ui-date-pop .flatpickr-day.flatpickr-disabled:hover {
+  background: transparent;
+  color: var(--tilw-text-muted);
+  opacity: 0.35;
+  cursor: not-allowed;
+}
