@@ -1294,6 +1294,9 @@
         "id": "Search by ID"
       },
       "clear": "Clear search"
+    },
+    "choice": {
+      "selectAll": "Select all"
     }
   }
 }

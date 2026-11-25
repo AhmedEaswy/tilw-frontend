@@ -87,6 +87,39 @@ export function typeAhead(options: readonly UiOption[], buffer: string, from: nu
   return -1
 }
 
+/** One tab in UiTabs. */
+export interface UiTab<V extends UiOptionValue = UiOptionValue> {
+  value: V
+  label: string
+  icon?: GlyphName
+  /** A count or short tag shown after the label (e.g. pending items). */
+  badge?: string | number
+  disabled?: boolean
+}
+
+/**
+ * Roving focus for a row of items (tabs, segmented choices): the next enabled index for a key, wrapping, with ← / →
+ * following the reading direction. Returns -1 when the key isn't a navigation key.
+ */
+export function rovingIndex(items: readonly { disabled?: boolean }[], current: number, key: string, rtl: boolean, vertical = false): number {
+  const n = items.length
+  if (!n) return -1
+  const next = vertical ? 'ArrowDown' : rtl ? 'ArrowLeft' : 'ArrowRight'
+  const prev = vertical ? 'ArrowUp' : rtl ? 'ArrowRight' : 'ArrowLeft'
+  let step: number
+  let i: number
+  if (key === next) [step, i] = [1, current]
+  else if (key === prev) [step, i] = [-1, current]
+  else if (key === 'Home') [step, i] = [1, -1]
+  else if (key === 'End') [step, i] = [-1, n]
+  else return -1
+  for (let k = 0; k < n; k++) {
+    i = (((i + step) % n) + n) % n
+    if (!items[i]!.disabled) return i
+  }
+  return current
+}
+
 // ---------------------------------------------------------------------------------------------- dates (local time)
 
 /** `YYYY-MM-DD` for a local date (never via toISOString, which shifts by the time zone). */

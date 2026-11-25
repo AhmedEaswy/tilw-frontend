@@ -1,6 +1,7 @@
 <script setup lang="ts">
 /**
- * Dev-only showcase of the form controls (UiSelect, UiAutocomplete, UiDatePicker, UiSearchField) in every state.
+ * Dev-only showcase of the form controls (UiSelect, UiAutocomplete, UiDatePicker, UiSearchField, UiTabs, UiToggle,
+ * UiCheckbox, UiChoiceGroup) in every state.
  * Switch language and theme from the toolbar. Not part of builds: modules/dev-pages.ts drops /dev/* outside
  * `nuxt dev`, and the middleware below is a second guard.
  */
@@ -88,6 +89,53 @@ const q = ref('')
 const qEmail = ref('')
 const qId = ref('')
 const searches = ref<string[]>([])
+
+// --- tabs
+const tab = ref<'general' | 'billing' | 'team' | 'archived'>('general')
+const tabPills = ref<'day' | 'week' | 'month'>('week')
+const tabsMain = computed(() => [
+  { value: 'general' as const, label: L('عام', 'General'), icon: 'settings' as const },
+  { value: 'billing' as const, label: L('الفوترة', 'Billing'), badge: 3 },
+  { value: 'team' as const, label: L('الفريق', 'Team') },
+  { value: 'archived' as const, label: L('مؤرشف', 'Archived'), disabled: true },
+])
+const tabsPeriod = computed(() => [
+  { value: 'day' as const, label: L('يوم', 'Day') },
+  { value: 'week' as const, label: L('أسبوع', 'Week') },
+  { value: 'month' as const, label: L('شهر', 'Month') },
+])
+
+// --- toggles & checkboxes
+const notify = ref(true)
+const beta = ref(false)
+const agree = ref(false)
+const partial = ref(true)
+
+// --- choice groups
+const billing = ref<string | null>('monthly')
+const channels = ref<string[]>(['email'])
+const planCard = ref<string | null>('pro')
+const features = ref<string[]>(['captions'])
+const billingOptions = computed<UiOption<string>[]>(() => [
+  { value: 'monthly', label: L('شهري', 'Monthly') },
+  { value: 'yearly', label: L('سنوي', 'Yearly'), hint: L('وفّر 20%', 'Save 20%') },
+  { value: 'lifetime', label: L('مدى الحياة', 'Lifetime'), disabled: true },
+])
+const channelOptions = computed<UiOption<string>[]>(() => [
+  { value: 'email', label: L('البريد الإلكتروني', 'Email') },
+  { value: 'sms', label: L('رسالة نصية', 'SMS') },
+  { value: 'push', label: L('إشعارات التطبيق', 'Push') },
+])
+const planCards = computed<UiOption<string>[]>(() => [
+  { value: 'free', label: L('مجاني', 'Free'), hint: L('3 نصوص، تسجيل حتى 5 دقائق', '3 scripts, 5-minute takes'), icon: 'file' },
+  { value: 'pro', label: L('احترافي', 'Pro'), hint: L('نصوص غير محدودة وأدوات الكتابة', 'Unlimited scripts and writing tools'), icon: 'mic' },
+  { value: 'team', label: L('فريق', 'Team'), hint: L('قريبًا', 'Coming soon'), icon: 'headset', disabled: true },
+])
+const featureCards = computed<UiOption<string>[]>(() => [
+  { value: 'captions', label: L('الترجمة النصية', 'Captions'), hint: L('نص تلقائي للتسجيلات', 'Automatic text for takes'), icon: 'file' },
+  { value: 'phone', label: L('ربط الهاتف', 'Phone link'), hint: L('تحكم من هاتفك', 'Control from your phone'), icon: 'keyboard' },
+  { value: 'export', label: L('تصدير', 'Export'), hint: L('تنزيل الملفات الأصلية', 'Download original files'), icon: 'download' },
+])
 
 const dialogOpen = ref(false)
 </script>
@@ -220,6 +268,67 @@ const dialogOpen = ref(false)
     </section>
 
     <section>
+      <h2>UiTabs</h2>
+      <div class="stack">
+        <UiTabs v-model="tab" :tabs="tabsMain" :label="L('أقسام الحساب', 'Account sections')">
+          <template #general><div class="stack-sm">{{ L('إعدادات عامة', 'General settings') }} <UiSearchField v-model="q" size="sm" /></div></template>
+          <template #billing><p>{{ L('الفواتير', 'Invoices') }}</p></template>
+          <template #team><p>{{ L('أعضاء الفريق', 'Team members') }}</p></template>
+        </UiTabs>
+        <div class="row">
+          <UiTabs v-model="tabPills" :tabs="tabsPeriod" variant="pills" size="sm" :panels="false" :label="L('الفترة', 'Period')" />
+          <code>{{ tab }} · {{ tabPills }}</code>
+        </div>
+        <UiTabs v-model="tab" :tabs="tabsMain" vertical :label="L('أقسام (عمودي)', 'Sections (vertical)')">
+          <template #panel="{ tab: t }"><p>{{ t.label }} — {{ L('محتوى', 'content') }}</p></template>
+        </UiTabs>
+      </div>
+    </section>
+
+    <section>
+      <h2>UiToggle · UiCheckbox</h2>
+      <div class="grid">
+        <div class="cell">
+          <UiToggle v-model="notify" :label="L('إشعارات البريد', 'Email notifications')" :description="L('نرسل ملخصًا أسبوعيًا', 'A weekly summary')" />
+          <UiToggle v-model="beta" :label="L('ميزات تجريبية', 'Beta features')" size="sm" label-position="end" />
+          <UiToggle v-model="beta" :label="L('معطّل', 'Disabled')" disabled />
+          <UiToggle v-model="notify" :label="L('يحفظ…', 'Saving…')" busy />
+          <code>{{ notify }} · {{ beta }}</code>
+        </div>
+        <div class="cell">
+          <UiCheckbox v-model="agree" :label="L('أوافق على الشروط', 'I agree to the terms')" :description="L('يجب الموافقة للمتابعة', 'Required to continue')" />
+          <UiCheckbox v-model="partial" :label="L('غير محدد', 'Indeterminate')" indeterminate />
+          <UiCheckbox v-model="agree" :label="L('خطأ', 'Error')" :error="L('مطلوب', 'Required')" size="sm" />
+          <UiCheckbox v-model="partial" :label="L('معطّل', 'Disabled')" disabled />
+          <code>{{ agree }}</code>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>UiChoiceGroup</h2>
+      <div class="grid">
+        <div class="cell">
+          <UiChoiceGroup v-model="billing" :options="billingOptions" :legend="L('دورة الفوترة', 'Billing cycle')" />
+          <code>{{ billing }}</code>
+        </div>
+        <div class="cell">
+          <UiChoiceGroup v-model="channels" :options="channelOptions" multiple select-all :legend="L('القنوات', 'Channels')" :hint="L('اختر واحدة أو أكثر', 'Pick one or more')" />
+          <code>{{ channels }}</code>
+        </div>
+        <div class="cell">
+          <UiChoiceGroup v-model="billing" :options="billingOptions" orientation="horizontal" size="sm" :legend="L('أفقي', 'Horizontal')" :error="L('اختر دورة', 'Choose a cycle')" />
+        </div>
+      </div>
+      <div class="stack">
+        <UiChoiceGroup v-model="planCard" :options="planCards" variant="cards" :legend="L('الخطة (بطاقات، اختيار واحد)', 'Plan (cards, single)')" />
+        <code>{{ planCard }}</code>
+        <UiChoiceGroup v-model="features" :options="featureCards" variant="cards" multiple :legend="L('الميزات (بطاقات، متعدد)', 'Features (cards, multiple)')" min-card-width="180px" />
+        <code>{{ features }}</code>
+      </div>
+    </section>
+
+    <section>
       <h2>Next to native admin inputs</h2>
       <div class="row">
         <input class="adm-input" placeholder="adm-input">
@@ -284,6 +393,16 @@ section {
   align-content: start;
   gap: 6px;
   font: 600 13px/1.4 var(--tilw-font-ar);
+}
+.stack-sm {
+  display: grid;
+  gap: 8px;
+  max-inline-size: 360px;
+}
+.stack {
+  display: grid;
+  gap: var(--tilw-space-24);
+  margin-block-start: var(--tilw-space-16);
 }
 .row {
   display: flex;
