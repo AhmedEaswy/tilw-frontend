@@ -9,7 +9,13 @@
  */
 import type { TakeMeta } from '~/services/takes'
 
-const props = defineProps<{ take: TakeMeta; src: string | null }>()
+const props = defineProps<{
+  take: TakeMeta
+  src: string | null
+  /** Where to start once the file is ready (handed over from the mini player). */
+  start?: { at: number; autoplay: boolean } | null
+}>()
+const emit = defineEmits<{ mini: [] }>()
 const { t } = useI18n()
 const el = ref<HTMLMediaElement>()
 const playing = ref(false)
@@ -30,6 +36,7 @@ function onMeta() {
   if (Number.isFinite(m.duration)) {
     duration.value = m.duration
     seekable.value = true
+    applyStart()
     return
   }
   // Force Chrome to scan the file once so the real duration (and seeking) becomes available.
@@ -40,9 +47,21 @@ function onMeta() {
       seekable.value = true
     }
     m.currentTime = 0
+    applyStart()
   }
   m.addEventListener('timeupdate', fix)
   m.currentTime = 1e101
+}
+
+let started: string | null = null
+function applyStart() {
+  const m = el.value
+  const s = props.start
+  if (!m || !s || started === props.src) return
+  started = props.src
+  if (s.at > 0) m.currentTime = Math.min(s.at, duration.value || s.at)
+  current.value = m.currentTime
+  if (s.autoplay) void m.play().catch(() => {})
 }
 
 function toggle() {
@@ -60,7 +79,11 @@ function seek(e: Event) {
 const wave = computed(() => waveBars(props.take.id, 64))
 const pct = computed(() => (duration.value ? Math.min(1, current.value / duration.value) : 0))
 const fmt = (s: number) => formatDuration(s * 1000)
-defineExpose({ pause: () => el.value?.pause() })
+defineExpose({
+  pause: () => el.value?.pause(),
+  /** Position and play state, for handing the take to the mini player. */
+  state: () => ({ at: el.value?.currentTime ?? current.value, playing: !!el.value && !el.value.paused }),
+})
 </script>
 
 <template>
@@ -128,6 +151,12 @@ defineExpose({ pause: () => el.value?.pause() })
           @input="seek"
         >
       </template>
+      <button type="button" class="mini" :aria-label="t('player.mini')" :title="t('player.mini')" :disabled="!src" data-testid="take-mini" @click="emit('mini')">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M20 11V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h5" />
+          <rect x="13" y="14" width="9" height="6" rx="1.5" fill="currentColor" stroke="none" />
+        </svg>
+      </button>
     </figcaption>
   </figure>
 </template>
@@ -200,6 +229,30 @@ video {
 }
 .play:disabled {
   opacity: 0.5;
+}
+.mini {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  inline-size: 38px;
+  block-size: 38px;
+  padding: 0;
+  border: 0;
+  border-radius: 19px;
+  background: none;
+  color: var(--tilw-stage-secondary);
+  cursor: pointer;
+}
+.mini:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--tilw-stage-text) 12%, transparent);
+  color: var(--tilw-stage-text);
+}
+.mini:disabled {
+  opacity: 0.4;
+}
+.mini:focus-visible {
+  outline: 2px solid var(--tilw-stage-cue);
+  outline-offset: 2px;
 }
 .play:focus-visible,
 .seek:focus-visible {

@@ -460,6 +460,23 @@
       "limitN": "Stopped at {time} and saved automatically. Download the original to keep a copy."
     }
   },
+  "player": {
+    "region": "Mini player",
+    "listen": "Listen",
+    "pickTitle": "Play a recording",
+    "search": "Search recordings",
+    "loading": "Loading recordings…",
+    "none": "No recordings yet.",
+    "noMatch": "No recordings match.",
+    "nowPlaying": "Playing",
+    "open": "Open recording page",
+    "close": "Close player",
+    "mini": "Mini player",
+    "move": "Move player (arrow keys)",
+    "back10": "Back 10 seconds",
+    "fwd10": "Forward 10 seconds",
+    "failed": "Couldn't play this recording."
+  },
   "settings": {
     "account": "Account",
     "themeLight": "Light",

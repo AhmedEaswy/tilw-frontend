@@ -28,6 +28,10 @@ const status = ref<'loading' | 'ready' | 'missing' | 'error'>('loading')
 useHead({ title: () => `${take.value?.scriptTitle ?? t('nav.recordings')} · tilwprompter` })
 
 const src = ref<string | null>(null)
+// Floating mini player: this page and the mini player hand the same file and position to each other.
+const mini = usePlayerStore()
+const start = ref<{ at: number; autoplay: boolean } | null>(null)
+const router = useRouter()
 function release() {
   if (src.value) URL.revokeObjectURL(src.value)
   src.value = null
@@ -43,6 +47,16 @@ async function open() {
       status.value = 'missing'
       return
     }
+    // The take is playing in the mini player: carry on here from the same spot, without reloading the file.
+    const h = mini.handOff(id.value)
+    start.value = h ? { at: h.at, autoplay: h.playing } : null
+    if (h) {
+      src.value = h.src
+      status.value = 'ready'
+      return
+    }
+    // Another take in the mini player gives way to this page's player (as on YouTube).
+    if (mini.take) mini.close()
     // A Drive-only take streams from Drive (research §8); a device take reads from this browser.
     const blob = await takes.blobFor(id.value)
     if (!blob) {
@@ -94,7 +108,26 @@ async function toggleStar() {
 }
 const confirmDelete = ref(false)
 const deleting = ref(false)
-const player = ref<{ pause: () => void }>()
+const player = ref<{ pause: () => void; state: () => { at: number; playing: boolean } }>()
+
+/** Move the take to the floating mini player (keeps the file and position) and go back to where they were. */
+function toMiniPlayer(autoplay: boolean) {
+  if (!take.value || !src.value || !player.value) return
+  const s = player.value.state()
+  player.value.pause()
+  void mini.play(take.value, { at: s.at, autoplay, src: src.value })
+  src.value = null // the mini player owns the URL now
+}
+function minimize() {
+  toMiniPlayer(true)
+  if (window.history.state?.back) router.back()
+  else void navigateTo('/app/recordings')
+}
+// Leaving the page while it plays keeps it playing in the mini player, unless they go to rehearse or record.
+onBeforeRouteLeave((to) => {
+  if (!player.value?.state().playing) return
+  if (to.path.startsWith('/app') && !/\/(record|rehearse)(\/|$)/.test(to.path)) toMiniPlayer(true)
+})
 async function remove(everywhere = true) {
   if (!take.value) return
   deleting.value = true
@@ -194,7 +227,7 @@ const endedNote = computed(() => {
           </section>
 
           <div class="main">
-            <TakePlayer ref="player" class="player" :take="take" :src="src" />
+            <TakePlayer ref="player" class="player" :take="take" :src="src" :start="start" @mini="minimize" />
             <div v-if="siblings.length > 1" class="takes">
               <p>{{ t('recordings.takes') }}</p>
               <div class="take-list">
