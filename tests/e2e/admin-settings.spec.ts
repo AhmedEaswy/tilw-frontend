@@ -54,8 +54,15 @@ test.describe('desktop settings', () => {
   test('sign-up mode switch with confirmation, then sign-up works', async ({ page }) => {
     await asAdmin(page, '/admin/settings')
     await expect(page.getByTestId('signup-mode')).toHaveText('بالدعوة فقط')
-    await page.getByRole('button', { name: 'مفتوح للجميع' }).click()
+    const toggle = page.getByRole('switch', { name: 'فتح التسجيل للجميع' })
+    await expect(toggle).not.toBeChecked()
+    // Cancelling the confirmation leaves the switch off.
+    await toggle.check()
+    await page.getByRole('dialog').getByRole('button', { name: 'إلغاء' }).click()
+    await expect(toggle).not.toBeChecked()
+    await toggle.check()
     await page.getByRole('dialog').getByRole('button', { name: 'فتح التسجيل' }).click()
+    await expect(toggle).toBeChecked()
     await expect(page.getByTestId('signup-mode')).toHaveText('مفتوح للجميع')
     await signOutMock(page)
     await page.goto('/signin')
@@ -86,6 +93,25 @@ test.describe('desktop settings', () => {
     await expect(page.getByRole('row').filter({ hasText: 'ai.captions' })).toHaveCount(1)
     await page.getByRole('dialog').getByRole('button', { name: 'حذف', exact: true }).click()
     await expect(page.getByRole('row').filter({ hasText: 'ai.captions' })).toHaveCount(0)
+  })
+
+  test('the account menu switches appearance and language, and links to the website', async ({ page }) => {
+    await asAdmin(page, '/admin/payments')
+    const button = page.getByRole('button', { name: 'قائمة الحساب' })
+    await button.focus()
+    await page.keyboard.press('ArrowDown')
+    const menu = page.getByRole('menu', { name: 'قائمة الحساب' })
+    await expect(menu.getByRole('menuitem', { name: 'الإعدادات' })).toBeFocused()
+    await expect(menu.getByRole('menuitem', { name: /فتح الموقع/ })).toHaveAttribute('target', '_blank')
+    await menu.getByRole('menuitemradio', { name: 'داكن' }).click()
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+    await expect(menu.getByRole('menuitemradio', { name: 'داكن' })).toHaveAttribute('aria-checked', 'true')
+    await menu.getByRole('menuitemradio', { name: 'English' }).click()
+    await expect(page.locator('html')).toHaveAttribute('dir', 'ltr')
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Payments')
+    await page.keyboard.press('Escape')
+    await expect(menu).toBeHidden()
+    await expect(page.getByRole('button', { name: 'Account menu' })).toBeFocused()
   })
 
   test('the console is usable by keyboard: search, open a person, a dialog traps and Esc closes it', async ({ page }) => {

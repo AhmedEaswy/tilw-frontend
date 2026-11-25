@@ -19,6 +19,10 @@ const list = usePagedList(cursor => useServices().admin.ledger({
   to: dayToIso(filters.to, true),
 }, cursor))
 const filters = useQueryFilters(['userId', 'kind', 'from', 'to'] as const, { allowed: { kind: KINDS }, onChange: () => void list.reload() })
+const range = rangeModel(filters, 'from', 'to')
+const today = toIsoDate(new Date())
+const kind = filterModel(filters, 'kind')
+const kindOptions = computed(() => withAll(t('admin.list.all'), KINDS.map(k => ({ value: k, label: t(`admin.kind.${k}`) }))))
 onMounted(() => void list.reload())
 
 const who = ref<AdminUserRow | null>(null)
@@ -49,12 +53,9 @@ const tone = (k: CreditKind) => (k === 'grant' ? 'info' : k === 'refund' ? 'succ
     </div>
     <section class="adm-card">
       <div class="adm-toolbar">
-        <div class="who"><PersonPicker v-model="who" :label="t('admin.ledger.person')" /></div>
-        <label class="adm-muted">{{ t('admin.ledger.kind') }}
-          <select v-model="filters.kind" class="adm-select"><option :value="undefined">{{ t('admin.list.all') }}</option><option v-for="k in KINDS" :key="k" :value="k">{{ t(`admin.kind.${k}`) }}</option></select>
-        </label>
-        <label class="adm-muted">{{ t('admin.range.from') }} <input v-model="filters.from" class="adm-input" type="date"></label>
-        <label class="adm-muted">{{ t('admin.range.to') }} <input v-model="filters.to" class="adm-input" type="date"></label>
+        <AdminPersonField v-model="who" class="who" inline :label="t('admin.ledger.person')" />
+        <span class="adm-field"><label for="f-kind">{{ t('admin.ledger.kind') }}</label><UiSelect id="f-kind" v-model="kind" :options="kindOptions" size="sm" /></span>
+        <span class="adm-field"><label for="f-range">{{ t('admin.range.label') }}</label><UiDatePicker id="f-range" v-model="range" mode="range" size="sm" :max="today" /></span>
         <span v-if="filters.userId && !who" class="adm-chip info">{{ t('admin.subs.onePerson') }} <button type="button" class="adm-link" :aria-label="t('common.close')" @click="filters.userId = undefined">×</button></span>
       </div>
       <div v-if="list.items.value.length" class="adm-scroll">
@@ -87,7 +88,7 @@ const tone = (k: CreditKind) => (k === 'grant' ? 'info' : k === 'refund' ? 'succ
 
     <UiDialog v-model:open="pickOpen" :title="t('admin.detail.a.credits')">
       <form class="adm-form" @submit.prevent="chosen">
-        <PersonPicker v-model="grantee" :label="t('admin.ledger.person')" />
+        <AdminPersonField v-model="grantee" size="md" :label="t('admin.ledger.person')" />
         <div class="adm-dialog-actions">
           <button type="button" class="adm-btn" @click="pickOpen = false">{{ t('common.cancel') }}</button>
           <button type="submit" class="adm-btn primary" :disabled="!grantee">{{ t('admin.ledger.next') }}</button>
@@ -100,14 +101,7 @@ const tone = (k: CreditKind) => (k === 'grant' ? 'info' : k === 'refund' ? 'succ
 
 <style scoped>
 .who {
-  inline-size: min(280px, 100%);
-}
-.who :deep(.adm-label) {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--tilw-text-muted);
-  font-weight: 500;
+  inline-size: min(320px, 100%);
 }
 .plus {
   color: var(--tilw-status-success);

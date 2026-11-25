@@ -19,10 +19,17 @@ const SOURCES = ['request', 'admin', 'provider'] as const
 const RSTATES = ['pending', 'fulfilled', 'rejected', 'cancelled', 'expired'] as const
 const filters = useQueryFilters(['tab', 'state', 'plan', 'source', 'userId', 'q'] as const, {
   allowed: { tab: ['subscriptions', 'requests'] },
-  debounce: ['q'],
   onChange: () => void (tab.value === 'requests' ? loadRequests() : subs.reload()),
 })
 const tab = computed(() => (filters.tab === 'requests' ? 'requests' : 'subscriptions'))
+const state = filterModel(filters, 'state')
+const source = filterModel(filters, 'source')
+const q = textModel(filters, 'q')
+const plan = computed<string | null>({ get: () => filters.plan ?? null, set: v => (filters.plan = v || undefined) })
+const all = () => t('admin.list.all')
+const stateOptions = computed(() => withAll(all(), STATES.map(s => ({ value: s, label: t(`admin.subState.${s}`) }))))
+const rstateOptions = computed(() => withAll(all(), RSTATES.map(s => ({ value: s, label: t(`admin.reqState.${s}`) }))))
+const sourceOptions = computed(() => withAll(all(), SOURCES.map(s => ({ value: s, label: t(`admin.source.${s}`) }))))
 const setTab = (v: 'subscriptions' | 'requests') => {
   filters.state = undefined
   filters.tab = v === 'requests' ? 'requests' : undefined
@@ -40,6 +47,10 @@ const tone = (s: string) => (s === 'active' ? 'success' : s === 'scheduled' ? 'i
 const editing = ref<{ row: AdminSubscriptionRow; mode: 'end' | 'move' } | null>(null)
 const editOpen = computed({ get: () => !!editing.value, set: v => !v && (editing.value = null) })
 const form = reactive({ endsAt: '', reason: 'refund' as 'refund' | 'cancelled' | 'other', note: '' })
+const formEnds = computed<string | null>({ get: () => form.endsAt || null, set: v => (form.endsAt = v ?? '') })
+const REASONS = ['refund', 'cancelled', 'other'] as const
+const formReason = computed<string | null>({ get: () => form.reason, set: v => (form.reason = (v as (typeof REASONS)[number] | null) ?? 'refund') })
+const reasonOptions = computed(() => REASONS.map(r => ({ value: r, label: t(`admin.endedReason.${r}`) })))
 const formError = ref('')
 function openEdit(row: AdminSubscriptionRow, mode: 'end' | 'move') {
   form.endsAt = row.endsAt.slice(0, 10)
@@ -85,6 +96,8 @@ async function loadRequests() {
 const paying = ref<AdminUpgradeRequest | null>(null)
 const payOpen = computed({ get: () => !!paying.value, set: v => !v && (paying.value = null) })
 const pay = reactive({ startsAt: '', endsAt: '', note: '' })
+const payStarts = computed<string | null>({ get: () => pay.startsAt || null, set: v => (pay.startsAt = v ?? '') })
+const payEnds = computed<string | null>({ get: () => pay.endsAt || null, set: v => (pay.endsAt = v ?? '') })
 const payError = ref('')
 function openPay(r: AdminUpgradeRequest) {
   Object.assign(pay, { startsAt: '', endsAt: '', note: '' })
@@ -150,15 +163,9 @@ onMounted(() => {
 
     <section v-if="tab === 'subscriptions'" class="adm-card">
       <div class="adm-toolbar">
-        <label class="adm-muted">{{ t('admin.subs.state') }}
-          <select v-model="filters.state" class="adm-select"><option :value="undefined">{{ t('admin.list.all') }}</option><option v-for="s in STATES" :key="s" :value="s">{{ t(`admin.subState.${s}`) }}</option></select>
-        </label>
-        <label class="adm-muted">{{ t('admin.users.plan') }}
-          <select v-model="filters.plan" class="adm-select"><option :value="undefined">{{ t('admin.list.all') }}</option><option v-for="p in admin.plans ?? []" :key="p.key" :value="p.key">{{ p.key }}</option></select>
-        </label>
-        <label class="adm-muted">{{ t('admin.detail.source') }}
-          <select v-model="filters.source" class="adm-select"><option :value="undefined">{{ t('admin.list.all') }}</option><option v-for="s in SOURCES" :key="s" :value="s">{{ t(`admin.source.${s}`) }}</option></select>
-        </label>
+        <span class="adm-field"><label for="f-state">{{ t('admin.subs.state') }}</label><UiSelect id="f-state" v-model="state" :options="stateOptions" size="sm" /></span>
+        <span class="adm-field"><label for="f-plan">{{ t('admin.users.plan') }}</label><AdminPlanSelect id="f-plan" v-model="plan" :plans="admin.plans ?? []" :all-label="t('admin.list.all')" /></span>
+        <span class="adm-field"><label for="f-source">{{ t('admin.detail.source') }}</label><UiSelect id="f-source" v-model="source" :options="sourceOptions" size="sm" /></span>
         <span v-if="filters.userId" class="adm-chip info">{{ t('admin.subs.onePerson') }} <button type="button" class="adm-link" :aria-label="t('common.close')" @click="filters.userId = undefined">×</button></span>
       </div>
       <div v-if="subs.items.value.length" class="adm-scroll">
@@ -200,10 +207,8 @@ onMounted(() => {
 
     <section v-else class="adm-card">
       <div class="adm-toolbar">
-        <input v-model="filters.q" type="search" class="adm-input" dir="auto" :placeholder="t('admin.reqs.search')" :aria-label="t('admin.reqs.search')">
-        <label class="adm-muted">{{ t('admin.subs.state') }}
-          <select v-model="filters.state" class="adm-select"><option :value="undefined">{{ t('admin.list.all') }}</option><option v-for="s in RSTATES" :key="s" :value="s">{{ t(`admin.reqState.${s}`) }}</option></select>
-        </label>
+        <UiSearchField v-model="q" size="sm" :placeholder="t('admin.reqs.search')" :label="t('admin.reqs.search')" />
+        <span class="adm-field"><label for="f-rstate">{{ t('admin.subs.state') }}</label><UiSelect id="f-rstate" v-model="state" :options="rstateOptions" size="sm" /></span>
         <span class="adm-grow adm-muted">{{ t('admin.reqs.latest') }}</span>
       </div>
       <div v-if="requests?.length" class="adm-scroll">
@@ -238,10 +243,8 @@ onMounted(() => {
 
     <UiDialog v-model:open="editOpen" :title="editing ? t(editing.mode === 'end' ? 'admin.subs.endTitle' : 'admin.subs.moveTitle', { name: editing.row.user.name ?? '' }) : ''">
       <form v-if="editing" class="adm-form" @submit.prevent="saveEdit">
-        <label v-if="editing.mode === 'move'" class="adm-label">{{ t('admin.subs.newEnd') }}<input v-model="form.endsAt" class="adm-input" type="date" required></label>
-        <label v-else class="adm-label">{{ t('admin.subs.reason') }}
-          <select v-model="form.reason" class="adm-select"><option v-for="r in (['refund', 'cancelled', 'other'] as const)" :key="r" :value="r">{{ t(`admin.endedReason.${r}`) }}</option></select>
-        </label>
+        <div v-if="editing.mode === 'move'" class="adm-label"><label for="e-ends">{{ t('admin.subs.newEnd') }}</label><UiDatePicker id="e-ends" v-model="formEnds" :clearable="false" /></div>
+        <div v-else class="adm-label"><label for="e-reason">{{ t('admin.subs.reason') }}</label><UiSelect id="e-reason" v-model="formReason" :options="reasonOptions" /></div>
         <label class="adm-label">{{ t('admin.plan.note') }}<textarea v-model="form.note" class="adm-input" dir="auto" maxlength="500" /></label>
         <p v-if="formError" class="adm-note error" role="alert">{{ formError }}</p>
         <div class="adm-dialog-actions">
@@ -255,8 +258,8 @@ onMounted(() => {
       <form v-if="paying" class="adm-form" @submit.prevent="fulfil">
         <p class="adm-muted">{{ t('admin.reqs.payText', { name: paying.name, plan: paying.plan, price: money(paying.priceCents), today: money(paying.currentPriceCents) }) }}</p>
         <div class="adm-row">
-          <label class="adm-label">{{ t('admin.reqs.startsAt') }}<input v-model="pay.startsAt" class="adm-input" type="date"><span class="adm-hint">{{ t('admin.reqs.startsHint') }}</span></label>
-          <label class="adm-label">{{ t('admin.reqs.endsAt') }}<input v-model="pay.endsAt" class="adm-input" type="date"><span class="adm-hint">{{ t('admin.reqs.endsHint') }}</span></label>
+          <div class="adm-label"><label for="p-starts">{{ t('admin.reqs.startsAt') }}</label><UiDatePicker id="p-starts" v-model="payStarts" aria-describedby="p-starts-h" /><span id="p-starts-h" class="adm-hint">{{ t('admin.reqs.startsHint') }}</span></div>
+          <div class="adm-label"><label for="p-ends">{{ t('admin.reqs.endsAt') }}</label><UiDatePicker id="p-ends" v-model="payEnds" :min="pay.startsAt || null" aria-describedby="p-ends-h" /><span id="p-ends-h" class="adm-hint">{{ t('admin.reqs.endsHint') }}</span></div>
         </div>
         <label class="adm-label">{{ t('admin.plan.note') }}<textarea v-model="pay.note" class="adm-input" dir="auto" maxlength="500" /></label>
         <p v-if="payError" class="adm-note error" role="alert">{{ payError }}</p>

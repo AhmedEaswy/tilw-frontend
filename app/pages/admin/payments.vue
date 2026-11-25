@@ -19,6 +19,8 @@ const list = usePagedList(
   },
 )
 const filters = useQueryFilters(['from', 'to', 'userId'] as const, { onChange: () => void list.reload() })
+const range = rangeModel(filters, 'from', 'to')
+const today = toIsoDate(new Date())
 onMounted(() => void list.reload())
 </script>
 
@@ -30,8 +32,7 @@ onMounted(() => void list.reload())
         <p class="adm-sub">{{ t('admin.pay.sub') }}</p>
       </div>
       <div class="adm-actions">
-        <label class="adm-muted">{{ t('admin.range.from') }} <input v-model="filters.from" class="adm-input" type="date"></label>
-        <label class="adm-muted">{{ t('admin.range.to') }} <input v-model="filters.to" class="adm-input" type="date"></label>
+        <span class="adm-field"><label for="f-range">{{ t('admin.range.label') }}</label><UiDatePicker id="f-range" v-model="range" mode="range" size="sm" :max="today" /></span>
       </div>
     </div>
     <div v-if="totals" class="adm-stats" aria-live="polite">

@@ -13,7 +13,11 @@ const admin = useAdminStore()
 const STATUSES = ['active', 'suspended', 'deletion_scheduled', 'admin'] as const
 
 const list = usePagedList(cursor => useServices().admin.users({ q: filters.q, plan: filters.plan, status: filters.status as (typeof STATUSES)[number] | undefined }, cursor))
-const filters = useQueryFilters(['q', 'plan', 'status'] as const, { allowed: { status: STATUSES }, debounce: ['q'], onChange: () => void list.reload() })
+const filters = useQueryFilters(['q', 'plan', 'status'] as const, { allowed: { status: STATUSES }, onChange: () => void list.reload() })
+const q = textModel(filters, 'q')
+const plan = computed<string | null>({ get: () => filters.plan ?? null, set: v => (filters.plan = v || undefined) })
+const status = filterModel(filters, 'status')
+const statusOptions = computed(() => withAll(t('admin.list.all'), STATUSES.map(s => ({ value: s, label: t(`admin.status.${s}`) }))))
 
 onMounted(() => {
   void list.reload()
@@ -37,19 +41,9 @@ const planName = (key: string | null) => {
 
     <section class="adm-card">
       <div class="adm-toolbar">
-        <input v-model="filters.q" type="search" class="adm-input" dir="auto" :placeholder="t('admin.users.search')" :aria-label="t('admin.users.search')">
-        <label class="adm-muted">{{ t('admin.users.plan') }}
-          <select v-model="filters.plan" class="adm-select">
-            <option :value="undefined">{{ t('admin.list.all') }}</option>
-            <option v-for="p in admin.plans ?? []" :key="p.key" :value="p.key">{{ planName(p.key) }}</option>
-          </select>
-        </label>
-        <label class="adm-muted">{{ t('admin.users.status') }}
-          <select v-model="filters.status" class="adm-select">
-            <option :value="undefined">{{ t('admin.list.all') }}</option>
-            <option v-for="s in STATUSES" :key="s" :value="s">{{ t(`admin.status.${s}`) }}</option>
-          </select>
-        </label>
+        <UiSearchField v-model="q" size="sm" :placeholder="t('admin.users.search')" :label="t('admin.users.search')" />
+        <span class="adm-field"><label for="f-plan">{{ t('admin.users.plan') }}</label><AdminPlanSelect id="f-plan" v-model="plan" :plans="admin.plans ?? []" :all-label="t('admin.list.all')" /></span>
+        <span class="adm-field"><label for="f-status">{{ t('admin.users.status') }}</label><UiSelect id="f-status" v-model="status" :options="statusOptions" size="sm" /></span>
         <span class="adm-grow adm-muted">{{ t('admin.users.newest') }}</span>
       </div>
       <div class="adm-scroll">

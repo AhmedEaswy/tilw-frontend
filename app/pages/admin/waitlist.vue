@@ -13,7 +13,8 @@ const admin = useAdminStore()
 const { show } = useToast()
 const errorText = useErrorText()
 
-const filters = useQueryFilters(['q', 'invited'] as const, { allowed: { invited: ['true', 'false'] }, debounce: ['q'], onChange: () => void reload() })
+const filters = useQueryFilters(['q', 'invited'] as const, { allowed: { invited: ['true', 'false'] }, onChange: () => void reload() })
+const q = textModel(filters, 'q')
 const reload = () => admin.load({ q: filters.q?.trim() || undefined, invited: filters.invited === undefined ? undefined : filters.invited === 'true' })
 onMounted(reload)
 const rows = computed(() => admin.waitlist ?? [])
@@ -62,7 +63,7 @@ const TONE = { account: 'success', invited: 'info', waiting: '' } as const
 
     <section class="adm-card">
       <div class="adm-toolbar">
-        <input v-model="filters.q" type="search" class="adm-input" dir="auto" :placeholder="t('admin.search')" :aria-label="t('admin.search')">
+        <UiSearchField v-model="q" kind="email" size="sm" :placeholder="t('admin.search')" :label="t('admin.search')" />
         <div class="adm-seg" role="group" :aria-label="t('admin.waitlist.filter')">
           <button type="button" :aria-pressed="filters.invited === undefined" @click="filters.invited = undefined">{{ t('admin.list.all') }}</button>
           <button type="button" :aria-pressed="filters.invited === 'false'" @click="filters.invited = 'false'">{{ t('admin.waitlist.notInvited') }}</button>

@@ -49,7 +49,8 @@ test.describe('desktop console', () => {
     await expect(rows).toHaveCount(53)
     await expect(page.getByText('هذا كل شيء.')).toBeVisible()
 
-    await page.locator('.adm-toolbar select').nth(1).selectOption('suspended')
+    await page.getByRole('combobox', { name: 'الحالة' }).click()
+    await page.getByRole('option', { name: 'موقوف' }).click()
     await expect(page).toHaveURL(/status=suspended/)
     await expect(rows).toHaveCount(1)
 

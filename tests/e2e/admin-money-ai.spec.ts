@@ -44,7 +44,8 @@ test('requests: mark one paid; it appears under payments with the total for the 
 
 test('subscriptions: filter by state and end one early', async ({ page }) => {
   await asAdmin(page, '/admin/subscriptions')
-  await page.locator('.adm-toolbar select').first().selectOption('active')
+  await page.getByRole('combobox', { name: 'الحالة' }).click()
+  await page.getByRole('option', { name: 'سارٍ' }).click()
   await expect(page).toHaveURL(/state=active/)
   const ends = page.getByRole('button', { name: 'إنهاء الآن' })
   const n = await ends.count()

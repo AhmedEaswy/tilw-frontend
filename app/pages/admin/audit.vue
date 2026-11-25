@@ -4,6 +4,7 @@
  * by admin, action (from the service's action list, grouped by target), target and date range.
  */
 import { actionKey, dayToIso } from '~/utils/admin'
+import type { UiOption } from '~/utils/uiControls'
 
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 const { t, te } = useI18n()
@@ -18,17 +19,24 @@ const list = usePagedList(cursor => useServices().admin.auditLog({
   after: dayToIso(filters.from),
   before: dayToIso(filters.to, true),
 }, cursor))
-const filters = useQueryFilters(['adminId', 'action', 'targetType', 'targetId', 'from', 'to'] as const, { debounce: ['targetId'], onChange: () => void list.reload() })
+const filters = useQueryFilters(['adminId', 'action', 'targetType', 'targetId', 'from', 'to'] as const, { onChange: () => void list.reload() })
+const range = rangeModel(filters, 'from', 'to')
+const today = toIsoDate(new Date())
 onMounted(() => {
   void list.reload()
   void admin.loadActions().catch(() => {})
 })
-const grouped = computed(() => {
-  const g: Record<string, string[]> = {}
-  for (const a of admin.actions ?? []) (g[a.targetType] ??= []).push(a.action)
-  return g
-})
 const label = (a: string) => (te(`admin.audit.action.${actionKey(a)}`) ? t(`admin.audit.action.${actionKey(a)}`) : a)
+// The service's action list, grouped by target (the group shows as the hint), "label · code" so either can be typed.
+const actionOptions = computed<UiOption<string>[]>(() => [...(admin.actions ?? [])]
+  .sort((a, b) => a.targetType.localeCompare(b.targetType))
+  .map(a => ({ value: a.action, label: `${label(a.action)} · ${a.action}`, hint: a.targetType, group: a.targetType })))
+async function findAction(q: string) {
+  const term = q.trim().toLocaleLowerCase()
+  return actionOptions.value.filter(o => o.label.toLocaleLowerCase().includes(term) || o.hint!.toLocaleLowerCase().includes(term))
+}
+const action = computed<string | null>({ get: () => filters.action ?? null, set: v => (filters.action = v || undefined) })
+const targetId = textModel(filters, 'targetId')
 </script>
 
 <template>
@@ -41,17 +49,9 @@ const label = (a: string) => (te(`admin.audit.action.${actionKey(a)}`) ? t(`admi
     </div>
     <section class="adm-card">
       <div class="adm-toolbar">
-        <label class="adm-muted">{{ t('admin.audit.action.label') }}
-          <select v-model="filters.action" class="adm-select">
-            <option :value="undefined">{{ t('admin.audit.allActions') }}</option>
-            <optgroup v-for="(acts, target) in grouped" :key="target" :label="String(target)">
-              <option v-for="a in acts" :key="a" :value="a">{{ label(a) }} · {{ a }}</option>
-            </optgroup>
-          </select>
-        </label>
-        <input v-model="filters.targetId" class="adm-input adm-ltr" type="search" :placeholder="t('admin.audit.targetId')" :aria-label="t('admin.audit.targetId')">
-        <label class="adm-muted">{{ t('admin.range.from') }} <input v-model="filters.from" class="adm-input" type="date"></label>
-        <label class="adm-muted">{{ t('admin.range.to') }} <input v-model="filters.to" class="adm-input" type="date"></label>
+        <span class="adm-field"><label for="f-action">{{ t('admin.audit.action.label') }}</label><UiAutocomplete id="f-action" v-model="action" class="act" :source="findAction" :selected-options="actionOptions" :debounce="0" size="sm" :placeholder="t('admin.audit.allActions')" /></span>
+        <UiSearchField v-model="targetId" kind="id" size="sm" :placeholder="t('admin.audit.targetId')" :label="t('admin.audit.targetId')" />
+        <span class="adm-field"><label for="f-range">{{ t('admin.range.label') }}</label><UiDatePicker id="f-range" v-model="range" mode="range" size="sm" :max="today" /></span>
         <span v-if="filters.adminId" class="adm-chip info">{{ t('admin.audit.oneAdmin') }} <button type="button" class="adm-link" :aria-label="t('common.close')" @click="filters.adminId = undefined">×</button></span>
       </div>
       <AuditTable v-if="list.items.value.length" :entries="list.items.value" />
@@ -62,3 +62,9 @@ const label = (a: string) => (te(`admin.audit.action.${actionKey(a)}`) ? t(`admi
     </section>
   </div>
 </template>
+
+<style scoped>
+.act {
+  inline-size: min(320px, 60vw);
+}
+</style>

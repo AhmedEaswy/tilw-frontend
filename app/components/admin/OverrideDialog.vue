@@ -63,6 +63,9 @@ async function remove() {
     error.value = errorText(e)
   }
 }
+const endsModel = computed<string | null>({ get: () => ends.value || null, set: v => (ends.value = v ?? '') })
+const today = toIsoDate(new Date())
+const uid = useId()
 </script>
 
 <template>
@@ -78,10 +81,10 @@ async function remove() {
         {{ t('admin.override.list') }}
         <input v-model="listVal" class="adm-input adm-ltr" type="text">
       </label>
-      <label class="adm-label">
-        {{ t('admin.override.endsAt') }}
-        <input v-model="ends" class="adm-input" type="date">
-      </label>
+      <div class="adm-label">
+        <label :for="`${uid}-ends`">{{ t('admin.override.endsAt') }}</label>
+        <UiDatePicker :id="`${uid}-ends`" v-model="endsModel" :min="today" />
+      </div>
       <label class="adm-label">
         {{ t('admin.override.note') }}
         <textarea v-model="note" class="adm-input" dir="auto" maxlength="500" />

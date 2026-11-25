@@ -131,6 +131,8 @@ async function createPlan() {
 }
 const newLimitOpen = ref(false)
 const nl = reactive({ key: '', type: 'int' as 'int' | 'bool' | 'list', labelAr: '', labelEn: '', counted: false })
+const LIMIT_TYPES = (['int', 'bool', 'list'] as const).map(v => ({ value: v, label: v }))
+const nlType = computed<string | null>({ get: () => nl.type, set: v => (nl.type = (v ?? 'int') as typeof nl.type) })
 const nlError = ref('')
 async function createLimit() {
   nlError.value = ''
@@ -242,9 +244,7 @@ async function createLimit() {
     <UiDialog v-model:open="newLimitOpen" :title="t('admin.plans.newLimit')">
       <form class="adm-form" @submit.prevent="createLimit">
         <label class="adm-label">{{ t('admin.plans.key') }}<input v-model="nl.key" class="adm-input adm-ltr" required placeholder="ai.captions_monthly"></label>
-        <label class="adm-label">{{ t('admin.plans.type') }}
-          <select v-model="nl.type" class="adm-select"><option value="int">int</option><option value="bool">bool</option><option value="list">list</option></select>
-        </label>
+        <div class="adm-label"><label for="nl-type">{{ t('admin.plans.type') }}</label><UiSelect id="nl-type" v-model="nlType" :options="LIMIT_TYPES" /></div>
         <div class="adm-row">
           <label class="adm-label">{{ t('admin.plans.labelAr') }}<input v-model="nl.labelAr" class="adm-input" dir="rtl" required></label>
           <label class="adm-label">{{ t('admin.plans.labelEn') }}<input v-model="nl.labelEn" class="adm-input" dir="ltr" required></label>

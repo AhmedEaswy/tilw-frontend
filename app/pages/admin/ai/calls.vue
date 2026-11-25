@@ -5,6 +5,7 @@
  */
 import type { AdminAiCall, AiCapability } from '~/services/types'
 import { dateTime, dayToIso, num, utc } from '~/utils/admin'
+import { PROVIDER_NAMES } from '~/components/brand/ProviderMark.vue'
 
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 const { t, locale } = useI18n()
@@ -24,6 +25,13 @@ const filters = useQueryFilters(['status', 'provider', 'capability', 'userId', '
   allowed: { status: STATUSES, capability: CAPS },
   onChange: () => void list.reload(),
 })
+const range = rangeModel(filters, 'from', 'to')
+const today = toIsoDate(new Date())
+const provider = filterModel(filters, 'provider')
+const capability = filterModel(filters, 'capability')
+const PROVIDERS = ['anthropic', 'openai', 'deepgram'] as const
+const providerOptions = computed(() => withAll(t('admin.list.all'), PROVIDERS.map(p => ({ value: p, label: PROVIDER_NAMES[p] }))))
+const capabilityOptions = computed(() => withAll(t('admin.list.all'), CAPS.map(c => ({ value: c, label: t(`admin.capability.${c}`) }))))
 onMounted(() => void list.reload())
 const tone = (s: string) => (s === 'failed' ? 'error' : s === 'succeeded' ? 'success' : 'warning')
 </script>
@@ -36,8 +44,7 @@ const tone = (s: string) => (s === 'failed' ? 'error' : s === 'succeeded' ? 'suc
         <p class="adm-sub">{{ t('admin.ai.callsSub') }}</p>
       </div>
       <div class="adm-actions">
-        <label class="adm-muted">{{ t('admin.range.from') }} <input v-model="filters.from" class="adm-input" type="date"></label>
-        <label class="adm-muted">{{ t('admin.range.to') }} <input v-model="filters.to" class="adm-input" type="date"></label>
+        <span class="adm-field"><label for="f-range">{{ t('admin.range.label') }}</label><UiDatePicker id="f-range" v-model="range" mode="range" size="sm" :max="today" /></span>
       </div>
     </div>
     <section class="adm-card">
@@ -46,12 +53,8 @@ const tone = (s: string) => (s === 'failed' ? 'error' : s === 'succeeded' ? 'suc
           <button type="button" :aria-pressed="!filters.status" @click="filters.status = undefined">{{ t('admin.list.all') }}</button>
           <button type="button" :aria-pressed="filters.status === 'failed'" @click="filters.status = 'failed'">{{ t('admin.ai.failures') }}</button>
         </div>
-        <label class="adm-muted">{{ t('admin.ai.provider') }}
-          <select v-model="filters.provider" class="adm-select"><option :value="undefined">{{ t('admin.list.all') }}</option><option v-for="p in ['anthropic', 'openai', 'deepgram']" :key="p" :value="p">{{ p }}</option></select>
-        </label>
-        <label class="adm-muted">{{ t('admin.ai.capabilityLabel') }}
-          <select v-model="filters.capability" class="adm-select"><option :value="undefined">{{ t('admin.list.all') }}</option><option v-for="c in CAPS" :key="c" :value="c">{{ t(`admin.capability.${c}`) }}</option></select>
-        </label>
+        <span class="adm-field"><label for="f-provider">{{ t('admin.ai.provider') }}</label><UiSelect id="f-provider" v-model="provider" :options="providerOptions" size="sm" /></span>
+        <span class="adm-field"><label for="f-capability">{{ t('admin.ai.capabilityLabel') }}</label><UiSelect id="f-capability" v-model="capability" :options="capabilityOptions" size="sm" /></span>
         <span v-if="filters.userId" class="adm-chip info">{{ t('admin.subs.onePerson') }} <button type="button" class="adm-link" :aria-label="t('common.close')" @click="filters.userId = undefined">×</button></span>
       </div>
       <div v-if="list.items.value.length" class="adm-scroll">

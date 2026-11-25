@@ -3,7 +3,7 @@
  * Feature 006 (D4): change the plan now. Paid plans need a period or a custom end date; a note is required. The plan
  * already in force is not offered. An overlap with a scheduled subscription shows on the end date.
  */
-import { isPortError, type AdminUserDetail } from '~/services/types'
+import { isPortError, type AdminPlan, type AdminUserDetail } from '~/services/types'
 import { dayToIso, money } from '~/utils/admin'
 
 const open = defineModel<boolean>('open', { default: false })
@@ -39,6 +39,11 @@ const chosen = computed(() => choices.value.find(p => p.id === planId.value))
 const paid = computed(() => !!chosen.value && chosen.value.key !== 'free')
 const valid = computed(() => !!chosen.value && note.value.trim().length > 0 && (!paid.value || mode.value !== 'custom' || !!ends.value))
 const name = (p: { nameAr: string; nameEn: string }) => (locale.value === 'ar' ? p.nameAr : p.nameEn)
+const priceHint = (p: AdminPlan) => (p.key === 'free' ? undefined : `${money(p.priceMonthlyCents)} / ${money(p.priceYearlyCents)}`)
+const planModel = computed<string | null>({ get: () => planId.value || null, set: v => (planId.value = v ?? '') })
+const endsModel = computed<string | null>({ get: () => ends.value || null, set: v => (ends.value = v ?? '') })
+const today = toIsoDate(new Date())
+const uid = useId()
 
 async function submit() {
   if (!valid.value || !chosen.value) return
@@ -65,25 +70,21 @@ async function submit() {
 <template>
   <UiDialog v-model:open="open" :title="t('admin.plan.title', { name: detail.name })">
     <form class="adm-form" @submit.prevent="submit">
-      <label class="adm-label">
-        {{ t('admin.plan.newPlan') }}
-        <select v-model="planId" class="adm-select" required>
-          <option v-for="p in choices" :key="p.id" :value="p.id">
-            {{ name(p) }}{{ p.key === 'free' ? '' : ` · ${money(p.priceMonthlyCents)} / ${money(p.priceYearlyCents)}` }}
-          </option>
-        </select>
-      </label>
+      <div class="adm-label">
+        <label :for="`${uid}-plan`">{{ t('admin.plan.newPlan') }}</label>
+        <AdminPlanSelect :id="`${uid}-plan`" v-model="planModel" :plans="choices" by="id" size="md" :hint="priceHint" />
+      </div>
       <div v-if="paid" class="adm-label">
         <span>{{ t('admin.plan.period') }}</span>
         <div class="adm-seg" role="group" :aria-label="t('admin.plan.period')">
           <button v-for="m in (['monthly', 'yearly', 'custom'] as const)" :key="m" type="button" :aria-pressed="mode === m" @click="mode = m">{{ t(`admin.plan.mode.${m}`) }}</button>
         </div>
       </div>
-      <label v-if="paid && mode === 'custom'" class="adm-label">
-        {{ t('admin.plan.endsAt') }}
-        <input v-model="ends" class="adm-input" type="date" required :aria-invalid="!!fieldError">
+      <div v-if="paid && mode === 'custom'" class="adm-label">
+        <label :for="`${uid}-ends`">{{ t('admin.plan.endsAt') }}</label>
+        <UiDatePicker :id="`${uid}-ends`" v-model="endsModel" :min="today" :clearable="false" :error="!!fieldError" />
         <span v-if="fieldError" class="adm-err" role="alert">{{ fieldError }}</span>
-      </label>
+      </div>
       <p v-else-if="fieldError" class="adm-err" role="alert">{{ fieldError }}</p>
       <p class="adm-note">{{ paid ? t('admin.plan.effectPaid', { from: detail.plan.nameAr && locale === 'ar' ? detail.plan.nameAr : (detail.plan.nameEn ?? current) }) : t('admin.plan.effectFree') }}</p>
       <label class="adm-label">

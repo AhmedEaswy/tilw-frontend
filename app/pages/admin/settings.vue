@@ -6,6 +6,7 @@
  */
 import { FLAG_KEY, isPortError, type AdminSettings, type AiKeyState, type SignupMode } from '~/services/types'
 import { dateTime, utc } from '~/utils/admin'
+import { PROVIDER_NAMES } from '~/components/brand/ProviderMark.vue'
 
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 const { t, locale } = useI18n()
@@ -29,6 +30,14 @@ onMounted(load)
 const nextMode = ref<SignupMode | null>(null)
 const modeOpen = computed({ get: () => !!nextMode.value, set: v => !v && (nextMode.value = null) })
 const modeBusy = ref(false)
+/** The switch shows the choice waiting for confirmation, then what the server has. */
+const openSignup = computed({
+  get: () => (nextMode.value ?? data.value?.signupMode) === 'open',
+  set: (on: boolean) => {
+    const m: SignupMode = on ? 'open' : 'invite_only'
+    nextMode.value = m === data.value?.signupMode ? null : m
+  },
+})
 async function setMode() {
   const m = nextMode.value
   if (!m || modeBusy.value) return
@@ -126,11 +135,14 @@ async function addFlag() {
     addBusy.value = false
   }
 }
-/** Flags with a save in flight: their switch is disabled, so quick toggles can't land out of order. */
-const pendingFlags = ref<Set<string>>(new Set())
+/**
+ * Flags with a save in flight and the value asked for: their switch shows it and is busy, so quick toggles can't land
+ * out of order; afterwards it shows what the server has again (so a failed save flips back).
+ */
+const pendingFlags = ref<Map<string, boolean>>(new Map())
 async function toggleFlag(key: string, enabled: boolean) {
   if (pendingFlags.value.has(key)) return
-  pendingFlags.value = new Set([...pendingFlags.value, key])
+  pendingFlags.value = new Map([...pendingFlags.value, [key, enabled]])
   try {
     await useServices().admin.setFlag(key, { enabled })
     await load()
@@ -138,7 +150,7 @@ async function toggleFlag(key: string, enabled: boolean) {
     show(errorText(e), 'error')
     await load()
   } finally {
-    const next = new Set(pendingFlags.value)
+    const next = new Map(pendingFlags.value)
     next.delete(key)
     pendingFlags.value = next
   }
@@ -179,9 +191,7 @@ async function removeFlag() {
           <h2 id="mode-h">{{ t('admin.settings.mode.title') }}</h2>
           <span class="adm-chip" data-testid="signup-mode">{{ t(`admin.settings.mode.${data.signupMode}`) }}</span>
         </div>
-        <div class="adm-seg" role="group" :aria-label="t('admin.settings.mode.title')">
-          <button v-for="m in (['invite_only', 'open'] as const)" :key="m" type="button" :aria-pressed="data.signupMode === m" @click="m !== data!.signupMode && (nextMode = m)">{{ t(`admin.settings.mode.${m}`) }}</button>
-        </div>
+        <UiToggle v-model="openSignup" class="mode" :label="t('admin.settings.mode.toggle')" :busy="modeBusy" data-testid="signup-toggle" />
         <p class="adm-muted">{{ t('admin.settings.mode.explain') }}</p>
       </section>
 
@@ -190,7 +200,7 @@ async function removeFlag() {
         <p class="adm-muted">{{ t('admin.settings.keys.explain') }}</p>
         <div v-for="k in data.aiKeys" :key="k.provider" class="key" :data-testid="`key-${k.provider}`">
           <div class="adm-card-head">
-            <span class="adm-person"><b class="adm-ltr">{{ k.provider === 'anthropic' ? 'Anthropic' : 'Deepgram' }}</b><small>{{ t(`admin.settings.keys.use.${k.provider}`) }}{{ k.project ? ` · ${k.project}` : '' }}</small></span>
+            <span class="prov"><ProviderMark :provider="k.provider" :size="22" /><span class="adm-person"><b class="adm-ltr">{{ PROVIDER_NAMES[k.provider] }}</b><small>{{ t(`admin.settings.keys.use.${k.provider}`) }}{{ k.project ? ` · ${k.project}` : '' }}</small></span></span>
             <span class="state">
               <span class="adm-chip" :class="SOURCE_TONE[k.source]">{{ t(`admin.settings.keys.source.${k.source}`) }}</span>
               <span v-if="k.last4" class="adm-ltr">…{{ k.last4 }}</span>
@@ -226,7 +236,7 @@ async function removeFlag() {
               <tr v-for="f in data.flags" :key="f.key">
                 <td><span class="adm-person"><b class="adm-ltr">{{ f.key }}</b><small>{{ f.description ?? '' }}</small></span></td>
                 <td class="nowrap" :title="utc(f.updatedAt)">{{ dateTime(f.updatedAt, locale) }}</td>
-                <td><input type="checkbox" role="switch" :checked="f.enabled" :disabled="pendingFlags.has(f.key)" :aria-busy="pendingFlags.has(f.key)" :aria-label="f.key" @change="toggleFlag(f.key, ($event.target as HTMLInputElement).checked)"></td>
+                <td><UiToggle :model-value="pendingFlags.get(f.key) ?? f.enabled" :label="f.key" hide-label size="sm" :busy="pendingFlags.has(f.key)" @update:model-value="toggleFlag(f.key, $event)" /></td>
                 <td class="act"><button type="button" class="adm-link danger" :aria-label="`${t('admin.settings.flags.remove')} ${f.key}`" @click="removingFlag = f.key">{{ t('admin.settings.flags.remove') }}</button></td>
               </tr>
             </tbody>
@@ -235,7 +245,7 @@ async function removeFlag() {
         <form class="adm-row add" @submit.prevent="addFlag">
           <label class="adm-label">{{ t('admin.settings.flags.key') }}<input v-model="newKey" class="adm-input adm-ltr" placeholder="ai.captions" maxlength="64"></label>
           <label class="adm-label">{{ t('admin.settings.flags.description') }}<input v-model="newDesc" class="adm-input" dir="auto" maxlength="200"></label>
-          <label class="chk"><input v-model="newOn" type="checkbox"> {{ t('admin.settings.flags.on') }}</label>
+          <UiToggle v-model="newOn" class="chk" :label="t('admin.settings.flags.on')" size="sm" label-position="end" />
           <button type="submit" class="adm-btn primary" :disabled="addBusy">{{ t('admin.settings.flags.add') }}</button>
         </form>
         <p class="adm-hint pad" :class="{ 'adm-err': flagError }" role="status">{{ flagError || t('admin.settings.flags.keyRule') }}</p>
@@ -293,10 +303,14 @@ async function removeFlag() {
   padding: 6px 16px 12px;
 }
 .chk {
+  align-self: center;
+}
+.mode {
+  max-inline-size: 420px;
+}
+.prov {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   align-items: center;
-  block-size: 36px;
-  font: 500 14px/1.4 var(--tilw-font-ar);
 }
 </style>

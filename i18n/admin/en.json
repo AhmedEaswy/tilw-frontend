@@ -43,6 +43,8 @@
     "topSearch": "Find a person by email or name",
     "backToStudio": "Back to studio",
     "accountMenu": "Account menu",
+    "openSite": "Open website",
+    "newTab": "opens in a new tab",
     "deletedPerson": "Deleted person",
     "env": {
       "demo": "Demo data",
@@ -79,6 +81,7 @@
       "actions": "Actions"
     },
     "range": {
+      "label": "Dates",
       "from": "From",
       "to": "To"
     },
@@ -381,6 +384,7 @@
       "expires": "Expires"
     },
     "plans": {
+      "pick": "Choose a plan",
       "sub": "Prices in US dollars. Every change applies from the next request and is in the audit log.",
       "newPlan": "New plan",
       "newLimit": "New limit kind",
@@ -575,6 +579,7 @@
       "sub": "Who can join, platform AI keys and feature flags.",
       "mode": {
         "title": "Who can join",
+        "toggle": "Open sign-up to everyone",
         "invite_only": "Invite only",
         "open": "Open to everyone",
         "explain": "Invite only: the sign-up page explains it and points to the waitlist; invitation links work. Open: anyone can create an account at /signup, and the landing page shows \"Create account\" instead of the waitlist.",

@@ -16,6 +16,8 @@ onMounted(() => admin.load())
 
 const query = ref('')
 const status = ref<'all' | InvitationState>('all')
+const statusModel = computed<string | null>({ get: () => status.value, set: v => (status.value = (v || 'all') as 'all' | InvitationState) })
+const statusOptions = computed(() => [{ value: 'all', label: t('admin.filterAll') }, ...STATES.map(s => ({ value: s, label: t(`admin.state.${s}`) }))])
 const STATES: InvitationState[] = ['pending', 'expired', 'withdrawn', 'used']
 const rows = computed(() => {
   const q = query.value.trim().toLowerCase()
@@ -58,13 +60,8 @@ async function withdraw() {
 
     <section class="adm-card">
       <div class="adm-toolbar">
-        <input v-model="query" type="search" class="adm-input" dir="auto" :placeholder="t('admin.search')" :aria-label="t('admin.search')">
-        <label class="adm-muted">{{ t('admin.filterLabel') }}
-          <select v-model="status" class="adm-select">
-            <option value="all">{{ t('admin.filterAll') }}</option>
-            <option v-for="s in STATES" :key="s" :value="s">{{ t(`admin.state.${s}`) }}</option>
-          </select>
-        </label>
+        <UiSearchField v-model="query" kind="email" size="sm" :debounce="0" :placeholder="t('admin.search')" :label="t('admin.search')" />
+        <span class="adm-field"><label for="f-state">{{ t('admin.filterLabel') }}</label><UiSelect id="f-state" v-model="statusModel" :options="statusOptions" size="sm" /></span>
       </div>
       <div v-if="rows.length" class="adm-scroll">
         <table class="adm-tbl">
