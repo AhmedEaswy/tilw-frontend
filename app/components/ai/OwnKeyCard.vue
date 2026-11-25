@@ -5,6 +5,7 @@
  * never shown again, only the provider and its last four characters (SC-003). Own keys never cover speech.
  */
 import { AI_RULES, isPortError, type AiProvider } from '~/services/types'
+import { PROVIDER_NAMES } from '~/components/brand/ProviderMark.vue'
 
 const { t, locale } = useI18n()
 const ai = useAiStore()
@@ -30,7 +31,18 @@ onMounted(() => {
 const allowed = computed(() => plan.limit('byok.allowed') !== false)
 const key = computed(() => ai.key)
 const showForm = computed(() => allowed.value && (!key.value || editing.value))
-const providerName = (p: string) => (p === 'openai' ? 'OpenAI' : 'Anthropic')
+const providerName = (p: AiProvider) => PROVIDER_NAMES[p]
+const providers: AiProvider[] = ['anthropic', 'openai']
+// Provider choice: a radio group with the marks (same keys as UiSegmented: ←/→ follow reading direction).
+function onProviderKey(e: KeyboardEvent) {
+  const rtl = getComputedStyle(e.currentTarget as Element).direction === 'rtl'
+  const step = e.key === (rtl ? 'ArrowLeft' : 'ArrowRight') ? 1 : e.key === (rtl ? 'ArrowRight' : 'ArrowLeft') ? -1 : 0
+  if (!step) return
+  e.preventDefault()
+  const i = providers.indexOf(provider.value)
+  provider.value = providers[(i + step + providers.length) % providers.length]!
+  nextTick(() => (e.currentTarget as HTMLElement | null)?.querySelector<HTMLElement>('[aria-checked="true"]')?.focus())
+}
 const placeholder = computed(() => (provider.value === 'openai' ? 'sk-…' : 'sk-ant-…'))
 
 async function save() {
@@ -104,7 +116,10 @@ function startReplace() {
     <!-- saved -->
     <template v-if="key && !editing">
       <div class="saved">
-        <b dir="ltr" data-testid="own-key-masked">{{ providerName(key.provider) }} · ••••{{ key.last4 }}</b>
+        <b dir="ltr" class="masked">
+          <ProviderMark :provider="key.provider" :size="20" />
+          <span data-testid="own-key-masked">{{ providerName(key.provider) }} · ••••{{ key.last4 }}</span>
+        </b>
         <span class="state" :class="key.checkOk ? 'ok' : 'bad'">{{ key.checkOk ? t('ai.key.works') : t('ai.key.failing') }}</span>
       </div>
       <p class="muted">
@@ -121,11 +136,20 @@ function startReplace() {
     <!-- empty or replacing -->
     <form v-if="showForm" class="form" autocomplete="off" @submit.prevent="save">
       <p v-if="!key" class="muted">{{ t('ai.key.lede') }}</p>
-      <UiSegmented
-        v-model="provider"
-        :label="t('ai.key.provider')"
-        :options="[{ value: 'anthropic', label: 'Anthropic' }, { value: 'openai', label: 'OpenAI' }]"
-      />
+      <div class="prov" role="radiogroup" :aria-label="t('ai.key.provider')" @keydown="onProviderKey">
+        <button
+          v-for="p in providers"
+          :key="p"
+          type="button"
+          role="radio"
+          :aria-checked="provider === p"
+          :tabindex="provider === p ? 0 : -1"
+          @click="provider = p"
+        >
+          <ProviderMark :provider="p" :size="18" />
+          <span lang="en">{{ providerName(p) }}</span>
+        </button>
+      </div>
       <UiField
         v-model="secret"
         type="password"
@@ -187,6 +211,43 @@ h2 {
 }
 .saved b {
   font: 500 17px/1.4 var(--tilw-font-lat);
+}
+.masked {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.prov {
+  display: flex;
+  padding: 3px;
+  min-block-size: var(--tilw-hit);
+  border-radius: var(--tilw-radius-field);
+  background: var(--tilw-surface-quiet);
+}
+.prov button {
+  display: inline-flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-inline-size: 0;
+  padding-inline: var(--tilw-space-12);
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--tilw-text-muted);
+  font: 500 16px/1.34 var(--tilw-font-lat);
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+.prov button[aria-checked='true'] {
+  background: var(--tilw-surface-white);
+  color: var(--tilw-text-ink);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+.prov button:focus-visible {
+  outline: 2px solid var(--tilw-focus-ring);
+  outline-offset: 1px;
 }
 .state {
   font: 500 14px/1.4 var(--tilw-font-ar);

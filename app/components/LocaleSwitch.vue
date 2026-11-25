@@ -1,18 +1,10 @@
 <script setup lang="ts">
-/** Switch between العربية and English. The choice persists in the tilw-locale cookie. */
-const { locale, locales, setLocale } = useI18n()
-const saved = useCookie<'ar' | 'en' | null>('tilw-locale', { maxAge: 60 * 60 * 24 * 365, sameSite: 'lax' })
-const other = computed(() => locales.value.find(l => l.code !== locale.value)!)
-
-async function toggle() {
-  const code = other.value.code as 'ar' | 'en'
-  saved.value = code
-  await setLocale(code)
-}
+/** Switch between العربية and English (auth pages). Same choice as the account menu: cookie, then the account when signed in. */
+const { other, choose } = useLocaleChoice()
 </script>
 
 <template>
-  <button type="button" class="locale" :lang="other.code" @click="toggle">
+  <button type="button" class="locale" :lang="other.code" @click="choose(other.code)">
     <UiGlyph name="language" :size="18" />
     {{ other.name }}
   </button>

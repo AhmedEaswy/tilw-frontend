@@ -46,16 +46,7 @@ const rows = computed(() => {
 
     <template v-else>
       <ProEndingBanner class="banner" />
-      <div class="grid">
-        <PlanCard :my="plan.my" @upgrade="upgrade.open()" />
-        <RequestPanel v-if="plan.my.pendingRequest" :request="plan.my.pendingRequest" />
-        <section v-else class="why">
-          <h2>{{ plan.isPro ? t('plan.proIncludes') : t('plan.whyPro') }}</h2>
-          <ul>
-            <li v-for="k in (['minutes', 'scripts', 'sync', 'history'] as const)" :key="k">{{ t(`plan.proLines.${k}`) }}</li>
-          </ul>
-        </section>
-      </div>
+      <PlanOverview class="grid" :my="plan.my" @upgrade="upgrade.open()" />
 
       <h2 class="use-h">{{ t('plan.usage') }}</h2>
       <div class="rows">
@@ -89,26 +80,9 @@ h1 {
   margin-block-start: 30px;
   align-items: stretch;
 }
-.why {
-  padding: 24px 27px;
-  border-radius: 12px;
-  background: var(--tilw-surface-white);
-}
-.why h2,
 .use-h {
-  margin: 0;
+  margin: 36px 0 0;
   font: 500 21px/1.36 var(--tilw-font-ar);
-}
-.why ul {
-  display: grid;
-  gap: 10px;
-  margin: 14px 0 0;
-  padding-inline-start: 20px;
-  color: var(--tilw-text-muted);
-  font: 400 16px/1.5 var(--tilw-font-ar);
-}
-.use-h {
-  margin-block-start: 36px;
 }
 .ai-link {
   display: inline-block;
@@ -132,9 +106,6 @@ h1 {
     grid-template-columns: 1fr;
     gap: 14px;
     margin-block-start: 18px;
-  }
-  .why {
-    padding: 18px;
   }
 }
 </style>

@@ -29,6 +29,11 @@
     "backToSite": "Back to website",
     "admin": "Admin"
   },
+  "menu": {
+    "appearance": "Appearance",
+    "language": "Language",
+    "themeSystem": "System"
+  },
   "legal": {
     "privacy": "Privacy policy",
     "terms": "Terms of use",
@@ -455,10 +460,6 @@
   },
   "settings": {
     "account": "Account",
-    "editAccount": "Edit name and password",
-    "language": "Language",
-    "appearance": "Appearance",
-    "themeSystem": "Match device",
     "themeLight": "Light",
     "themeDark": "Dark",
     "readingHint": "Speed, font size and reading mode",
@@ -509,12 +510,10 @@
     "deletedTitle": "Your account is deleted",
     "deletedLede": "Thank you for trying tilw. You've been signed out of this browser.",
     "toHome": "Go to the home page",
-    "planLabel": "Plan: {plan}",
-    "planHint": "Your plan's limits and what you've used",
-    "planHintFree": "{n} of {max} active scripts",
-    "planHintPro": "Tilw Pro is active",
     "storageHintNone": "Link Google Drive to keep a copy of your takes",
-    "storageHintLinked": "Google Drive linked · Copying: {mode}"
+    "storageHintLinked": "Google Drive linked · Copying: {mode}",
+    "aiPlatforms": "Connect your AI platforms",
+    "viewFullPlan": "View full plan"
   },
   "errorPage": {
     "notFoundTitle": "Page not found",
