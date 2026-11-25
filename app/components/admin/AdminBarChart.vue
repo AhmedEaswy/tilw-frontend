@@ -49,7 +49,7 @@ rect {
   fill: var(--tilw-action-primary);
 }
 rect.zero {
-  fill: var(--tilw-border-subtle);
+  fill: var(--tilw-hairline);
 }
 .axis {
   display: flex;

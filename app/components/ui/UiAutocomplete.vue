@@ -422,15 +422,16 @@ defineExpose({ focus: () => input.value?.focus(), clear: clearAll })
   padding-block: 3px;
   padding-inline: var(--ui-pad) calc(var(--ui-pad) - 6px);
   box-sizing: border-box;
-  border: 1px solid var(--tilw-border-strong);
+  border: 1px solid var(--tilw-control-edge);
   border-radius: var(--tilw-radius-field);
-  background: var(--tilw-surface-white);
+  background: var(--tilw-control-fill);
   color: var(--tilw-text-ink);
   cursor: text;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s, background-color 0.12s;
 }
 .box:hover {
-  border-color: var(--tilw-text-muted);
+  border-color: var(--tilw-control-edge-hover);
+  background: var(--tilw-control-fill-hover);
 }
 .box:focus-within {
   border-color: var(--tilw-focus-ring);
@@ -443,7 +444,7 @@ defineExpose({ focus: () => input.value?.focus(), clear: clearAll })
   box-shadow: 0 0 0 1px var(--tilw-status-error);
 }
 .disabled .box {
-  border-color: var(--tilw-border-subtle);
+  border-color: var(--tilw-control-edge-disabled);
   background: var(--tilw-surface-quiet);
   color: var(--tilw-text-muted);
   cursor: not-allowed;

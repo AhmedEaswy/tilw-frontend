@@ -124,22 +124,28 @@ const chart = computed(() => (data.value?.signups.byDay ?? []).map(d => ({ label
   flex-wrap: wrap;
   gap: 12px 24px;
   align-items: center;
-  padding: 12px 16px;
-  border-radius: 14px;
-  background: color-mix(in srgb, #e9cc82 60%, var(--tilw-surface-white));
-  color: #73531b;
+  padding: 14px 20px;
+  border: 0;
+  border-radius: var(--tilw-radius-panel);
+  background: var(--tilw-warning-bg);
+  color: var(--tilw-warning-ink);
   font: 500 14px/1.4 var(--tilw-font-ar);
+}
+.att .adm-link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 .tot {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 20px;
+  gap: 8px 24px;
   color: var(--tilw-text-muted);
   font: 500 13px/1.4 var(--tilw-font-ar);
 }
 .two {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
-  gap: 16px;
+  gap: 18px;
 }
 </style>

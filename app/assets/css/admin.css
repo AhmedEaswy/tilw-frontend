@@ -1,10 +1,39 @@
 /*
  * Feature 006: the admin console's dense look, from the studio's paper/ink tokens (research R8, Figma page 10).
  * Loaded by the admin layout only. Every class starts with `adm-` so nothing leaks into the studio.
+ *
+ * Direction D (2026-11): flat studio cards, rows for data. Cards are a flat surface-white fill on the paper page
+ * (12px, no shadow, no outer border) with inset hairlines; headings and the page header sit on the bare page;
+ * fields are filled wells (no border, hover deepens, focus = 2px ring); tables get a header band and faint rows.
+ * The derived colours are --tilw-* tokens in tokens.css. `.adm-seg` is intentionally unchanged.
  */
+
+/* Point the UI kit's control hooks at D's fills. On the bare page (and the dialog paper) a field uses the
+   page fill; inside a card it uses the card well. */
+:root.adm-html {
+  --tilw-control-fill: var(--tilw-field-fill-page);
+  --tilw-control-fill-hover: var(--tilw-field-fill-page-hover);
+  --tilw-control-edge: transparent;
+  --tilw-control-edge-hover: transparent;
+  --tilw-control-edge-disabled: transparent;
+  --tilw-toggle-off: var(--tilw-switch-off);
+  --tilw-toggle-knob-off: var(--tilw-switch-knob-off);
+  --tilw-toggle-knob-shadow: none;
+  --tilw-dialog-shadow: none; /* the scrim separates a dialog */
+  --tilw-dialog-rule: var(--tilw-hairline);
+}
+.adm-card {
+  --tilw-control-fill: var(--tilw-field-fill);
+  --tilw-control-fill-hover: var(--tilw-field-fill-hover);
+}
+/* a dialog sits on its own paper panel wherever it is declared */
+.adm-html .ui-dialog {
+  --tilw-control-fill: var(--tilw-field-fill-page);
+  --tilw-control-fill-hover: var(--tilw-field-fill-page-hover);
+}
 .adm-page {
   display: grid;
-  gap: var(--tilw-space-16);
+  gap: var(--tilw-space-24);
   padding: var(--tilw-space-24) var(--tilw-space-32) var(--tilw-space-48);
 }
 .adm-head {
@@ -14,7 +43,7 @@
   flex-wrap: wrap;
 }
 .adm-head h1 {
-  font: 700 24px/1.35 var(--tilw-font-ar);
+  font: 700 26px/1.35 var(--tilw-font-ar);
 }
 .adm-head .adm-sub {
   color: var(--tilw-text-muted);
@@ -35,19 +64,21 @@
 }
 
 .adm-card {
-  border: 1px solid var(--tilw-border-subtle);
-  border-radius: 14px;
+  border: 0;
+  border-radius: var(--tilw-radius-panel);
   background: var(--tilw-surface-white);
+  box-shadow: none;
   overflow: hidden;
 }
 .adm-card-pad {
-  padding: var(--tilw-space-16);
+  padding: 18px 20px;
   display: grid;
   gap: var(--tilw-space-12);
 }
 .adm-card h2,
 .adm-card-title {
-  font: 600 15px/1.4 var(--tilw-font-ar);
+  font: 700 16px/1.4 var(--tilw-font-ar);
+  color: var(--tilw-text-ink);
 }
 .adm-card-head {
   display: flex;
@@ -59,26 +90,86 @@
 }
 
 .adm-toolbar {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: var(--tilw-space-8);
+  gap: 10px;
   flex-wrap: wrap;
-  padding: var(--tilw-space-12) var(--tilw-space-16);
-  border-block-end: 1px solid var(--tilw-border-subtle);
+  padding: 14px 20px;
+  border: 0;
+}
+/* an inset hairline under the toolbar, except above a table (its header band is the edge) */
+.adm-toolbar::after {
+  content: '';
+  position: absolute;
+  inset-block-end: 0;
+  inset-inline: 20px;
+  block-size: 1px;
+  background: var(--tilw-hairline);
+  pointer-events: none;
+}
+.adm-toolbar:has(+ .adm-scroll)::after,
+.adm-toolbar:last-child::after {
+  content: none;
 }
 .adm-toolbar .adm-grow {
   margin-inline-start: auto;
 }
+/* Fields: filled wells, no border; hover deepens; focus is a 2px ring. */
 .adm-input,
 .adm-select {
   block-size: 36px;
   padding-inline: 12px;
-  border: 1px solid var(--tilw-border-subtle);
-  border-radius: 10px;
-  background: var(--tilw-surface-white);
+  border: 0;
+  border-radius: var(--tilw-radius-field);
+  background-color: var(--tilw-control-fill);
   color: var(--tilw-text-ink);
   font: 500 14px/1 var(--tilw-font-ar);
   min-inline-size: 0;
+  box-shadow: none;
+  transition: background-color 0.12s;
+}
+.adm-input::placeholder {
+  color: var(--tilw-text-muted);
+  opacity: 1;
+}
+.adm-input:hover:not(:disabled),
+.adm-select:hover:not(:disabled) {
+  background-color: var(--tilw-control-fill-hover);
+}
+.adm-input:focus,
+.adm-input:focus-visible,
+.adm-select:focus,
+.adm-select:focus-visible {
+  outline: 2px solid var(--tilw-focus-ring);
+  outline-offset: 0;
+}
+.adm-input[aria-invalid='true'] {
+  outline: 2px solid var(--tilw-status-error);
+  outline-offset: 0;
+}
+.adm-input:disabled,
+.adm-select:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.adm-input[type='number'] {
+  font-variant-numeric: tabular-nums;
+}
+/* native select: custom chevron so the well reads the same as the inputs */
+.adm-select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-inline-end: 34px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%2377858a' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: 14px;
+  background-position: right 12px center;
+  font-weight: 600;
+  cursor: pointer;
+}
+.adm-select:dir(rtl) {
+  background-position: left 12px center;
 }
 .adm-input[type='search'] {
   inline-size: min(320px, 100%);
@@ -108,7 +199,7 @@ textarea.adm-input {
   font: var(--tilw-type-caption);
 }
 
-/* Dense tables: 36–44px rows, sticky header, numbers at the inline end. */
+/* Tables inside cards: a header band (no line), faint row rules, a faint hover tint. */
 .adm-scroll {
   overflow-x: auto;
 }
@@ -128,20 +219,34 @@ textarea.adm-input {
   position: sticky;
   inset-block-start: 0;
   z-index: 1;
-  padding: 8px 16px;
-  background: var(--tilw-surface-quiet);
+  padding: 11px 16px;
+  border: 0;
+  background: var(--tilw-band);
   color: var(--tilw-text-muted);
-  font: 600 12px/1.4 var(--tilw-font-ar);
+  font: 600 12.5px/1.4 var(--tilw-font-ar);
   text-align: start;
   white-space: nowrap;
 }
 .adm-tbl td {
-  padding: 9px 16px;
-  border-block-end: 1px solid var(--tilw-border-subtle);
+  padding: 12px 16px;
+  border-block-end: 1px solid var(--tilw-hairline);
   vertical-align: middle;
 }
-.adm-tbl tr:last-child td {
+.adm-tbl th:first-child,
+.adm-tbl td:first-child {
+  padding-inline-start: 20px;
+}
+.adm-tbl th:last-child,
+.adm-tbl td:last-child {
+  padding-inline-end: 20px;
+}
+.adm-tbl tr:last-child td,
+.adm-tbl tbody tr:last-child th {
   border-block-end: 0;
+}
+.adm-tbl.adm-tbl tbody tr:hover td,
+.adm-tbl.adm-tbl tbody tr:hover th {
+  background: var(--tilw-row-hover);
 }
 .adm-tbl .n {
   text-align: end;
@@ -158,8 +263,9 @@ textarea.adm-input {
 .adm-tbl .act > * + * {
   margin-inline-start: var(--tilw-space-12);
 }
-.adm-tbl tr.sel td {
-  background: var(--tilw-surface-selected);
+.adm-tbl tr.sel td,
+.adm-tbl.adm-tbl tbody tr.sel:hover td {
+  background: var(--tilw-stat-selected);
 }
 .adm-person {
   display: grid;
@@ -197,6 +303,11 @@ textarea.adm-input {
 .adm-link.danger {
   color: var(--tilw-status-error);
 }
+.adm-link:focus-visible {
+  outline: 2px solid var(--tilw-focus-ring);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
 .adm-link:disabled {
   opacity: 0.45;
   cursor: not-allowed;
@@ -210,28 +321,49 @@ textarea.adm-input {
   gap: 6px;
   block-size: 36px;
   padding-inline: 14px;
-  border: 1px solid var(--tilw-border-subtle);
-  border-radius: 10px;
-  background: var(--tilw-surface-white);
+  border: 1px solid transparent;
+  border-radius: var(--tilw-radius-field);
+  background: var(--tilw-button-fill);
   color: var(--tilw-text-ink);
   font: 600 14px/1 var(--tilw-font-ar);
   cursor: pointer;
   white-space: nowrap;
   text-decoration: none;
+  box-shadow: none;
+  transition: background-color 0.12s;
+}
+/* neutral buttons are flat fills */
+.adm-btn:not(.primary):not(.ghost):not(.danger):hover:not(:disabled):not([aria-disabled='true']) {
+  background: var(--tilw-button-fill-hover);
+}
+.adm-btn:focus-visible {
+  outline: 2px solid var(--tilw-focus-ring);
+  outline-offset: 2px;
 }
 .adm-btn.primary {
   border-color: transparent;
   background: var(--tilw-action-solid);
   color: var(--tilw-text-on-solid);
 }
+.adm-btn.primary:hover:not(:disabled):not([aria-disabled='true']) {
+  background: color-mix(in srgb, var(--tilw-action-solid) 88%, var(--tilw-text-ink));
+}
+/* danger keeps a soft red edge */
 .adm-btn.danger {
-  border-color: var(--tilw-status-error);
+  border-color: color-mix(in srgb, var(--tilw-status-error) 40%, transparent);
+  background: none;
   color: var(--tilw-status-error);
+}
+.adm-btn.danger:hover:not(:disabled):not([aria-disabled='true']) {
+  background: color-mix(in srgb, var(--tilw-status-error) 10%, transparent);
 }
 .adm-btn.ghost {
   border-color: transparent;
   background: none;
   color: var(--tilw-action-primary);
+}
+.adm-btn.ghost:hover:not(:disabled):not([aria-disabled='true']) {
+  background: var(--tilw-button-fill);
 }
 .adm-btn:disabled,
 .adm-btn[aria-disabled='true'] {
@@ -262,8 +394,8 @@ textarea.adm-input {
   color: var(--tilw-status-success);
 }
 .adm-chip.warning {
-  background: color-mix(in srgb, #73531b 18%, var(--tilw-surface-white));
-  color: #73531b;
+  background: var(--tilw-warning-bg);
+  color: var(--tilw-warning-ink);
 }
 .adm-chip.error {
   background: color-mix(in srgb, var(--tilw-status-error) 14%, var(--tilw-surface-white));
@@ -304,34 +436,48 @@ textarea.adm-input {
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: var(--tilw-space-12);
 }
+/* key/value rows separated by hairlines (the card padding insets them from the card edge) */
+/* stat tiles straight on the bare page are flat cards; inside a card they keep their band fill (AdminStat) */
+.adm-page > .adm-stats > .stat {
+  border-radius: var(--tilw-radius-panel);
+  background: var(--tilw-surface-white);
+}
 .adm-kv {
   display: grid;
-  gap: 2px;
+  gap: 0;
 }
 .adm-kv > div {
   display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: var(--tilw-space-12);
-  padding-block: 5px;
-  font: 500 13px/1.45 var(--tilw-font-ar);
+  margin: 0;
+  padding-block: 10px;
+  font: 500 13.5px/1.45 var(--tilw-font-ar);
+}
+.adm-kv > div + div {
+  border-block-start: 1px solid var(--tilw-hairline);
 }
 .adm-kv dt {
   color: var(--tilw-text-muted);
 }
 .adm-kv dd {
+  margin: 0;
+  color: var(--tilw-text-ink);
   font-weight: 600;
   text-align: end;
 }
 .adm-note {
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: var(--tilw-surface-quiet);
+  padding: 10px 14px;
+  border: 0;
+  border-radius: var(--tilw-radius-field);
+  background: var(--tilw-band);
   color: var(--tilw-text-muted);
   font: 500 13px/1.6 var(--tilw-font-ar);
 }
 .adm-note.warn {
-  background: color-mix(in srgb, #e9cc82 60%, var(--tilw-surface-white));
-  color: #73531b;
+  background: var(--tilw-warning-bg);
+  color: var(--tilw-warning-ink);
 }
 .adm-note.error {
   background: color-mix(in srgb, var(--tilw-status-error) 12%, var(--tilw-surface-white));
@@ -344,6 +490,8 @@ textarea.adm-input {
   font: var(--tilw-type-meta);
 }
 .adm-more {
+  border-block-start: 1px solid var(--tilw-hairline);
+  background: none;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -369,6 +517,68 @@ textarea.adm-input {
   gap: var(--tilw-space-8);
   justify-content: flex-end;
   flex-wrap: wrap;
+}
+
+/* Switches (role=switch checkboxes) and plain checkboxes: flat, no knob shadow. */
+.adm-page input[type='checkbox'][role='switch']:not(.native),
+.adm-html .ui-dialog input[type='checkbox'][role='switch']:not(.native) {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  flex: none;
+  inline-size: 40px;
+  block-size: 24px;
+  margin: 0;
+  border-radius: var(--tilw-radius-pill);
+  background: var(--tilw-switch-off);
+  cursor: pointer;
+  vertical-align: middle;
+  transition: background-color 0.15s;
+}
+.adm-page input[type='checkbox'][role='switch']:not(.native)::before,
+.adm-html .ui-dialog input[type='checkbox'][role='switch']:not(.native)::before {
+  content: '';
+  position: absolute;
+  inset-block-start: 3px;
+  inset-inline-start: 3px;
+  inline-size: 18px;
+  block-size: 18px;
+  border-radius: 50%;
+  background: var(--tilw-switch-knob-off);
+  transition: inset-inline-start 0.15s;
+}
+.adm-page input[type='checkbox'][role='switch']:not(.native):checked,
+.adm-html .ui-dialog input[type='checkbox'][role='switch']:not(.native):checked {
+  background: var(--tilw-action-solid);
+}
+.adm-page input[type='checkbox'][role='switch']:not(.native):checked::before,
+.adm-html .ui-dialog input[type='checkbox'][role='switch']:not(.native):checked::before {
+  inset-inline-start: 19px;
+  background: var(--tilw-text-on-solid);
+}
+.adm-page input[type='checkbox'][role='switch']:not(.native):hover:not(:disabled):not(:checked),
+.adm-html .ui-dialog input[type='checkbox'][role='switch']:not(.native):hover:not(:disabled):not(:checked) {
+  background: color-mix(in srgb, var(--tilw-switch-off) 80%, var(--tilw-border-strong));
+}
+.adm-page input[type='checkbox'][role='switch']:not(.native):focus-visible,
+.adm-html .ui-dialog input[type='checkbox'][role='switch']:not(.native):focus-visible {
+  outline: 2px solid var(--tilw-focus-ring);
+  outline-offset: 2px;
+}
+.adm-page input[type='checkbox'][role='switch']:not(.native):disabled,
+.adm-html .ui-dialog input[type='checkbox'][role='switch']:not(.native):disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.adm-page input[type='checkbox']:not([role='switch']):not(.native),
+.adm-html .ui-dialog input[type='checkbox']:not([role='switch']):not(.native) {
+  accent-color: var(--tilw-action-solid);
+}
+@media (prefers-reduced-motion: reduce) {
+  .adm-page input[type='checkbox'][role='switch']:not(.native),
+  .adm-page input[type='checkbox'][role='switch']:not(.native)::before {
+    transition: none;
+  }
 }
 
 @media (max-width: 1023px) {

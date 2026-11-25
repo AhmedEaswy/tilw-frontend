@@ -288,14 +288,15 @@ defineExpose({ focus: () => trigger.value?.focus(), open: () => openList(), clos
   gap: var(--tilw-space-4);
   block-size: var(--ui-h);
   padding-inline-end: calc(var(--ui-pad) - 4px);
-  border: 1px solid var(--tilw-border-strong);
+  border: 1px solid var(--tilw-control-edge);
   border-radius: var(--tilw-radius-field);
-  background: var(--tilw-surface-white);
+  background: var(--tilw-control-fill);
   color: var(--tilw-text-ink);
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s, background-color 0.12s;
 }
 .box:hover {
-  border-color: var(--tilw-text-muted);
+  border-color: var(--tilw-control-edge-hover);
+  background: var(--tilw-control-fill-hover);
 }
 .box:focus-within,
 .is-open .box {
@@ -309,7 +310,7 @@ defineExpose({ focus: () => trigger.value?.focus(), open: () => openList(), clos
   box-shadow: 0 0 0 1px var(--tilw-status-error);
 }
 .disabled .box {
-  border-color: var(--tilw-border-subtle);
+  border-color: var(--tilw-control-edge-disabled);
   background: var(--tilw-surface-quiet);
   color: var(--tilw-text-muted);
   cursor: not-allowed;

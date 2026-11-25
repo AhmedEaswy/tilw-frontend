@@ -280,18 +280,48 @@ async function createLimit() {
   background: none;
   color: var(--tilw-text-ink);
   font-weight: 500;
-  border-block-end: 1px solid var(--tilw-border-subtle);
+  padding-block: 12px;
+  border-block-end: 1px solid var(--tilw-hairline);
 }
+/* editable cell: the same filled well as the fields, a pencil on hover/focus */
 .val {
-  min-inline-size: 110px;
-  padding: 6px 10px;
-  border: 1px solid var(--tilw-border-subtle);
-  border-radius: 8px;
-  background: var(--tilw-surface-white);
+  position: relative;
+  min-inline-size: 116px;
+  padding-block: 7px;
+  padding-inline: 12px 32px;
+  border: 0;
+  border-radius: var(--tilw-radius-field);
+  background: var(--tilw-field-fill);
   color: var(--tilw-text-ink);
-  font: 600 13px/1.3 var(--tilw-font-ar);
+  font: 600 13.5px/1.3 var(--tilw-font-ar);
   text-align: start;
   cursor: pointer;
+  transition: background-color 0.12s;
+}
+.val::after {
+  content: '';
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-end: 10px;
+  inline-size: 13px;
+  block-size: 13px;
+  margin-block-start: -6.5px;
+  background: var(--tilw-action-primary);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10.8 2.7l2.5 2.5L6 12.5l-3.3.8.8-3.3z'/%3E%3Cpath d='M9.3 4.2l2.5 2.5'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10.8 2.7l2.5 2.5L6 12.5l-3.3.8.8-3.3z'/%3E%3Cpath d='M9.3 4.2l2.5 2.5'/%3E%3C/svg%3E") center / contain no-repeat;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.val:hover {
+  background: var(--tilw-field-fill-hover);
+}
+.val:focus-visible {
+  outline: 2px solid var(--tilw-focus-ring);
+  outline-offset: 0;
+}
+.val:hover::after,
+.val:focus-visible::after {
+  opacity: 1;
 }
 .rm {
   margin-inline-end: auto;

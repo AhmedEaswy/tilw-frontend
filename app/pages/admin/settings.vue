@@ -275,8 +275,8 @@ async function removeFlag() {
 .key {
   display: grid;
   gap: 10px;
-  padding-block: 12px;
-  border-block-start: 1px solid var(--tilw-border-subtle);
+  padding-block: 14px;
+  border-block-start: 1px solid var(--tilw-hairline);
 }
 .state {
   display: flex;
