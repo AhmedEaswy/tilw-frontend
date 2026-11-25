@@ -1,9 +1,9 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
-import { aiKnobs, signIn } from './r2'
+import { signIn } from './r2'
 
-// Feature 005 US3 (T020): dictation and a new script from an audio file (quickstart 3, 4).
-// Chromium's fake microphone records; the mock answers with a fake transcript.
+// Feature 005 US3 (T020): dictation on the device (G-A5, quickstart 3) and a new script from an audio file (quickstart 4).
+// Dictation hears the mock's scripted recognizer; New from audio records with Chromium's fake microphone.
 
 test.use({
   permissions: ['camera', 'microphone'],
@@ -31,45 +31,98 @@ function wav(seconds: number): Buffer {
   return b
 }
 
-async function dictate(page: Page) {
-  await page.getByTestId('tools-dictate').click()
-  const dialog = page.getByTestId('dictate-dialog')
-  await expect(dialog.getByTestId('dictate-stop')).toBeVisible({ timeout: 6000 })
-  await page.waitForTimeout(1200)
-  await dialog.getByTestId('dictate-stop').click()
-  await expect(dialog.getByTestId('transcribe-cost')).toHaveText('1 رصيد')
-  return dialog
+/** G-A5: the scripted recognizer in the mock (services/mock/recognition.ts); `ok` says three phrases. */
+async function recognition(page: Page, mode: 'ok' | 'unsupported' | 'denied' | 'network') {
+  await page.addInitScript(m => localStorage.setItem('tilw:mock:recognition', m), mode)
 }
 
-test('dictates into the editor at the cursor and charges by the minute', async ({ page }) => {
+test('dictates on the device: words appear live, Insert puts them at the cursor, no credits used', async ({ page }) => {
+  await recognition(page, 'ok')
   await signIn(page)
   await page.goto('/app/scripts/s_letter')
   const body = page.getByLabel('نص الحلقة')
   await body.click()
   await body.press('Control+End')
-  const dialog = await dictate(page)
-  await expect(dialog.getByText('المفاتيح الخاصة لا تنطبق على الكلام')).toBeVisible()
-  await expect(dialog.getByText('يذهب الصوت من متصفحك مباشرة إلى مزوّد تحويل الكلام')).toBeVisible()
+  await page.getByTestId('tools-dictate').click()
+  const dialog = page.getByTestId('dictate-dialog')
+  await expect(dialog.getByTestId('dictate-listening')).toContainText('يستمع')
+  await expect(dialog.getByText('لا يصل أي صوت إلى Tilw ولا يُخصم أي رصيد')).toBeVisible()
+  // Live, then final; the browser ends the session once and the app listens on.
+  await expect(dialog.getByTestId('dictate-text')).toHaveText('فاكتبه لنا. ربما يكون سؤالك هو الحكاية التالية. كل حكاية تبدأ بسؤال صغير.')
+  await page.waitForTimeout(600)
+  await expect(dialog.getByTestId('dictate-listening')).toBeVisible()
   const { violations } = await new AxeBuilder({ page }).include('[data-testid="dictate-dialog"]').withTags(['wcag2a', 'wcag2aa', 'wcag22aa']).analyze()
   expect(violations.map(v => v.id)).toEqual([])
-  await dialog.getByTestId('transcribe-go').click()
+  await dialog.getByTestId('dictate-stop').click()
+  await dialog.getByTestId('dictate-insert').click()
   await expect(page.getByText('أُدرج النص عند المؤشر.')).toBeVisible()
-  await expect(body).toHaveValue(/فاكتبه لنا\. ربما يكون سؤالك هو الحكاية التالية\. كل حكاية تبدأ بسؤال صغير\./)
+  await expect(body).toHaveValue(/فاكتبه لنا\. ربما يكون سؤالك هو الحكاية التالية\. كل حكاية تبدأ بسؤال صغير\.$/)
 
   await page.goto('/app/settings/ai')
-  await expect(page.getByTestId('credits-balance')).toHaveText('19 رصيد')
-  await expect(page.getByTestId('credit-entries')).toContainText('تحويل كلام')
+  await expect(page.getByTestId('credits-balance')).toHaveText('20 رصيد')
+  await expect(page.getByTestId('credit-entries')).not.toContainText('تحويل كلام')
 })
 
-test('says when the provider failed, without inserting anything', async ({ page }) => {
+test('the chosen dialect is remembered; English scripts listen in English', async ({ page }) => {
+  await recognition(page, 'ok')
   await signIn(page)
-  await aiKnobs(page, { speech: 'failed' })
+  await page.goto('/app/scripts/s_letter')
+  await page.getByTestId('tools-dictate').click()
+  const dialog = page.getByTestId('dictate-dialog')
+  await expect(dialog.getByTestId('dictate-lang')).toContainText('العربية (مصر)')
+  await dialog.getByTestId('dictate-lang').click()
+  await page.getByRole('option', { name: 'العربية (السعودية)' }).click()
+  expect(await page.evaluate(() => localStorage.getItem('tilw:dictate:lang'))).toBe('ar-SA')
+})
+
+test('microphone refused: says how to allow it and inserts nothing', async ({ page }) => {
+  await recognition(page, 'denied')
+  await signIn(page)
   await page.goto('/app/scripts/s_letter')
   const before = await page.getByLabel('نص الحلقة').inputValue()
-  const dialog = await dictate(page)
-  await dialog.getByTestId('transcribe-go').click()
-  await expect(dialog.getByTestId('transcribe-error')).toContainText('فشل تحويل الكلام')
+  await page.getByTestId('tools-dictate').click()
+  const dialog = page.getByTestId('dictate-dialog')
+  await expect(dialog.getByRole('alert')).toContainText('اسمح بالميكروفون')
+  await expect(dialog.getByTestId('dictate-insert')).toHaveCount(0)
   await expect(page.getByLabel('نص الحلقة')).toHaveValue(before)
+})
+
+test('API there but failing at once (Brave, Opera): not available here', async ({ page }) => {
+  await recognition(page, 'network')
+  await signIn(page)
+  await page.goto('/app/scripts/s_letter')
+  await page.getByTestId('tools-dictate').click()
+  await expect(page.getByTestId('dictate-dialog').getByRole('alert')).toContainText('الإملاء غير متاح في هذا المتصفح')
+})
+
+test('no speech recognition: Dictate shows disabled and its tooltip says why', async ({ page, isMobile }) => {
+  await recognition(page, 'unsupported')
+  await signIn(page)
+  await page.goto('/app/scripts/s_letter')
+  const button = page.getByTestId('tools-dictate')
+  await expect(button).toHaveAttribute('aria-disabled', 'true')
+  const tip = page.getByRole('tooltip')
+  const text = 'الإملاء غير متاح في هذا المتصفح. استخدم ميكروفون لوحة المفاتيح، أو افتح Tilw في Chrome أو Safari.'
+  // aria-disabled: Playwright treats it as not enabled, so force the pointer (people can still tap and hover it).
+  if (isMobile) {
+    // Centre it: at the bottom edge the phone's sticky action bar covers it.
+    await button.evaluate(el => el.scrollIntoView({ block: 'center' }))
+    await button.tap({ force: true })
+  } else {
+    await button.hover({ force: true })
+  }
+  await expect(tip).toBeVisible()
+  await expect(tip).toHaveText(text)
+  await expect(page.getByTestId('dictate-dialog')).toHaveCount(0)
+  const { violations } = await new AxeBuilder({ page }).include('aside').withTags(['wcag2a', 'wcag2aa', 'wcag22aa']).analyze()
+  expect(violations.map(v => v.id)).toEqual([])
+  await page.keyboard.press('Escape')
+  await expect(tip).toBeHidden()
+  if (!isMobile) {
+    await button.focus()
+    await expect(tip).toBeVisible()
+    await expect(button).toHaveAccessibleDescription(new RegExp(text.slice(0, 20)))
+  }
 })
 
 test('makes a new script from an audio file, and refuses a file that is not audio', async ({ page, isMobile }) => {

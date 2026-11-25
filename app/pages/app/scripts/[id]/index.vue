@@ -2,6 +2,7 @@
 /**
  * Script editor (6:19 desktop, 6:21 phone, 6:86 en) with conflict flow (6:72 → 6:73). T050–T055.
  */
+import { recognitionSupported } from '~/services/ai/recognition'
 import type { DeliveryMark } from '~/services/types'
 import { creditsForWords } from '~/services/ai/audio'
 
@@ -148,7 +149,8 @@ watch(() => [editor.status, id.value] as const, ([st, sid]) => {
 // ----- feature 005: dictation (A3), inserted at the cursor as one undo step -----
 const dictateOpen = ref(false)
 const canDictate = ref(false)
-onMounted(() => (canDictate.value = typeof MediaRecorder !== 'undefined' && !!navigator.mediaDevices?.getUserMedia))
+// G-A5: dictation uses the browser's own speech recognition; without it the button stays, disabled, with a tooltip.
+onMounted(() => (canDictate.value = recognitionSupported()))
 function insertSpoken(text: string) {
   const clean = text.trim()
   if (!clean || editor.readOnly) return
@@ -291,7 +293,7 @@ const formatHint = computed(() => {
       </div>
 
       <HistoryDrawer v-if="historyOpen && editor.script" :script-id="id" @close="historyOpen = false" />
-      <DictateDialog v-if="dictateOpen" v-model:open="dictateOpen" @insert="insertSpoken" />
+      <DictateDialog v-if="dictateOpen" v-model:open="dictateOpen" :direction="direction" @insert="insertSpoken" />
       <FormatDrawer v-if="formatOpen && editor.script" :script-id="id" :direction="direction" @close="formatOpen = false" />
 
       <MarksDialog

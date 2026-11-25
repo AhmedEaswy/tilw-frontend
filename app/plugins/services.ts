@@ -32,6 +32,11 @@ export default defineNuxtPlugin(async (nuxtApp) => {
       locale: (): 'ar' | 'en' => ((nuxtApp.$i18n as unknown as { locale: { value: string } } | undefined)?.locale.value === 'en' ? 'en' : 'ar'),
     })
   }
+  // G-A5: in the mock, dictation hears a scripted recognizer (or none, per the /__mock knob) instead of the microphone.
+  if (mock && import.meta.client) {
+    const { installMockRecognition } = await import('~/services/mock/recognition')
+    installMockRecognition(window as unknown as Window & Record<string, unknown>, window.localStorage)
+  }
   // Release 2: another tab of the mock may upload or change plans; pick up what it wrote (the real API needs nothing).
   if (mock && import.meta.client) {
     window.addEventListener('storage', (e) => {

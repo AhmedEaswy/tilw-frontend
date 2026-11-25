@@ -77,6 +77,15 @@ defineExpose({ openSearch: () => !searchOpen.value && toggleSearch() })
         </button>
         <p id="dictate-hint" class="hint">{{ t('ai.tools.dictateHint') }}</p>
       </li>
+      <!-- G-A5: the browser has no speech recognition: shown, not usable, and the tooltip says why and what to do. -->
+      <li v-else>
+        <UiTooltip v-slot="{ describedby }" :text="t('ai.dictate.unsupported')">
+          <button type="button" class="off" aria-disabled="true" :aria-describedby="`${describedby} dictate-hint`" data-testid="tools-dictate">
+            <UiGlyph name="mic" :size="18" />{{ t('ai.tools.dictate') }}
+          </button>
+        </UiTooltip>
+        <p id="dictate-hint" class="hint">{{ t('ai.dictate.unsupportedHint') }}</p>
+      </li>
       <li class="sep" aria-hidden="true" />
       <li>
         <button type="button" :aria-expanded="searchOpen" @click="toggleSearch"><UiGlyph name="search" :size="18" />{{ t('editor.search') }}</button>
@@ -109,9 +118,26 @@ defineExpose({ openSearch: () => !searchOpen.value && toggleSearch() })
 .dim {
   opacity: 0.5;
 }
-li > button:disabled {
+li > button:disabled,
+button.off {
   opacity: 0.5;
   cursor: default;
+}
+button.off {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-block-size: 43px;
+  inline-size: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--tilw-text-muted);
+  font: 400 17px/1.36 var(--tilw-font-ar);
+  text-align: start;
+}
+button.off :deep(.ui-glyph) {
+  color: var(--tilw-text-ink);
 }
 .tools {
   display: grid;

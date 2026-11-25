@@ -3,6 +3,7 @@
  * Mock backend panel (T017). Phase 1 has no email delivery, so reset and invite links appear in the
  * outbox here. Also toggles latency, failures, conflicts and expired tokens to exercise error states.
  */
+import { MOCK_RECOGNITION_KEY, mockRecognitionMode, type MockRecognitionMode } from '~/services/mock/recognition'
 import type { MockBackend } from '~/services/mock'
 import type { MockKnobs } from '~/services/mock/db'
 import { SEED_PASSWORD } from '~/services/mock/seed'
@@ -186,6 +187,15 @@ onBeforeUnmount(() => app.value?.stop())
 
 // ---------- feature 005: AI writing tools ----------
 const aiKnobs = reactive({ ...mock.knobs.ai.knobs() })
+// G-A5: the scripted speech recognizer (services/mock/recognition.ts) reads this on every use.
+const recognition = ref<MockRecognitionMode>(import.meta.client ? mockRecognitionMode(localStorage) : 'ok')
+watch(recognition, (v) => {
+  try {
+    localStorage.setItem(MOCK_RECOGNITION_KEY, v)
+  } catch {
+    // ignore
+  }
+})
 watch(aiKnobs, k => mock.knobs.ai.setKnobs({ ...k }), { deep: true })
 const aiBalance = ref<number | null>(null)
 const balanceEdit = ref('0')
@@ -323,6 +333,14 @@ async function endOpenLink() {
             <option value="failed">failed (refunded)</option>
             <option value="empty">no words</option>
             <option value="overrun">overrun (3× longer)</option>
+          </select>
+        </label>
+        <label>Speech recognition (dictation)
+          <select v-model="recognition" aria-label="Speech recognition">
+            <option value="ok">ok (scripted phrases)</option>
+            <option value="unsupported">unsupported (Firefox)</option>
+            <option value="denied">microphone denied</option>
+            <option value="network">fails at once (Brave, Opera)</option>
           </select>
         </label>
         <label class="ck"><input v-model="aiKnobs.keyRefused" type="checkbox"> Own key refused</label>

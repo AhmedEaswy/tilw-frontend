@@ -74,11 +74,11 @@ In Settings, a person opens **AI & credits**. They see their balance, the plan's
 
 ### User Story 3 - Turn speech into script text (Priority: P2)
 
-In the editor, a person presses **Dictate**. The browser asks for the microphone (only now). They speak; a timer and level show they're being heard. They press **Stop**. The app says what it costs ("2 minutes · 2 credits · own keys don't apply to speech") and they confirm. A moment later the text appears where the cursor was, ready to edit. From the library, **New from audio** takes an audio file (up to 60 minutes and 200 MB), shows the cost, transcribes it and shows the text, which they can save as a new script.
+In the editor, a person presses **Dictate**. The browser asks for the microphone (only now). They speak and the words appear as they talk, using the browser's own speech recognition (no AI service, no credits; G-A5). They press **Stop**, then **Insert**, and the text goes where the cursor was, ready to edit. From the library, **New from audio** takes an audio file (up to 60 minutes and 200 MB), shows the cost, transcribes it and shows the text, which they can save as a new script.
 
 **Why this priority**: Many people think out loud better than they write, but formatting delivers the landing promise first.
 
-**Independent Test**: In the mock, dictate a clip (fake microphone), confirm the cost, and see the fake text inserted at the cursor and the balance reduced. Upload an audio file from the library and save the text as a new script. Pick a file over 200 MB and see it refused before anything is spent.
+**Independent Test**: In the mock, dictate with the fake recognizer, see the text appear live, insert it at the cursor, and see the balance unchanged. Upload an audio file from the library and save the text as a new script. Pick a file over 200 MB and see it refused before anything is spent.
 
 **Acceptance Scenarios**:
 
@@ -142,7 +142,7 @@ On a take's page, the person presses **Captions**. The app shows the take's leng
 - **Dictation longer than the plan's audio limit**: the recording stops at the limit and says so.
 - **Permission expires** before the upload starts (5 minutes): the app asks for a new permission only if the person retries, and says the first one's credits are settled by the service.
 - **Microphone in use or missing**: same messages as the recording studio.
-- **Browser without recording support**: Dictate is hidden, upload still works.
+- **Browser without speech recognition** (Firefox, Brave, Opera, in-app browsers): Dictate shows disabled with a tooltip pointing to the keyboard's microphone or Chrome/Safari; upload still works.
 - **Negative balance**: every AI action shows paused; own-key formatting still works (it costs no credits).
 - **Own key saved, plan turns own keys off**: formatting uses credits and says why.
 - **Mock adapter**: the in-browser mock never calls a real provider. It answers with a fake transcript and fake word timings, so all flows can be tested offline.
@@ -209,7 +209,7 @@ On a take's page, the person presses **Captions**. The app shows the take's leng
 ## Assumptions
 
 - Backend 004 is merged and its routes are as in `openapi.yaml` (version 4.0.0) and `device-flows.md`. The mock follows the same rules.
-- Dictation is record-then-transcribe; live words while speaking are out of scope.
+- Dictation uses the browser's speech recognition with live words (G-A5); it never reaches Deepgram or Tilw.
 - The editor's existing History, conflict and read-only behaviour (features 001 and 003) are reused.
 - The speech provider is Deepgram; the web app uses the upload address, headers and answer format from `device-flows.md` and nothing provider-specific beyond that.
 - Admin screens for grants and AI usage are backend feature 005's web side, not this feature.
