@@ -1157,20 +1157,15 @@
     },
     "speech": {
       "dictateTitle": "Dictate",
-      "recordingNote": "Speak naturally. Recording stops at {minutes} minutes.",
-      "recordingLive": "Recording",
       "stop": "Stop",
       "starting": "Starting the microphone…",
       "micDeniedTitle": "Microphone not allowed",
-      "micDenied": "Allow the microphone in your browser's address bar, then try again. Writing works as usual.",
       "micMissing": "No microphone was found on this device.",
-      "confirmTitle": "Turn speech into text",
       "length": "Length",
       "cost": "Cost",
       "balance": "Your balance",
       "file": "File",
       "go": "Transcribe · {cost}",
-      "discardRecording": "Discard recording",
       "working": "Transcribing",
       "steps": {
         "permission": "Getting permission",
@@ -1178,7 +1173,6 @@
         "settling": "Writing the text"
       },
       "inserted": "The text was inserted at the cursor.",
-      "autoStopped": "Recording stopped at the limit.",
       "notEnough": "Your balance doesn't cover this length.",
       "importTitle": "New script from audio",
       "newFromAudio": "New from audio",
