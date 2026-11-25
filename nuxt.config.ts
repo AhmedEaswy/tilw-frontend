@@ -13,6 +13,14 @@ export default defineNuxtConfig({
   // Landing styles are imported by pages/index.vue only, so they never leak into the app.
   css: ['~/assets/css/tokens.css', '~/assets/css/base.css'],
 
+  // These are imported lazily (date picker, Drive queue, realtime), so Vite would only discover them mid-session and
+  // re-optimise deps, reloading the page against stale chunks (seen as "x is not defined" errors). Pre-bundle them.
+  vite: {
+    optimizeDeps: {
+      include: ['flatpickr', 'flatpickr/dist/l10n/ar.js', 'idb-keyval', 'pusher-js'],
+    },
+  },
+
   runtimeConfig: {
     public: {
       /** 'mock' (in-browser) or 'http' (Laravel API). Override with NUXT_PUBLIC_SERVICES_MODE. */
