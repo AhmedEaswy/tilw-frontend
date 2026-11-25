@@ -16,9 +16,9 @@ defineProps<{ label: string; value: string | number; note?: string }>()
   display: grid;
   gap: 4px;
   padding: 14px 16px;
-  border: 1px solid var(--tilw-border-subtle);
-  border-radius: 14px;
-  background: var(--tilw-surface-white);
+  border: 0;
+  border-radius: var(--tilw-radius-field);
+  background: var(--tilw-band);
 }
 .l,
 .n {

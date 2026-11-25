@@ -131,7 +131,7 @@ defineExpose({ focus: () => input.value?.focus() })
 .track {
   position: relative;
   border-radius: var(--tilw-radius-pill);
-  background: var(--tilw-border-strong);
+  background: var(--tilw-toggle-off);
   pointer-events: none;
   transition: background-color 0.2s, box-shadow 0.15s;
 }
@@ -142,14 +142,15 @@ defineExpose({ focus: () => input.value?.focus() })
   inline-size: calc(var(--ui-h) - 2 * var(--ui-pad));
   block-size: calc(var(--ui-h) - 2 * var(--ui-pad));
   border-radius: 50%;
-  background: var(--tilw-text-on-solid);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-  transition: inset-inline-start 0.2s;
+  background: var(--tilw-toggle-knob-off);
+  box-shadow: var(--tilw-toggle-knob-shadow);
+  transition: inset-inline-start 0.2s, background-color 0.2s;
 }
 .on .track {
   background: var(--tilw-action-solid);
 }
 .on .thumb {
+  background: var(--tilw-text-on-solid);
   inset-inline-start: calc(var(--ui-w) - var(--ui-h) + var(--ui-pad));
 }
 .control:hover .track {

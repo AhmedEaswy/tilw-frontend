@@ -53,7 +53,7 @@
   font: 600 15px/1.4 var(--tilw-font-lat);
 }
 .ui-date-pop .numInputWrapper:hover {
-  background: var(--tilw-surface-quiet);
+  background: var(--tilw-field-fill);
 }
 .ui-date-pop .numInputWrapper span.arrowUp::after {
   border-bottom-color: var(--tilw-text-muted);
@@ -75,7 +75,7 @@
 }
 .ui-date-pop .flatpickr-months .flatpickr-prev-month:hover,
 .ui-date-pop .flatpickr-months .flatpickr-next-month:hover {
-  background: var(--tilw-surface-quiet);
+  background: var(--tilw-field-fill);
 }
 .ui-date-pop .flatpickr-months .flatpickr-prev-month:hover svg,
 .ui-date-pop .flatpickr-months .flatpickr-next-month:hover svg {
@@ -143,7 +143,7 @@
 .ui-date-pop .flatpickr-day.prevMonthDay:hover,
 .ui-date-pop .flatpickr-day.nextMonthDay:hover {
   border-color: transparent;
-  background: var(--tilw-surface-quiet);
+  background: var(--tilw-field-fill);
   color: var(--tilw-text-ink);
 }
 .ui-date-pop .flatpickr-day:focus-visible {
@@ -156,7 +156,7 @@
 .ui-date-pop .flatpickr-day.today:hover,
 .ui-date-pop .flatpickr-day.today:focus {
   border-color: var(--tilw-border-strong);
-  background: var(--tilw-surface-quiet);
+  background: var(--tilw-field-fill);
   color: var(--tilw-text-ink);
 }
 .ui-date-pop .flatpickr-day.prevMonthDay,

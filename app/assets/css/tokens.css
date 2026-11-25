@@ -82,6 +82,37 @@
   --tilw-shadow-pop: 0 20px 50px rgba(20, 32, 38, 0.18);
   --tilw-scrim: rgba(20, 32, 38, 0.45);
 
+  /* Flat panels (admin direction D, 2026-11): derived fills. Panels are flat surface-white on the paper page with
+     inset hairlines; fields are filled wells one tint deeper; tables get a header band. */
+  --tilw-radius-panel: 12px;
+  --tilw-hairline: color-mix(in srgb, var(--tilw-border-subtle) 50%, var(--tilw-surface-white));
+  --tilw-band: color-mix(in srgb, var(--tilw-surface-quiet) 55%, var(--tilw-surface-white));
+  --tilw-row-hover: color-mix(in srgb, var(--tilw-surface-selected) 45%, var(--tilw-surface-white));
+  --tilw-field-fill: color-mix(in srgb, var(--tilw-surface-quiet) 78%, var(--tilw-surface-sage));
+  --tilw-field-fill-hover: color-mix(in srgb, var(--tilw-surface-quiet) 55%, var(--tilw-surface-sage));
+  --tilw-field-fill-page: var(--tilw-field-fill); /* a field sitting on the bare page (or the dialog paper) */
+  --tilw-field-fill-page-hover: var(--tilw-field-fill-hover);
+  --tilw-button-fill: var(--tilw-surface-quiet);
+  --tilw-button-fill-hover: color-mix(in srgb, var(--tilw-surface-quiet) 70%, var(--tilw-surface-sage));
+  --tilw-stat-selected: color-mix(in srgb, var(--tilw-surface-selected) 75%, var(--tilw-surface-white));
+  --tilw-switch-off: color-mix(in srgb, var(--tilw-surface-sage) 80%, var(--tilw-surface-quiet));
+  --tilw-switch-knob-off: var(--tilw-surface-white);
+  --tilw-warning-ink: #73531b;
+  --tilw-warning-bg: color-mix(in srgb, #e9cc82 45%, var(--tilw-surface-white));
+
+  /* Control hooks read by the UI kit (UiSelect, UiAutocomplete, UiSearchField, UiDatePicker, UiToggle, UiDialog).
+     The defaults keep the studio's outlined look; the admin console points them at the flat fills above. */
+  --tilw-control-fill: var(--tilw-surface-white);
+  --tilw-control-fill-hover: var(--tilw-surface-white);
+  --tilw-control-edge: var(--tilw-border-strong);
+  --tilw-control-edge-hover: var(--tilw-text-muted);
+  --tilw-control-edge-disabled: var(--tilw-border-subtle);
+  --tilw-toggle-off: var(--tilw-border-strong);
+  --tilw-toggle-knob-off: var(--tilw-text-on-solid);
+  --tilw-toggle-knob-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --tilw-dialog-shadow: var(--tilw-shadow-pop);
+  --tilw-dialog-rule: var(--tilw-border-subtle);
+
   color-scheme: light;
 }
 
@@ -106,6 +137,20 @@
     --tilw-brand-wordmark: #f7f2e9;
     --tilw-shadow-pop: 0 20px 50px rgba(0, 0, 0, 0.45);
     --tilw-scrim: rgba(0, 0, 0, 0.55);
+    --tilw-hairline: color-mix(in srgb, var(--tilw-surface-paper) 55%, var(--tilw-surface-white));
+    --tilw-band: color-mix(in srgb, var(--tilw-surface-quiet) 60%, var(--tilw-surface-white));
+    --tilw-row-hover: color-mix(in srgb, var(--tilw-surface-white) 82%, var(--tilw-surface-sage));
+    --tilw-field-fill: var(--tilw-surface-paper); /* a well, darker than the panel */
+    --tilw-field-fill-hover: color-mix(in srgb, var(--tilw-surface-paper) 72%, var(--tilw-surface-forest));
+    --tilw-field-fill-page: var(--tilw-surface-white); /* on the bare page a field is a step lighter */
+    --tilw-field-fill-page-hover: color-mix(in srgb, var(--tilw-surface-white) 80%, var(--tilw-surface-sage));
+    --tilw-button-fill: color-mix(in srgb, var(--tilw-surface-sage) 65%, var(--tilw-surface-white));
+    --tilw-button-fill-hover: var(--tilw-surface-sage);
+    --tilw-stat-selected: var(--tilw-surface-selected);
+    --tilw-switch-off: var(--tilw-surface-sage);
+    --tilw-switch-knob-off: var(--tilw-text-muted);
+    --tilw-warning-ink: #e9cc82;
+    --tilw-warning-bg: color-mix(in srgb, #73531b 40%, var(--tilw-surface-white));
     color-scheme: dark;
   }
 }
@@ -129,5 +174,19 @@
   --tilw-brand-wordmark: #f7f2e9;
   --tilw-shadow-pop: 0 20px 50px rgba(0, 0, 0, 0.45);
   --tilw-scrim: rgba(0, 0, 0, 0.55);
+  --tilw-hairline: color-mix(in srgb, var(--tilw-surface-paper) 55%, var(--tilw-surface-white));
+  --tilw-band: color-mix(in srgb, var(--tilw-surface-quiet) 60%, var(--tilw-surface-white));
+  --tilw-row-hover: color-mix(in srgb, var(--tilw-surface-white) 82%, var(--tilw-surface-sage));
+  --tilw-field-fill: var(--tilw-surface-paper); /* a well, darker than the panel */
+  --tilw-field-fill-hover: color-mix(in srgb, var(--tilw-surface-paper) 72%, var(--tilw-surface-forest));
+  --tilw-field-fill-page: var(--tilw-surface-white); /* on the bare page a field is a step lighter */
+  --tilw-field-fill-page-hover: color-mix(in srgb, var(--tilw-surface-white) 80%, var(--tilw-surface-sage));
+  --tilw-button-fill: color-mix(in srgb, var(--tilw-surface-sage) 65%, var(--tilw-surface-white));
+  --tilw-button-fill-hover: var(--tilw-surface-sage);
+  --tilw-stat-selected: var(--tilw-surface-selected);
+  --tilw-switch-off: var(--tilw-surface-sage);
+  --tilw-switch-knob-off: var(--tilw-text-muted);
+  --tilw-warning-ink: #e9cc82;
+  --tilw-warning-bg: color-mix(in srgb, #73531b 40%, var(--tilw-surface-white));
   color-scheme: dark;
 }

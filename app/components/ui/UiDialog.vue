@@ -68,14 +68,14 @@ defineExpose({ close })
   padding: 41px 40px 40px;
   border-radius: var(--tilw-radius-card);
   background: var(--tilw-surface-paper);
-  box-shadow: var(--tilw-shadow-pop);
+  box-shadow: var(--tilw-dialog-shadow);
 }
 .handle {
   display: none;
 }
 h2 {
   padding-block-end: 21px;
-  border-block-end: 1px solid var(--tilw-border-subtle);
+  border-block-end: 1px solid var(--tilw-dialog-rule);
   font: 700 39px/1.36 var(--tilw-font-ar);
 }
 :lang(en) h2 {
