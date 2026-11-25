@@ -72,9 +72,8 @@ const modeLine = computed(() => {
       <section v-for="i in (scriptId ? 1 : 2)" :key="i" class="group" aria-hidden="true">
         <SkeletonCard media="212px" padding="21px 21px 22px" radius="13px" title="35px" :title-w="i === 1 ? '62%' : '48%'" :lines="0">
           <UiSkeleton h="20px" w="46%" r="4px" />
-          <UiSkeleton h="20px" w="30%" r="4px" />
+          <span class="c-foot-skel"><UiSkeleton h="18px" w="42%" r="4px" /></span>
         </SkeletonCard>
-        <UiSkeleton class="c-status" h="18px" w="42%" r="4px" />
         <SkeletonRows class="older-skel" :count="1" height="76px" />
       </section>
     </SkeletonRegion>
@@ -108,10 +107,9 @@ const modeLine = computed(() => {
           <span class="f-btn">{{ t('recordings.review') }}</span>
         </span>
       </NuxtLink>
-      <TakeActionsMenu class="more-at on-stage" :take="latest" />
+      <TakeActionsMenu class="more-at on-stage" :take="latest" :open-script="!scriptId" />
       </div>
       <TakeStorageStatus class="f-status" :take="latest" actions />
-      <NuxtLink v-if="!scriptId && latest.scriptId !== 'none'" :to="`/app/scripts/${latest.scriptId}`" class="open-script">{{ t('recordings.openScript') }}</NuxtLink>
       <h2 v-if="all.length > 1" class="all">{{ t('recordings.all') }}</h2>
       <ul v-if="all.length > 1" class="rows">
         <li v-for="take in all.slice(1)" :key="take.id">
@@ -122,7 +120,7 @@ const modeLine = computed(() => {
               <small>{{ meta(take) }}</small>
             </span>
           </NuxtLink>
-          <TakeActionsMenu class="more-at on-row" :take="take" />
+          <TakeActionsMenu class="more-at on-row" :take="take" :open-script="!scriptId" />
           <TakeStorageStatus class="r-status" :take="take" actions />
         </li>
       </ul>
@@ -139,17 +137,19 @@ const modeLine = computed(() => {
             <small>{{ meta(group[0]!) }}<span v-if="group[0]!.starred" class="star">{{ t('recordings.best') }}</span></small>
           </span>
         </NuxtLink>
-        <TakeActionsMenu class="more-at on-card" :take="group[0]!" />
+        <!-- The card's bottom end: where the take is (sync status), then its "…" menu. -->
+        <div class="c-foot">
+          <TakeStorageStatus class="c-status" :take="group[0]!" actions />
+          <TakeActionsMenu :take="group[0]!" :open-script="!scriptId" />
         </div>
-        <TakeStorageStatus class="c-status" :take="group[0]!" actions />
-        <NuxtLink v-if="!scriptId && group[0]!.scriptId !== 'none'" :to="`/app/scripts/${group[0]!.scriptId}`" class="open-script" data-testid="group-open-script">{{ t('recordings.openScript') }}</NuxtLink>
+        </div>
         <template v-for="take in group.slice(1)" :key="take.id">
           <div class="older-wrap">
           <NuxtLink :to="`/app/recordings/${take.id}`" class="older">
             <b>{{ take.driveOnly ? take.scriptTitle : t('recordings.take', { n: num(take.number) }) }}<template v-if="take.label">  ·  {{ take.label }}</template><span v-if="take.starred" class="star">{{ t('recordings.best') }}</span></b>
             <small>{{ kindLabel(take.kind) }}  ·  {{ formatDuration(take.durationMs) }}</small>
           </NuxtLink>
-          <TakeActionsMenu class="more-at on-row" :take="take" />
+          <TakeActionsMenu class="more-at on-row" :take="take" :open-script="!scriptId" />
           </div>
           <TakeStorageStatus class="o-status" :take="take" actions />
         </template>
@@ -160,20 +160,6 @@ const modeLine = computed(() => {
 </template>
 
 <style scoped>
-.open-script {
-  justify-self: start;
-  align-self: start;
-  color: var(--tilw-action-primary);
-  font: 500 15px/1.36 var(--tilw-font-ar);
-  text-decoration: none;
-}
-.open-script:hover {
-  text-decoration: underline;
-}
-.open-script:focus-visible {
-  outline: 2px solid var(--tilw-focus-ring);
-  outline-offset: 2px;
-}
 .rec-list {
   padding-block: 37px 40px;
 }
@@ -260,9 +246,35 @@ const modeLine = computed(() => {
   position: absolute;
   color: var(--tilw-text-ink);
 }
-.more-at.on-card {
-  inset-block-end: 16px;
-  inset-inline-end: 12px;
+/* The card's last row: sync status then "…", at the bottom end of the card body. The row itself lets clicks through to
+   the card link; only the status actions and the menu take them. */
+.card-wrap .c-txt {
+  padding-block-end: 74px;
+  padding-inline-end: 21px; /* the "…" moved down to the last row */
+}
+.c-foot {
+  position: absolute;
+  inset-block-end: 14px;
+  inset-inline: 21px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  color: var(--tilw-text-ink);
+  pointer-events: none;
+}
+.c-foot > * {
+  pointer-events: auto;
+}
+.c-foot .c-status {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+}
+.c-foot-skel {
+  display: flex;
+  justify-content: flex-end;
+  margin-block-start: 26px;
 }
 .more-at.on-row {
   inset-block-start: 14px;

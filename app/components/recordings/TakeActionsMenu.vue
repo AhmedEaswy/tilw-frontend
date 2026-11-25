@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * A take's "…" button on the recordings list: the same dropdown as a script row's options (UiMenu).
- *  Play — in the floating mini player · View — the take page ·
+ *  Play — in the floating mini player · View — the take page · Open script (with `openScript`) ·
  *  and one Drive action for where the take is: Sync (copy to Drive), Withdraw (stop a copy that is waiting,
  *  running or failed) or Unsync (remove the Drive copy, keep the original here; asks first).
  */
@@ -9,7 +9,8 @@ import type { TakeMeta } from '~/services/takes'
 import type { UiMenuItem } from '~/components/ui/UiMenu.vue'
 import { takePlace } from '~/utils/storage'
 
-const props = defineProps<{ take: TakeMeta }>()
+/** `openScript`: offer "Open script" (the full recordings list; a script's own Recordings tab leaves it out). */
+const props = defineProps<{ take: TakeMeta; openScript?: boolean }>()
 
 const { t } = useI18n()
 const player = usePlayerStore()
@@ -27,6 +28,7 @@ const items = computed<UiMenuItem[]>(() => {
   const list: UiMenuItem[] = []
   if (place.value !== 'unreachable') list.push({ key: 'play', label: t('takeActions.play'), icon: 'play' })
   list.push({ key: 'view', label: t('takeActions.view'), icon: 'expand' })
+  if (props.openScript && x.scriptId !== 'none') list.push({ key: 'script', label: t('recordings.openScript'), icon: 'file' })
   if (place.value === 'device' && storage.linked && storage.syncMode !== 'off') list.push({ key: 'sync', label: t('takeActions.sync'), icon: 'up' })
   if (!x.driveOnly && ['waiting', 'uploading', 'failed'].includes(place.value) && uploads.entries[x.id]) list.push({ key: 'withdraw', label: t('takeActions.withdraw'), icon: 'stop' })
   if (!x.driveOnly && place.value === 'drive') list.push({ key: 'unsync', label: t('takeActions.unsync'), icon: 'close', tone: 'danger' })
@@ -44,6 +46,9 @@ function onSelect(key: string) {
       break
     case 'view':
       void navigateTo(`/app/recordings/${id}`)
+      break
+    case 'script':
+      void navigateTo(`/app/scripts/${props.take.scriptId}`)
       break
     case 'sync':
       void uploads.enqueue(id)

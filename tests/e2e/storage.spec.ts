@@ -103,7 +103,7 @@ test('a take in both places asks where to delete it', async ({ page }) => {
   await recordTake(page)
   await page.getByRole('button', { name: 'نسخ إلى Drive' }).first().click()
   await expect(page.getByRole('status').filter({ hasText: 'في Google Drive' }).first()).toBeVisible()
-  await page.getByRole('link', { name: /مراجعة/ }).first().click()
+  await page.locator('a[href^="/app/recordings/"]').first().click()
   await page.getByRole('button', { name: 'حذف المحاولة' }).click()
   const dialog = page.getByRole('dialog', { name: 'أين تريد حذف المحاولة؟' })
   await expect(dialog.getByRole('button', { name: 'من الجهاز ومن Drive' })).toBeVisible()

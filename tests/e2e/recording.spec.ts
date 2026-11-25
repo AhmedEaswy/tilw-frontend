@@ -59,7 +59,8 @@ test('audio mode shows the sound check instead of the camera', async ({ page }) 
   await expect(page.getByRole('heading', { name: 'اختبر صوتك' })).toBeVisible()
   await page.getByRole('button', { name: 'تفعيل الميكروفون' }).click()
   await expect(page.getByText('صوتك الآن')).toBeVisible()
-  await expect(page.locator('video')).toHaveCount(0)
+  // The floating mini player keeps a hidden <video> mounted; the record page itself shows none.
+  await expect(page.locator('video:visible')).toHaveCount(0)
 })
 
 test('denied permission offers retry and rehearsal without recording', async ({ page }) => {

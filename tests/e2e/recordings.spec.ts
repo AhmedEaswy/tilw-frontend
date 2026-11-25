@@ -42,7 +42,7 @@ test('reviews, downloads, stars and deletes a take', async ({ page }) => {
   await recordTake(page)
   await recordTake(page)
 
-  await page.getByRole('link', { name: /مراجعة/ }).first().click() // the latest take; phone labels it "مراجعة"
+  await page.locator('a[href^="/app/recordings/"]').first().click() // the latest take's card
   await expect(page.getByRole('heading', { name: 'مراجعة المحاولة' })).toBeVisible()
   await expect(page.getByText('المحاولات', { exact: true })).toBeVisible()
 
@@ -86,13 +86,14 @@ test('the library counts each script’s recordings, and recordings link back to
   await signIn(page)
   await recordTake(page, 's_opening')
 
-  // Recordings list: open the take's script (desktop group, phone feature card).
-  await page.getByRole('link', { name: 'فتح النص' }).first().click()
+  // Recordings list: "Open script" is in the take's "…" menu (desktop card, phone feature card).
+  await page.getByTestId('take-more').first().locator('button[aria-haspopup="menu"]').click()
+  await page.getByRole('menuitem', { name: 'فتح النص' }).click()
   await expect(page).toHaveURL(/\/app\/scripts\/s_opening$/)
 
   // Take details: open its script from the header.
   await page.goto('/app/recordings')
-  await page.getByRole('link', { name: /مراجعة/ }).first().click()
+  await page.locator('a[href^="/app/recordings/"]').first().click()
   // Phone hides the header links and keeps "back to script" at the foot of the page.
   if (isMobile) await page.getByRole('link', { name: 'العودة إلى النص' }).click()
   else await page.getByTestId('take-open-script').click()
