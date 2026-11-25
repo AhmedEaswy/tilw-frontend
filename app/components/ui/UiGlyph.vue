@@ -9,6 +9,8 @@ export type GlyphName =
   | 'mic' | 'video' | 'file' | 'download' | 'check' | 'more' | 'menu' | 'rewind' | 'pin' | 'headset'
   | 'clock' | 'stop' | 'plus' | 'down' | 'up' | 'sun' | 'keyboard' | 'mail' | 'edit' | 'copy'
   | 'archive' | 'language' | 'privacy'
+  // form controls (UiSelect, UiDatePicker, UiSearchField)
+  | 'calendar' | 'chevron-down' | 'hash'
   // field and action icons from the sign-in frame (6:62)
   | 'field-mail' | 'field-lock' | 'arrow-action'
   // auth state icons (6:64, 6:101, 6:102)
