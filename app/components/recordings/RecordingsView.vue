@@ -33,19 +33,6 @@ function meta(take: TakeMeta, withNumber = true) {
     .join('  ·  ')
 }
 const latest = computed(() => all.value[0] ?? null)
-
-// "…" on each take opens its actions (play, view, sync / withdraw / unsync), like the script list.
-const actionsTake = ref<TakeMeta | null>(null)
-const actionsOpen = ref(false)
-function openActions(take: TakeMeta) {
-  actionsTake.value = take
-  actionsOpen.value = true
-}
-// Follow the take as its Drive state changes while the sheet is open.
-watch(() => takes.all, (list) => {
-  if (actionsTake.value) actionsTake.value = list.find(x => x.id === actionsTake.value!.id) ?? null
-})
-const moreLabel = (take: TakeMeta) => t('library.actionsFor', { title: take.driveOnly ? take.scriptTitle : `${take.scriptTitle} · ${t('recordings.take', { n: num(take.number) })}` })
 const modeLine = computed(() => {
   if (!storage.status) return null
   if (!storage.linked) return t('uploads.modeLine.none')
@@ -121,7 +108,7 @@ const modeLine = computed(() => {
           <span class="f-btn">{{ t('recordings.review') }}</span>
         </span>
       </NuxtLink>
-      <button type="button" class="more on-stage" :aria-label="moreLabel(latest)" data-testid="take-more" @click="openActions(latest)"><UiGlyph name="more" :size="20" /></button>
+      <TakeActionsMenu class="more-at on-stage" :take="latest" />
       </div>
       <TakeStorageStatus class="f-status" :take="latest" actions />
       <NuxtLink v-if="!scriptId && latest.scriptId !== 'none'" :to="`/app/scripts/${latest.scriptId}`" class="open-script">{{ t('recordings.openScript') }}</NuxtLink>
@@ -135,7 +122,7 @@ const modeLine = computed(() => {
               <small>{{ meta(take) }}</small>
             </span>
           </NuxtLink>
-          <button type="button" class="more on-row" :aria-label="moreLabel(take)" data-testid="take-more" @click="openActions(take)"><UiGlyph name="more" :size="20" /></button>
+          <TakeActionsMenu class="more-at on-row" :take="take" />
           <TakeStorageStatus class="r-status" :take="take" actions />
         </li>
       </ul>
@@ -152,7 +139,7 @@ const modeLine = computed(() => {
             <small>{{ meta(group[0]!) }}<span v-if="group[0]!.starred" class="star">{{ t('recordings.best') }}</span></small>
           </span>
         </NuxtLink>
-        <button type="button" class="more on-card" :aria-label="moreLabel(group[0]!)" data-testid="take-more" @click="openActions(group[0]!)"><UiGlyph name="more" :size="20" /></button>
+        <TakeActionsMenu class="more-at on-card" :take="group[0]!" />
         </div>
         <TakeStorageStatus class="c-status" :take="group[0]!" actions />
         <NuxtLink v-if="!scriptId && group[0]!.scriptId !== 'none'" :to="`/app/scripts/${group[0]!.scriptId}`" class="open-script" data-testid="group-open-script">{{ t('recordings.openScript') }}</NuxtLink>
@@ -162,14 +149,13 @@ const modeLine = computed(() => {
             <b>{{ take.driveOnly ? take.scriptTitle : t('recordings.take', { n: num(take.number) }) }}<template v-if="take.label">  ·  {{ take.label }}</template><span v-if="take.starred" class="star">{{ t('recordings.best') }}</span></b>
             <small>{{ kindLabel(take.kind) }}  ·  {{ formatDuration(take.durationMs) }}</small>
           </NuxtLink>
-          <button type="button" class="more on-row" :aria-label="moreLabel(take)" data-testid="take-more" @click="openActions(take)"><UiGlyph name="more" :size="20" /></button>
+          <TakeActionsMenu class="more-at on-row" :take="take" />
           </div>
           <TakeStorageStatus class="o-status" :take="take" actions />
         </template>
       </section>
     </div>
 
-    <TakeActionsDialog v-model:open="actionsOpen" :take="actionsTake" />
   </div>
 </template>
 
@@ -270,45 +256,27 @@ const modeLine = computed(() => {
 .rows li .row {
   padding-inline-end: 64px;
 }
-.more {
+.more-at {
   position: absolute;
-  display: grid;
-  place-items: center;
-  inline-size: var(--tilw-hit);
-  block-size: var(--tilw-hit);
-  padding: 0;
-  border: 0;
-  border-radius: 10px;
-  background: none;
   color: var(--tilw-text-ink);
-  cursor: pointer;
 }
-.more:hover {
-  background: var(--tilw-surface-quiet);
-}
-.more:focus-visible {
-  outline: 2px solid var(--tilw-focus-ring);
-  outline-offset: 2px;
-}
-.more.on-card {
+.more-at.on-card {
   inset-block-end: 16px;
   inset-inline-end: 12px;
 }
-.more.on-row {
+.more-at.on-row {
   inset-block-start: 14px;
   inset-inline-end: 10px;
 }
-.older-wrap .more.on-row {
+.older-wrap .more-at.on-row {
   inset-block-start: calc(50% - var(--tilw-hit) / 2);
 }
-.more.on-stage {
+.more-at.on-stage {
   inset-block-start: 10px;
   inset-inline-end: 10px;
+  border-radius: 10px;
   background: color-mix(in srgb, var(--tilw-stage-background) 70%, transparent);
   color: var(--tilw-stage-text);
-}
-.more.on-stage:hover {
-  background: var(--tilw-stage-background);
 }
 .card:hover .c-txt b {
   color: var(--tilw-action-primary);
