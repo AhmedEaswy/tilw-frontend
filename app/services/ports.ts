@@ -15,6 +15,8 @@ import type {
   AuditEntry, AuditFilters, ChangePlanInput, CreditEntry, FeatureFlag, GrantSubscriptionInput, LedgerEntry, LedgerFilters,
   LimitDefinition, OverrideInput, Page, PaymentsPage, Period, PlanInput, PublicSettings, SignupMode, SubscriptionFilters,
   SubscriptionPatch, UsageGroupBy, AdminLimitValue, Locale,
+  AdminAnalytics, AdminConnections, AdminLink, AdminList, AdminPermissionsInput, AdminPreferences, AdminRow, AdminScript, AdminTake,
+  PracticeInput, PracticeSession,
 } from './types'
 
 export interface AuthPort {
@@ -198,6 +200,34 @@ export interface AdminPort {
   // ---------- audit ----------
   auditLog(filters: AuditFilters, cursor?: string | null): Promise<Page<AuditEntry>>
   auditActions(): Promise<AuditAction[]>
+
+  // ---------- feature 007: analytics, one person's insights, admins ----------
+  /** Aggregates over the last `days` (1..365) ending now. Section users (view). */
+  analytics(days: number): Promise<AdminAnalytics>
+  /** Newest recording first; metadata only. */
+  userTakes(id: string, cursor?: string | null, limit?: number): Promise<Page<AdminTake>>
+  /** Most recently updated first; never the text. */
+  userScripts(id: string, cursor?: string | null, limit?: number): Promise<Page<AdminScript>>
+  /** Newest start first, with their remotes. */
+  userLinks(id: string, cursor?: string | null, limit?: number): Promise<Page<AdminLink>>
+  /** Not paged. */
+  userConnections(id: string): Promise<AdminConnections>
+  /** Not paged. */
+  userPreferences(id: string): Promise<AdminPreferences>
+  /** The super admin first, then by email. Needs admins (edit), reads too. */
+  admins(): Promise<AdminList>
+  /** Exactly one of userId / email. `conflict` when already an admin, suspended or leaving. */
+  addAdmin(input: ({ userId: string; email?: never } | { email: string; userId?: never }) & { permissions: AdminPermissionsInput }): Promise<AdminRow>
+  /** Replaces the whole map. `super_admin_locked` for the super admin; `conflict` for yourself. */
+  updateAdmin(id: string, permissions: AdminPermissionsInput): Promise<AdminRow>
+  /** `super_admin_locked` for the super admin; `conflict` for yourself or the last admin. */
+  removeAdmin(id: string): Promise<void>
+}
+
+/** Feature 007: one finished teleprompter run, with or without a take. */
+export interface PracticePort {
+  /** `not_found` when the script isn't the caller's own. */
+  log(input: PracticeInput): Promise<PracticeSession>
 }
 
 /** Feature 004: the owner's phone links (session). Contract: specs/004-phone-link/contracts/ports.md. */
@@ -301,4 +331,5 @@ export interface Services {
   ai: AiPort
   speech: SpeechPort
   settings: SettingsPort
+  practice: PracticePort
 }

@@ -12,7 +12,7 @@ import {
 import type { LinkAuth, Pairing, PairingCode, PhoneLink, PhoneLinkWithCode, RealtimeSettings } from '../types'
 import { createHttpClient, type HttpClientOptions } from './client'
 import { createHttpRealtime } from './realtime'
-import { createHttpAdmin, createHttpSettings } from './admin'
+import { createHttpAdmin, createHttpPractice, createHttpSettings } from './admin'
 import { createSpeech } from '../ai/speech'
 import type { Credits, FormatEstimate, FormatSuggestion, OwnKey, Transcription, TranscriptionEstimate, TranscriptionPermission } from '../types'
 
@@ -98,6 +98,7 @@ export function createHttpServices(opts: HttpClientOptions & { realtime?: Realti
 
     admin: createHttpAdmin(api),
     settings: createHttpSettings(api),
+    practice: createHttpPractice(api),
 
     // Device-only: the old app's browser keys are not defined for the real service, so there is nothing to offer.
     legacy: {

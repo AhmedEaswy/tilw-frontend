@@ -8,9 +8,12 @@
  * the last admin, a state that already holds, and the plan already in force. Every successful write adds one audit
  * entry with the backend's action name; a refused one adds none.
  */
-import type { AdminPort, SettingsPort } from '../ports'
+import type { AdminPort, PracticePort, SettingsPort } from '../ports'
 import {
-  PortError,
+  PortError, ADMIN_SECTIONS, DURATION_BUCKETS,
+  type AdminAnalytics, type AdminConnections, type AdminLevel, type AdminLink, type AdminPermissions, type AdminPermissionsInput,
+  type AdminPreferences, type AdminRole, type AdminRow, type AdminScript, type AdminSection, type AdminTake, type AiProvider,
+  type AnalyticsAiRow, type DashboardHeadlines, type DurationBucket, type PracticeSession, type PracticeVia, type RemoteTake, type Script,
   type AddCreditsInput, type AdminAiCall, type AdminDashboard, type AdminLimitValue, type AdminOverride, type AdminPlan, type AdminSettings,
   type AdminStatus, type AdminSubscription, type AdminSubscriptionRow, type AdminUpgradeRequest, type AdminUserDetail, type AdminUserRow,
   type AiCapability, type AiKeyState, type AiUsage, type AuditAction, type AuditEntry, type CreditEntry, type CreditKind, type FeatureFlag,
@@ -34,7 +37,7 @@ export const MOCK_ADMIN_EMAIL = 'admin@example.com'
 /** Backend audit action names (GET /api/admin/audit-log/actions). */
 export const AUDIT_ACTIONS: AuditAction[] = [
   ['user.suspend', 'User'], ['user.unsuspend', 'User'], ['user.password_reset', 'User'], ['user.plan_change', 'User'],
-  ['user.admin_grant', 'User'], ['user.admin_revoke', 'User'], ['user.delete_schedule', 'User'], ['user.delete_cancel', 'User'],
+  ['user.admin_grant', 'User'], ['user.admin_permissions', 'User'], ['user.admin_revoke', 'User'], ['user.delete_schedule', 'User'], ['user.delete_cancel', 'User'],
   ['credits.grant', 'User'], ['credits.correct', 'User'], ['override.set', 'User'], ['override.remove', 'User'],
   ['subscription.grant', 'Subscription'], ['subscription.update', 'Subscription'], ['subscription.end', 'Subscription'],
   ['request.fulfil', 'SubscriptionRequest'], ['request.reject', 'SubscriptionRequest'],
@@ -57,6 +60,38 @@ interface SeedCall {
   createdAt: number
 }
 
+/** Feature 007: what every admin route needs (section, level); null = any admin. Reads need view, writes edit. */
+type Access = [AdminSection | null, 'view' | 'edit']
+const R = (s: AdminSection | null): Access => [s, 'view']
+const W = (s: AdminSection): Access => [s, 'edit']
+export const ADMIN_ACCESS: Record<keyof AdminPort, Access> = {
+  waitlist: R('users'), removeWaitlist: W('users'), invitations: R('users'), invite: W('users'), resend: W('users'), withdraw: W('users'),
+  dashboard: R(null), users: R('users'), user: R('users'), suspend: W('users'), unsuspend: W('users'), sendPasswordReset: W('users'),
+  changePlan: W('money'), grantAdmin: W('admins'), revokeAdmin: W('admins'), scheduleDeletion: W('users'), cancelDeletion: W('users'),
+  addCredits: W('ai'), setOverride: W('plans'), removeOverride: W('plans'), userSubscriptions: R('money'), grantSubscription: W('money'),
+  plans: R('plans'), createPlan: W('plans'), updatePlan: W('plans'), setPlanLimit: W('plans'), unsetPlanLimit: W('plans'),
+  limitDefinitions: R('plans'), defineLimit: W('plans'),
+  subscriptions: R('money'), updateSubscription: W('money'), requests: R('money'), fulfilRequest: W('money'), rejectRequest: W('money'), payments: R('money'),
+  aiUsage: R('ai'), aiCalls: R('ai'), ledger: R('ai'),
+  settings: R('settings'), setSignupMode: W('settings'), setAiKey: W('settings'), removeAiKey: W('settings'), setFlag: W('settings'), removeFlag: W('settings'),
+  auditLog: R('audit'), auditActions: R('audit'),
+  analytics: R('users'), userTakes: R('users'), userScripts: R('users'), userLinks: R('users'), userConnections: R('users'), userPreferences: R('users'),
+  // Every /admin/admins route needs admins: edit, reads too.
+  admins: W('admins'), addAdmin: W('admins'), updateAdmin: W('admins'), removeAdmin: W('admins'),
+}
+
+const ALL_EDIT = Object.fromEntries(ADMIN_SECTIONS.map(x => [x, 'edit'])) as AdminPermissions
+/** A grant without permissions (and the 007 migration): edit everywhere but admins. */
+export const DEFAULT_ADMIN_PERMISSIONS: AdminPermissions = { ...ALL_EDIT, admins: 'none' }
+export const allows = (level: AdminLevel | undefined, need: 'view' | 'edit') => (need === 'view' ? level === 'view' || level === 'edit' : level === 'edit')
+
+interface InsightPractice { id: string; userId: string; scriptId: string | null; startedAt: number; durationS: number; recorded: boolean; via: PracticeVia; createdAt: number }
+interface InsightLink {
+  id: string; userId: string; scriptId: string | null; scriptTitle: string | null; hostKind: 'web' | 'app'; hostLabel: string; player: 'host' | 'remote'
+  state: 'waiting' | 'connected' | 'ended'; startedAt: number; lastUsedAt: number; endedAt: number | null; endReason: string | null
+  remotes: { id: string; kind: 'browser' | 'app'; name: string; status: AdminLink['remotes'][number]['status']; pairedAt: number; lastSeenAt: number | null; endedAt: number | null }[]
+}
+
 interface AdminState {
   signupMode: SignupMode
   flags: FeatureFlag[]
@@ -71,6 +106,15 @@ interface AdminState {
   audit: AuditEntry[]
   nextAuditId: number
   linkedAt: Record<string, number>
+  // ---------- feature 007 ----------
+  /** userId -> role; an admin with no entry is `admin` with the defaults (the demo admin is `super`). */
+  roles: Record<string, { role: AdminRole; permissions: AdminPermissions }>
+  practice: InsightPractice[]
+  /** Seeded phone links (the live ones come from the link mock's own state). */
+  links: InsightLink[]
+  /** Seeded own AI keys of other people (the signed-in person's real key comes from the AI mock). */
+  ownKeys: Record<string, { provider: AiProvider; last4: string; checkOk: boolean; checkedAt: number }>
+  insightsSeeded: boolean
 }
 
 export interface MockAdminKnobs {
@@ -142,6 +186,11 @@ export function createMockAdmin(d: MockAdminDeps) {
       audit: s?.audit ?? [],
       nextAuditId: s?.nextAuditId ?? 1,
       linkedAt: s?.linkedAt ?? {},
+      roles: s?.roles ?? {},
+      practice: s?.practice ?? [],
+      links: s?.links ?? [],
+      ownKeys: s?.ownKeys ?? {},
+      insightsSeeded: s?.insightsSeeded ?? false,
     }
   }
   let st = read()
@@ -256,6 +305,88 @@ export function createMockAdmin(d: MockAdminDeps) {
   }
   seed()
 
+  // ---------- feature 007 seed (once, also over an older mock state) ----------
+  function seedInsights() {
+    if (read().insightsSeeded) return
+    const t = d.now()
+    const r = rng(99)
+    const people = db.s.users.filter(u => u.id.startsWith('u_seed'))
+    const TITLES = ['كلمة الافتتاح', 'Product update', 'حلقة البودكاست ١٢', 'Quarterly review', 'إعلان الإطلاق', 'Weekly vlog', 'شرح الميزة الجديدة', 'Conference talk']
+    const BODY = 'نص قصير للتجربة. This is a short demo script used by the mock. '
+    const LENGTHS = [35, 95, 240, 420, 780, 1100, 1500, 2100, 2900]
+    // Scripts for every other person (some archived), and takes across every duration range, audio and video.
+    const scriptsOf: Record<string, Script[]> = {}
+    db.write((s) => {
+      people.forEach((u, i) => {
+        if (i % 2) return
+        const n = 1 + (i % 4)
+        const list: Script[] = Array.from({ length: n }, (_, k) => {
+          const created = t - Math.floor((5 + i * 2 + k * 9) * DAY * (0.5 + r()))
+          const updated = Math.min(t, created + Math.floor(r() * 10 * DAY))
+          return {
+            id: `s_ins${i}_${k}`, title: TITLES[(i + k) % TITLES.length]!, body: BODY.repeat(1 + ((i + k) % 6)), marks: [], direction: 'auto' as Script['direction'],
+            pinned: k === 0 && i % 4 === 0, archivedAt: k === 2 ? new Date(updated).toISOString() : null, version: 1,
+            createdAt: new Date(created).toISOString(), updatedAt: new Date(updated).toISOString(),
+            lastOpenedAt: r() > 0.3 ? new Date(updated).toISOString() : null, lastPosition: null,
+          }
+        })
+        s.scripts[u.id] = [...(s.scripts[u.id] ?? []), ...list]
+        scriptsOf[u.id] = list
+        const takes = (s.remoteTakes[u.id] ??= [])
+        const count = 2 + (i % 5)
+        for (let k = 0; k < count; k++) {
+          const sec = LENGTHS[(i + k * 3) % LENGTHS.length]! + Math.floor(r() * 30)
+          const video = (i + k) % 3 !== 0
+          const sc = list[k % list.length]!
+          takes.push({
+            id: `rt_ins${i}_${k}`, clientId: `t_ins${i}_${k}`, scriptId: sc.id, title: `${sc.title} · ${k + 1}`, kind: video ? 'video' : 'audio',
+            mime: video ? 'video/webm' : 'audio/webm', durationMs: sec * 1000, sizeBytes: sec * (video ? 300_000 : 16_000),
+            recordedAt: new Date(t - Math.floor(r() * 80 * DAY)).toISOString(), starred: k === 0, providerFileId: `drive_ins${i}_${k}`,
+            state: k === 4 ? 'unreachable' : 'backed_up',
+          })
+        }
+      })
+    })
+    tx((s) => {
+      // Practice sessions over the last 90 days (more recent ones more often): web, app and phone, about a third with a take.
+      for (let k = 0; k < 160; k++) {
+        const u = people[(k * 7) % people.length]!
+        const list = scriptsOf[u.id] ?? []
+        const startedAt = t - Math.floor(Math.pow(r(), 1.4) * 90 * DAY)
+        const via: PracticeVia = k % 5 === 0 ? 'phone' : k % 3 === 0 ? 'app' : 'web'
+        s.practice.push({ id: `ps_seed${k}`, userId: u.id, scriptId: list.length ? list[k % list.length]!.id : null, startedAt, durationS: 20 + Math.floor(r() * 900), recorded: r() < 0.35, via, createdAt: startedAt + 1000 })
+      }
+      // Phone links: mostly ended, two still open; hosted by the web studio or the app.
+      for (let k = 0; k < 30; k++) {
+        const u = people[(k * 3) % people.length]!
+        const list = scriptsOf[u.id] ?? []
+        const sc = list.length ? list[k % list.length]! : null
+        const startedAt = t - Math.floor(r() * 85 * DAY) - 600_000
+        const open = k < 2
+        const ended = open ? null : startedAt + 120_000 + Math.floor(r() * 40 * 60_000)
+        s.links.push({
+          id: `L_seed${k}`, userId: u.id, scriptId: sc?.id ?? null, scriptTitle: sc?.title ?? null, hostKind: k % 4 === 0 ? 'app' : 'web',
+          hostLabel: k % 4 === 0 ? 'Tilw for iPhone' : k % 2 ? 'Chrome on Windows' : 'Safari on macOS', player: k % 6 === 0 ? 'remote' : 'host',
+          state: open ? (k === 0 ? 'connected' : 'waiting') : 'ended', startedAt, lastUsedAt: ended ?? t - 60_000, endedAt: ended,
+          endReason: open ? null : k % 5 === 0 ? 'idle' : 'host_ended',
+          remotes: k === 1
+            ? []
+            : [{ id: `rm_seed${k}`, kind: k % 3 ? 'browser' : 'app', name: k % 3 ? 'Safari on iPhone' : 'Pixel 8', status: open ? 'active' : 'ended', pairedAt: startedAt + 30_000, lastSeenAt: ended ?? t - 30_000, endedAt: ended }],
+        })
+      }
+      // Own AI keys, Anthropic and OpenAI.
+      people.forEach((u, i) => {
+        if (i % 6 === 2) s.ownKeys[u.id] = { provider: i % 12 === 2 ? 'openai' : 'anthropic', last4: String(1000 + i * 37).slice(-4), checkOk: i % 18 !== 2, checkedAt: t - (i + 1) * DAY }
+      })
+      s.ownKeys.u_seed07 = { provider: 'openai', last4: 'x9Qa', checkOk: true, checkedAt: t - 2 * DAY }
+      // The demo admin is the super admin; the second admin has a narrower set of permissions.
+      s.roles[MOCK_ADMIN_ID] = { role: 'super', permissions: { ...ALL_EDIT } }
+      s.roles.u_admin2 = { role: 'admin', permissions: { users: 'edit', money: 'view', ai: 'view', plans: 'none', settings: 'none', audit: 'view', admins: 'none' } }
+      s.insightsSeeded = true
+    })
+  }
+  seedInsights()
+
   // ---------- helpers ----------
   const person = (id: string | null | undefined): PersonRef | null => {
     if (!id) return null
@@ -289,6 +420,160 @@ export function createMockAdmin(d: MockAdminDeps) {
   }
   const conflict = () => new PortError('conflict')
 
+  // ---------- feature 007: roles and permissions ----------
+  const NONE = Object.fromEntries(ADMIN_SECTIONS.map(x => [x, 'none'])) as AdminPermissions
+  function roleOf(u: Pick<User, 'id' | 'isAdmin'>): { role: AdminRole; permissions: AdminPermissions } | null {
+    if (!u.isAdmin) return null
+    const r = read().roles[u.id]
+    if (r?.role === 'super' || (!r && u.id === MOCK_ADMIN_ID)) return { role: 'super', permissions: { ...ALL_EDIT } }
+    return { role: 'admin', permissions: r ? { ...NONE, ...r.permissions } : { ...DEFAULT_ADMIN_PERMISSIONS } }
+  }
+  function isSuper(id: string) {
+    const u = db.s.users.find(x => x.id === id)
+    return !!u && roleOf(u)?.role === 'super'
+  }
+  const locked = () => new PortError('super_admin_locked')
+  /** PermissionsInput: any of the sections, left out = none; unknown sections or levels → validation on `permissions.<section>`. */
+  function checkPermissions(p: unknown): AdminPermissions {
+    if (!p || typeof p !== 'object' || Array.isArray(p)) throw new PortError('validation', { permissions: 'invalid' })
+    const out = { ...NONE }
+    for (const [k, v] of Object.entries(p as Record<string, unknown>)) {
+      if (!(ADMIN_SECTIONS as readonly string[]).includes(k) || !['none', 'view', 'edit'].includes(v as string)) throw new PortError('validation', { [`permissions.${k}`]: 'invalid' })
+      out[k as AdminSection] = v as AdminLevel
+    }
+    return out
+  }
+  function adminRow(u: User): AdminRow {
+    st = read()
+    const r = roleOf(u)!
+    return { id: u.id, email: u.email, name: u.name, adminRole: r.role, adminPermissions: r.permissions, status: statusOf(u.id), lastActiveAt: st.lastActive[u.id] ? iso(st.lastActive[u.id]) : null, createdAt: u.createdAt }
+  }
+  /** The signed-in admin's refusal for a route, or null (non-admins and signed-out callers get the route's own answer). */
+  function denied([section, need]: Access): PortError | null {
+    if (!section) return null
+    const id = d.sessionUserId()
+    const u = id ? db.s.users.find(x => x.id === id) : null
+    if (!u?.isAdmin) return null
+    return allows(roleOf(u)?.permissions[section], need) ? null : new PortError('forbidden', undefined, undefined, undefined, { section, need })
+  }
+
+  // ---------- feature 007: insights sources ----------
+  const round1 = (n: number) => Math.round(n * 10) / 10
+  const words = (text: string) => text.trim().split(/\s+/).filter(Boolean).length
+  const clampLimit = (n?: number) => Math.min(100, Math.max(1, n ?? 50))
+  const allTakes = () => Object.entries(db.s.remoteTakes).flatMap(([userId, list]) => list.map(x => ({ ...x, userId })))
+  const allScripts = () => Object.values(db.s.scripts).flat()
+  const scriptTitle = (userId: string, scriptId: string | null) => (scriptId ? (db.s.scripts[userId] ?? []).find(x => x.id === scriptId)?.title ?? null : null)
+  /** Live links from the link mock's own state (`tilw:mock:links:v1`), shaped like the seeded ones. */
+  function liveLinks(): InsightLink[] {
+    type Raw = { id: string; userId: string; scriptId: string | null; hostLabel: string; player: 'host' | 'remote'; state: InsightLink['state']; startedAt: number; lastUsedAt: number; endedAt: number | null; endReason: string | null; remotes?: { id: string; kind: 'browser' | 'app'; name: string; status: InsightLink['remotes'][number]['status']; createdAt: number; lastSeenAt: string | number | null; endedAt: number | null }[] }
+    let raw: { links?: Raw[] } | null = null
+    try {
+      raw = JSON.parse(d.kv.getItem('tilw:mock:links:v1') ?? 'null')
+    } catch {
+      raw = null
+    }
+    return (raw?.links ?? []).map(l => ({
+      id: l.id, userId: l.userId, scriptId: l.scriptId, scriptTitle: scriptTitle(l.userId, l.scriptId), hostKind: 'web', hostLabel: l.hostLabel, player: l.player,
+      state: l.state, startedAt: l.startedAt, lastUsedAt: l.lastUsedAt, endedAt: l.endedAt, endReason: l.endReason,
+      remotes: (l.remotes ?? []).map(r => ({ id: r.id, kind: r.kind, name: r.name, status: r.status, pairedAt: r.createdAt, lastSeenAt: typeof r.lastSeenAt === 'string' ? Date.parse(r.lastSeenAt) : r.lastSeenAt, endedAt: r.endedAt })),
+    }))
+  }
+  const allLinks = () => [...read().links, ...liveLinks()]
+  function pubLink(l: InsightLink): AdminLink {
+    return {
+      id: l.id, scriptId: l.scriptId, scriptTitle: l.scriptTitle, hostKind: l.hostKind, hostLabel: l.hostLabel, player: l.player, state: l.state,
+      startedAt: iso(l.startedAt), lastUsedAt: iso(l.lastUsedAt), endedAt: l.endedAt ? iso(l.endedAt) : null, endReason: l.endReason,
+      remotes: [...l.remotes].sort((a, b) => a.pairedAt - b.pairedAt).map(r => ({ id: r.id, kind: r.kind, name: r.name, status: r.status, pairedAt: iso(r.pairedAt), lastSeenAt: r.lastSeenAt ? iso(r.lastSeenAt) : null, endedAt: r.endedAt ? iso(r.endedAt) : null })),
+    }
+  }
+  /** Own AI keys saved now: the seeded ones plus real keys the AI mock holds. */
+  function ownKeysNow() {
+    const out = { ...read().ownKeys }
+    for (const u of db.s.users) {
+      const k = d.ai.ownKey(u.id)
+      if (k) out[u.id] = { provider: k.provider, last4: k.last4, checkOk: true, checkedAt: Date.parse(k.checkedAt) }
+    }
+    return out
+  }
+  function bucketOf(ms: number): DurationBucket {
+    const sec = ms / 1000
+    return sec < 60 ? 'lt1m' : sec < 300 ? '1to5' : sec < 900 ? '5to15' : sec < 1800 ? '15to30' : 'gt30'
+  }
+  function analyticsOf(days: number): AdminAnalytics {
+    const t = d.now()
+    const from = t - days * DAY
+    const empty = knobs().emptyDashboard
+    const inP = (ms: number) => ms >= from && ms <= t
+    const dates: string[] = []
+    for (let x = Date.parse(dayOf(from)); x <= t; x += DAY) dates.push(dayOf(x))
+    const perDay = (ms: number[]) => dates.map(date => ({ date, count: ms.filter(m => dayOf(m) === date).length }))
+
+    const takes = empty ? [] : allTakes().filter(x => inP(Date.parse(x.recordedAt)))
+    const durationBuckets = Object.fromEntries(DURATION_BUCKETS.map(b => [b, 0])) as Record<DurationBucket, number>
+    takes.forEach(x => durationBuckets[bucketOf(x.durationMs)]++)
+    const scripts = empty ? [] : allScripts()
+    const practice = empty ? [] : read().practice.filter(x => inP(x.startedAt))
+    const links = empty ? [] : allLinks().filter(x => inP(x.startedAt))
+    const ended = links.filter(x => x.endedAt)
+    const keys = Object.values(empty ? {} : ownKeysNow())
+    const calls = empty ? [] : callsAll().filter(c => inP(c.createdAt))
+    const aiUsage: AnalyticsAiRow[] = []
+    for (const c of calls) {
+      const unit = c.capability === 'format' ? 'words' as const : 'seconds' as const
+      let r = aiUsage.find(x => x.provider === c.provider && x.paidWith === c.paidWith && x.unit === unit)
+      if (!r) aiUsage.push(r = { provider: c.provider, paidWith: c.paidWith, calls: 0, failed: 0, units: 0, unit, credits: 0 })
+      r.calls++
+      if (c.status === 'failed') r.failed++
+      r.units += c.units
+      r.credits += c.paidWith === 'own_key' ? 0 : c.credits
+    }
+    aiUsage.sort((a, b) => a.provider.localeCompare(b.provider) || a.paidWith.localeCompare(b.paidWith) || a.unit.localeCompare(b.unit))
+    const avg = (list: number[]) => (list.length ? Math.round(list.reduce((n, x) => n + x, 0) / list.length) : null)
+    return {
+      generatedAt: iso(t),
+      period: { days, from: iso(from), to: iso(t) },
+      takes: {
+        count: takes.length,
+        totalMinutes: round1(takes.reduce((n, x) => n + x.durationMs, 0) / 60_000),
+        durationBuckets,
+        byDay: dates.map((date) => {
+          const l = takes.filter(x => dayOf(Date.parse(x.recordedAt)) === date)
+          return { date, count: l.length, minutes: round1(l.reduce((n, x) => n + x.durationMs, 0) / 60_000) }
+        }),
+        byKind: { audio: takes.filter(x => x.kind === 'audio').length, video: takes.filter(x => x.kind === 'video').length },
+      },
+      scripts: {
+        total: scripts.length, active: scripts.filter(x => !x.archivedAt).length, archived: scripts.filter(x => x.archivedAt).length,
+        createdInPeriod: scripts.filter(x => inP(Date.parse(x.createdAt))).length,
+      },
+      practice: {
+        sessions: practice.length,
+        byDay: perDay(practice.map(x => x.startedAt)),
+        avgDurationS: avg(practice.map(x => x.durationS)),
+        recordedShare: practice.length ? Math.round((practice.filter(x => x.recorded).length / practice.length) * 1000) / 1000 : null,
+        usersPractising: new Set(practice.map(x => x.userId)).size,
+        byVia: { web: practice.filter(x => x.via === 'web').length, app: practice.filter(x => x.via === 'app').length, phone: practice.filter(x => x.via === 'phone').length },
+      },
+      phoneLinks: {
+        started: links.length,
+        byHostKind: { web: links.filter(x => x.hostKind === 'web').length, app: links.filter(x => x.hostKind === 'app').length },
+        byDay: perDay(links.map(x => x.startedAt)),
+        avgDurationS: avg(ended.map(x => Math.round((x.endedAt! - x.startedAt) / 1000))),
+      },
+      drives: (() => {
+        const linked = empty ? 0 : Object.values(db.s.storage).filter(x => x.state === 'linked').length
+        return { linked, byProvider: { google_drive: linked } }
+      })(),
+      ownKeys: { users: keys.length, byProvider: { anthropic: keys.filter(k => k.provider === 'anthropic').length, openai: keys.filter(k => k.provider === 'openai').length } },
+      aiUsage,
+    }
+  }
+  function headlinesOf(days: number): DashboardHeadlines {
+    const a = analyticsOf(days)
+    return { takes: a.takes.count, minutes: a.takes.totalMinutes, scripts: a.scripts.createdInPeriod, practiceSessions: a.practice.sessions, phoneLinks: a.phoneLinks.started, ownKeyUsers: a.ownKeys.users }
+  }
+
   // subscriptions
   function subState(x: MockSubscription, t = d.now()): AdminSubscription['state'] {
     if (x.startsAt > t) return 'scheduled'
@@ -317,7 +602,7 @@ export function createMockAdmin(d: MockAdminDeps) {
   function row(u: User): AdminUserRow {
     const sub = inForce(u.id)
     return {
-      id: u.id, email: u.email, name: u.name, isAdmin: !!u.isAdmin, plan: planKeyOf(u.id), planEndsAt: sub ? iso(sub.endsAt) : null,
+      id: u.id, email: u.email, name: u.name, isAdmin: !!u.isAdmin, adminRole: roleOf(u)?.role ?? null, plan: planKeyOf(u.id), planEndsAt: sub ? iso(sub.endsAt) : null,
       pendingRequest: pendingRef(u.id), createdAt: u.createdAt, status: statusOf(u.id),
       suspendedAt: st.suspensions[u.id] ? iso(st.suspensions[u.id]!.at) : null,
       deletionDueAt: db.s.deletion[u.id] !== undefined ? iso(db.s.deletion[u.id]) : null,
@@ -363,7 +648,8 @@ export function createMockAdmin(d: MockAdminDeps) {
     const storage = db.s.storage[u.id]
     const key = d.ai.ownKey(u.id)
     return {
-      id: u.id, email: u.email, name: u.name, locale: u.locale, isAdmin: !!u.isAdmin, status: statusOf(u.id), createdAt: u.createdAt,
+      id: u.id, email: u.email, name: u.name, locale: u.locale, isAdmin: !!u.isAdmin, adminRole: roleOf(u)?.role ?? null, adminPermissions: roleOf(u)?.permissions ?? null,
+      status: statusOf(u.id), createdAt: u.createdAt,
       lastActiveAt: st.lastActive[u.id] ? iso(st.lastActive[u.id]) : null,
       suspension: sus ? { at: iso(sus.at), reason: sus.reason, byId: sus.byId, byEmail: person(sus.byId)?.email ?? null } : null,
       deletionDueAt: db.s.deletion[u.id] !== undefined ? iso(db.s.deletion[u.id]) : null,
@@ -560,6 +846,7 @@ export function createMockAdmin(d: MockAdminDeps) {
           pendingRequests: empty ? 0 : db.s.requests.filter(r => r.state === 'pending' && Date.parse(r.expiresAt) > t).length,
           waitlistNotInvited: empty ? 0 : db.s.waitlist.filter(w => !db.s.invites.some(i => i.email === w.email) && !db.s.users.some(u => u.email === w.email)).length,
         },
+        headlines: headlinesOf(days),
       }
     }),
     users: (f, cursor, limit = 50) => adminRead(() => {
@@ -576,6 +863,7 @@ export function createMockAdmin(d: MockAdminDeps) {
     user: id => adminRead(() => detail(findUser(id))),
     suspend: (id, reason) => adminWrite((a) => {
       const u = findUser(id)
+      if (isSuper(id)) throw locked()
       if (!reason?.trim()) throw new PortError('validation', { reason: 'required' })
       notSelf(a, id)
       if (u.isAdmin || st.suspensions[id]) throw conflict()
@@ -639,19 +927,28 @@ export function createMockAdmin(d: MockAdminDeps) {
       st = read()
       if (u.isAdmin || statusOf(id) !== 'active') throw conflict()
       db.write(() => (u.isAdmin = true))
-      tx(s => audit(s, a.id, 'user.admin_grant', 'User', id, { isAdmin: false }, { isAdmin: true }))
+      tx((s) => {
+        s.roles[id] = { role: 'admin', permissions: { ...DEFAULT_ADMIN_PERMISSIONS } }
+        audit(s, a.id, 'user.admin_grant', 'User', id, { isAdmin: false, adminRole: null, adminPermissions: null }, { isAdmin: true, adminRole: 'admin', adminPermissions: DEFAULT_ADMIN_PERMISSIONS })
+      })
       return detail(u)
     }),
     revokeAdmin: id => adminWrite((a) => {
       const u = findUser(id)
+      if (isSuper(id)) throw locked()
       notSelf(a, id)
       if (!u.isAdmin || adminCount() <= 1) throw conflict()
+      const before = roleOf(u)
       db.write(() => (u.isAdmin = false))
-      tx(s => audit(s, a.id, 'user.admin_revoke', 'User', id, { isAdmin: true }, { isAdmin: false }))
+      tx((s) => {
+        delete s.roles[id]
+        audit(s, a.id, 'user.admin_revoke', 'User', id, { isAdmin: true, adminRole: before?.role ?? null, adminPermissions: before?.permissions ?? null }, { isAdmin: false, adminRole: null, adminPermissions: null })
+      })
       return detail(u)
     }),
     scheduleDeletion: (id, reason) => adminWrite((a) => {
       const u = findUser(id)
+      if (isSuper(id)) throw locked()
       if (!reason?.trim()) throw new PortError('validation', { reason: 'required' })
       notSelf(a, id)
       if (u.isAdmin || db.s.deletion[id] !== undefined) throw conflict()
@@ -662,6 +959,7 @@ export function createMockAdmin(d: MockAdminDeps) {
       d.mail(u.email, 'email', null)
       tx((s) => {
         s.deletionBy[id] = a.id
+        delete s.ownKeys[id]
         audit(s, a.id, 'user.delete_schedule', 'User', id, null, { deletionDueAt: iso(due), reason: reason.trim() })
       })
       return detail(u)
@@ -983,6 +1281,107 @@ export function createMockAdmin(d: MockAdminDeps) {
       return { items, nextCursor: from + 50 < all.length ? String(items.at(-1)!.id) : null }
     }),
     auditActions: () => adminRead(() => AUDIT_ACTIONS.map(x => ({ ...x }))),
+    // ---------- feature 007 ----------
+    analytics: days => adminRead(() => {
+      if (!Number.isInteger(days) || days < 1 || days > 365) throw new PortError('validation', { days: 'invalid' })
+      return analyticsOf(days)
+    }),
+    userTakes: (id, cursor, limit) => adminRead(() => {
+      findUser(id)
+      const all = [...(db.s.remoteTakes[id] ?? [])]
+        .sort((a, b) => b.recordedAt.localeCompare(a.recordedAt))
+        .map((x: RemoteTake): AdminTake => ({
+          id: x.id, scriptId: x.scriptId, scriptTitle: scriptTitle(id, x.scriptId), title: x.title, kind: x.kind, mime: x.mime, durationMs: x.durationMs,
+          sizeBytes: x.sizeBytes, recordedAt: x.recordedAt, starred: x.starred, provider: 'google_drive', state: x.state, createdAt: x.recordedAt,
+        }))
+      return paged(all, cursor, clampLimit(limit))
+    }),
+    userScripts: (id, cursor, limit) => adminRead(() => {
+      findUser(id)
+      const takes = db.s.remoteTakes[id] ?? []
+      const practice = read().practice.filter(x => x.userId === id)
+      const all = [...(db.s.scripts[id] ?? [])]
+        .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+        .map((x): AdminScript => ({
+          id: x.id, title: x.title, wordCount: words(x.body), archived: !!x.archivedAt, archivedAt: x.archivedAt, pinned: x.pinned, lastOpenedAt: x.lastOpenedAt,
+          takes: takes.filter(k => k.scriptId === x.id).length, practiceSessions: practice.filter(p => p.scriptId === x.id).length, createdAt: x.createdAt, updatedAt: x.updatedAt,
+        }))
+      return paged(all, cursor, clampLimit(limit))
+    }),
+    userLinks: (id, cursor, limit) => adminRead(() => {
+      findUser(id)
+      const all = allLinks().filter(l => l.userId === id).sort((a, b) => b.startedAt - a.startedAt).map(pubLink)
+      return paged(all, cursor, clampLimit(limit))
+    }),
+    userConnections: id => adminRead((): AdminConnections => {
+      const u = findUser(id)
+      st = read()
+      const storage = db.s.storage[id]
+      const key = ownKeysNow()[id]
+      return {
+        storage: storage && storage.state !== 'none' && storage.accountEmail
+          ? [{ provider: 'google_drive', accountEmail: storage.accountEmail, state: storage.state, linkedAt: iso(st.linkedAt[id] ?? Date.parse(u.createdAt)) }]
+          : [],
+        aiKeys: key ? [{ capability: 'text', provider: key.provider, last4: key.last4, checkOk: key.checkOk, checkedAt: iso(key.checkedAt) }] : [],
+        devices: (db.s.devices[id] ?? []).filter(x => x.platform !== 'web')
+          .map(x => ({ id: x.id, name: x.name, platform: x.platform === 'ios' || x.platform === 'android' ? x.platform : 'other' as const, lastUsedAt: x.lastUsedAt, createdAt: x.createdAt }))
+          .sort((a, b) => (b.lastUsedAt ?? '').localeCompare(a.lastUsedAt ?? '')),
+        webSessions: db.s.sessionUserId === id ? 1 : 0,
+      }
+    }),
+    userPreferences: id => adminRead((): AdminPreferences => {
+      const u = findUser(id)
+      return { locale: u.locale, theme: u.theme, reading: { ...u.reading }, syncMode: db.s.storage[id]?.syncMode ?? 'off' }
+    }),
+    admins: () => adminRead(() => ({
+      admins: db.s.users.filter(u => u.isAdmin).map(adminRow)
+        .sort((a, b) => (a.adminRole === 'super' ? 0 : 1) - (b.adminRole === 'super' ? 0 : 1) || a.email.localeCompare(b.email)),
+      sections: [...ADMIN_SECTIONS],
+    })),
+    addAdmin: input => adminWrite((a) => {
+      const byId = typeof input.userId === 'string' && input.userId !== ''
+      const byEmail = typeof input.email === 'string' && input.email !== ''
+      if (byId === byEmail) throw new PortError('validation', { userId: 'one_of' })
+      const permissions = checkPermissions(input.permissions)
+      const u = byId ? db.s.users.find(x => x.id === input.userId) : db.s.users.find(x => x.email === normalizeEmail(input.email!))
+      if (!u) throw new PortError('validation', byId ? { userId: 'invalid' } : { email: 'invalid' })
+      st = read()
+      if (u.isAdmin || statusOf(u.id) !== 'active') throw conflict()
+      db.write(() => (u.isAdmin = true))
+      tx((s) => {
+        s.roles[u.id] = { role: 'admin', permissions }
+        audit(s, a.id, 'user.admin_grant', 'User', u.id, { isAdmin: false, adminRole: null, adminPermissions: null }, { isAdmin: true, adminRole: 'admin', adminPermissions: permissions })
+      })
+      return adminRow(u)
+    }),
+    updateAdmin: (id, input) => adminWrite((a) => {
+      const u = findUser(id)
+      if (!u.isAdmin) throw new PortError('not_found')
+      if (isSuper(id)) throw locked()
+      notSelf(a, id)
+      const permissions = checkPermissions(input)
+      const before = roleOf(u)!.permissions
+      if (ADMIN_SECTIONS.some(x => before[x] !== permissions[x])) {
+        tx((s) => {
+          s.roles[id] = { role: 'admin', permissions }
+          audit(s, a.id, 'user.admin_permissions', 'User', id, { adminPermissions: before }, { adminPermissions: permissions })
+        })
+      }
+      return adminRow(u)
+    }),
+    removeAdmin: id => adminWrite((a) => {
+      const u = findUser(id)
+      if (!u.isAdmin) throw new PortError('not_found')
+      if (isSuper(id)) throw locked()
+      notSelf(a, id)
+      if (adminCount() <= 1) throw conflict()
+      const before = roleOf(u)!
+      db.write(() => (u.isAdmin = false))
+      tx((s) => {
+        delete s.roles[id]
+        audit(s, a.id, 'user.admin_revoke', 'User', id, { isAdmin: true, adminRole: before.role, adminPermissions: before.permissions }, { isAdmin: false, adminRole: null, adminPermissions: null })
+      })
+    }),
   }
 
   const settings: SettingsPort = {
@@ -992,8 +1391,46 @@ export function createMockAdmin(d: MockAdminDeps) {
     }),
   }
 
+  /** Feature 007: every admin method checks the caller's section level first (403 `forbidden` with section and need). */
+  function guard(port: AdminPort): AdminPort {
+    const out: Record<string, unknown> = {}
+    for (const key of Object.keys(ADMIN_ACCESS) as (keyof AdminPort)[]) {
+      const fn = port[key] as (...args: unknown[]) => Promise<unknown>
+      out[key] = (...args: unknown[]) => {
+        const no = denied(ADMIN_ACCESS[key])
+        return no ? d.call(() => { throw no }) : fn(...args)
+      }
+    }
+    return out as unknown as AdminPort
+  }
+
+  /** Feature 007: practice sessions (POST /api/practice-sessions). */
+  const practice: PracticePort = {
+    log: input => d.call((): PracticeSession => {
+      const userId = d.sessionUserId()
+      if (!userId) throw new PortError('unauthenticated')
+      const fields: Record<string, string> = {}
+      if (!Number.isInteger(input.durationS) || input.durationS < 1 || input.durationS > 21_600) fields.durationS = 'invalid'
+      if (typeof input.recorded !== 'boolean') fields.recorded = 'required'
+      if (!['web', 'app', 'phone'].includes(input.via)) fields.via = 'invalid'
+      const started = Date.parse(input.startedAt)
+      if (!Number.isFinite(started) || started > d.now() + 5 * 60_000) fields.startedAt = 'invalid'
+      if (Object.keys(fields).length) throw new PortError('validation', fields)
+      if (input.scriptId && !(db.s.scripts[userId] ?? []).some(x => x.id === input.scriptId)) throw new PortError('not_found')
+      const rec: InsightPractice = { id: uid('ps'), userId, scriptId: input.scriptId ?? null, startedAt: started, durationS: input.durationS, recorded: input.recorded, via: input.via, createdAt: d.now() }
+      tx(s => s.practice.push(rec))
+      return { id: rec.id, scriptId: rec.scriptId, startedAt: iso(rec.startedAt), durationS: rec.durationS, recorded: rec.recorded, via: rec.via, createdAt: iso(rec.createdAt) }
+    }),
+  }
+
   /** Hooks for the auth side of the mock (suspension, last active, admin deletions). */
   const hooks = {
+    /** Feature 007: the profile's role fields. */
+    profile: (u: Pick<User, 'id' | 'isAdmin'>) => {
+      const r = roleOf(u)
+      return { adminRole: r?.role ?? null, adminPermissions: r?.permissions ?? null }
+    },
+    isSuper,
     isSuspended: (userId: string) => !!read().suspensions[userId],
     /** An admin scheduled this deletion: signing in does not cancel it. */
     deletionByAdmin: (userId: string) => !!read().deletionBy[userId],
@@ -1017,9 +1454,20 @@ export function createMockAdmin(d: MockAdminDeps) {
       s.suspensions[userId] = { at: d.now(), reason, byId: MOCK_ADMIN_ID }
     }),
     unsuspend: (userId: string) => tx(s => delete s.suspensions[userId]),
+    /** Feature 007: make someone an admin with this role and these permissions (null removes the admin flag). */
+    setRole: (userId: string, role: AdminRole | null, permissions: AdminPermissionsInput = {}) => {
+      db.write((x) => {
+        const u = x.users.find(y => y.id === userId)
+        if (u) u.isAdmin = !!role
+      })
+      tx((x) => {
+        if (role) x.roles[userId] = { role, permissions: role === 'super' ? { ...ALL_EDIT } : { ...NONE, ...permissions } }
+        else delete x.roles[userId]
+      })
+    },
     summary: () => ({ people: db.s.users.length, admins: db.s.users.filter(u => u.isAdmin).length, waitlist: db.s.waitlist.length, invitations: db.s.invites.length, requests: db.s.requests.filter(r => r.state === 'pending').length, calls: callsAll().length, audit: read().audit.length }),
     reset: () => d.kv.removeItem(KEY),
   }
 
-  return { admin, settings, hooks, controls }
+  return { admin: guard(admin), settings, practice, hooks, controls }
 }

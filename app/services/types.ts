@@ -32,6 +32,10 @@ export interface User {
   reading: ReadingSettings
   /** Present when the real service is used; the mock has no admins. */
   isAdmin?: boolean
+  /** Feature 007: `super` (every permission, locked), `admin`, or null for everyone else. */
+  adminRole?: AdminRole | null
+  /** Feature 007: the level per admin section; null when not an admin. */
+  adminPermissions?: AdminPermissions | null
   createdAt: string
 }
 
@@ -258,6 +262,10 @@ export type PortErrorCode =
   | 'account_suspended'
   /** Feature 006 (backend 005): public sign-up while the sign-up mode is invite-only. */
   | 'signup_closed'
+  /** Feature 007: an admin whose level for the route's section is too low (403; `info.section`, `info.need`). */
+  | 'forbidden'
+  /** Feature 007: the super admin can't be edited, demoted, suspended, deleted or lose the admin flag (409). */
+  | 'super_admin_locked'
 
 export interface PortErrorInfo {
   balance?: number
@@ -265,6 +273,9 @@ export interface PortErrorInfo {
   reason?: string
   /** Seconds, from `Retry-After`. */
   retryAfter?: number
+  /** Feature 007 (`forbidden`): the section and the level the route needs. */
+  section?: AdminSection
+  need?: 'view' | 'edit'
 }
 
 export class PortError extends Error {
@@ -623,6 +634,8 @@ export interface AdminDashboard {
   ai: { creditsUsed: number; creditsUsedThisMonth: number; calls: number; failedCalls: number; ownKeyCalls: number }
   revenue: { currency: 'USD'; mrrCents: number; payingSubscriptions: number; payments: number; paymentsCents: number }
   attention: { pendingRequests: number; waitlistNotInvited: number }
+  /** Feature 007: headline counts for the period (ownKeyUsers is "now"). */
+  headlines: DashboardHeadlines
 }
 
 export interface PendingRequestRef {
@@ -641,6 +654,8 @@ export interface AdminUserRow {
   email: string
   name: string
   isAdmin: boolean
+  /** Feature 007. */
+  adminRole: AdminRole | null
   plan: string | null
   planEndsAt: string | null
   pendingRequest: PendingRequestRef | null
@@ -717,6 +732,9 @@ export interface AdminUserDetail {
   name: string
   locale: Locale
   isAdmin: boolean
+  /** Feature 007. */
+  adminRole: AdminRole | null
+  adminPermissions: AdminPermissions | null
   status: AdminStatus
   createdAt: string
   lastActiveAt: string | null
@@ -967,3 +985,190 @@ export interface AuditFilters {
 
 /** Feature-flag key rule (backend FR-023). */
 export const FLAG_KEY = /^[a-z][a-z0-9_.-]{0,63}$/
+
+// ---------------------------------------------------------------------------------------------------------------
+// Feature 007 (backend specs/007-admin-insights/contracts/openapi.yaml): admin roles and per-section permissions,
+// product analytics, read-only views of one person's takes, scripts, links, connections and preferences, practice.
+// ---------------------------------------------------------------------------------------------------------------
+
+/** The seven admin sections, in display order. */
+export const ADMIN_SECTIONS = ['users', 'money', 'ai', 'plans', 'settings', 'audit', 'admins'] as const
+export type AdminSection = (typeof ADMIN_SECTIONS)[number]
+/** `edit` includes `view`. */
+export type AdminLevel = 'none' | 'view' | 'edit'
+export type AdminRole = 'super' | 'admin'
+/** Always all seven sections in answers. */
+export type AdminPermissions = Record<AdminSection, AdminLevel>
+/** Any of the sections; left out = none. */
+export type AdminPermissionsInput = Partial<AdminPermissions>
+
+export interface AdminRow {
+  id: string
+  email: string
+  name: string
+  adminRole: AdminRole
+  adminPermissions: AdminPermissions
+  status: AdminStatus
+  lastActiveAt: string | null
+  createdAt: string
+}
+
+export interface AdminList {
+  admins: AdminRow[]
+  sections: AdminSection[]
+}
+
+export interface DashboardHeadlines {
+  /** Take records created in the period. */
+  takes: number
+  /** Their total length in minutes, one decimal. */
+  minutes: number
+  scripts: number
+  practiceSessions: number
+  phoneLinks: number
+  /** People with an own AI key saved now. */
+  ownKeyUsers: number
+}
+
+export interface DayCount {
+  date: string
+  count: number
+}
+
+/** Lower bound inclusive: lt1m < 60 s ≤ 1to5 < 300 s ≤ 5to15 < 900 s ≤ 15to30 < 1800 s ≤ gt30. */
+export const DURATION_BUCKETS = ['lt1m', '1to5', '5to15', '15to30', 'gt30'] as const
+export type DurationBucket = (typeof DURATION_BUCKETS)[number]
+
+export type PracticeVia = 'web' | 'app' | 'phone'
+
+export interface AnalyticsAiRow {
+  provider: string
+  paidWith: PaidWith
+  calls: number
+  failed: number
+  units: number
+  unit: 'words' | 'seconds'
+  credits: number
+}
+
+export interface AdminAnalytics {
+  generatedAt: string
+  period: { days: number; from: string; to: string }
+  takes: {
+    count: number
+    totalMinutes: number
+    durationBuckets: Record<DurationBucket, number>
+    byDay: { date: string; count: number; minutes: number }[]
+    byKind: { audio: number; video: number }
+  }
+  scripts: { total: number; active: number; archived: number; createdInPeriod: number }
+  practice: {
+    sessions: number
+    byDay: DayCount[]
+    avgDurationS: number | null
+    /** 0..1, null when there are no sessions. */
+    recordedShare: number | null
+    usersPractising: number
+    byVia: Record<PracticeVia, number>
+  }
+  phoneLinks: {
+    started: number
+    byHostKind: { web: number; app: number }
+    byDay: DayCount[]
+    avgDurationS: number | null
+  }
+  drives: { linked: number; byProvider: Record<string, number> }
+  ownKeys: { users: number; byProvider: Record<AiProvider, number> }
+  aiUsage: AnalyticsAiRow[]
+}
+
+export interface PracticeSession {
+  id: string
+  scriptId: string | null
+  startedAt: string
+  durationS: number
+  recorded: boolean
+  via: PracticeVia
+  createdAt: string
+}
+
+export interface PracticeInput {
+  scriptId?: string | null
+  startedAt: string
+  /** Whole seconds, 1..21600. */
+  durationS: number
+  recorded: boolean
+  via: PracticeVia
+}
+
+/** Never a provider file id or any media. */
+export interface AdminTake {
+  id: string
+  scriptId: string | null
+  scriptTitle: string | null
+  title: string
+  kind: 'audio' | 'video'
+  mime: string
+  durationMs: number
+  sizeBytes: number
+  recordedAt: string
+  starred: boolean
+  provider: string
+  state: 'uploading' | 'backed_up' | 'unreachable' | 'failed'
+  createdAt: string
+}
+
+/** Never the body, marks or reading position. */
+export interface AdminScript {
+  id: string
+  title: string
+  wordCount: number
+  archived: boolean
+  archivedAt: string | null
+  pinned: boolean
+  lastOpenedAt: string | null
+  takes: number
+  practiceSessions: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface AdminLinkRemote {
+  id: string
+  kind: 'browser' | 'app'
+  name: string
+  status: 'pending' | 'active' | 'replaced' | 'declined' | 'ended'
+  pairedAt: string
+  lastSeenAt: string | null
+  endedAt: string | null
+}
+
+export interface AdminLink {
+  id: string
+  scriptId: string | null
+  scriptTitle: string | null
+  hostKind: 'web' | 'app'
+  hostLabel: string
+  player: 'host' | 'remote'
+  state: 'waiting' | 'connected' | 'ended'
+  startedAt: string
+  lastUsedAt: string
+  endedAt: string | null
+  endReason: string | null
+  remotes: AdminLinkRemote[]
+}
+
+export interface AdminConnections {
+  storage: { provider: string; accountEmail: string; state: 'linked' | 'revoked'; linkedAt: string }[]
+  aiKeys: { capability: 'text'; provider: AiProvider; last4: string; checkOk: boolean; checkedAt: string }[]
+  devices: AdminDevice[]
+  webSessions: number
+}
+
+export interface AdminPreferences {
+  locale: Locale
+  theme: Theme
+  /** The 001 reading settings as saved. */
+  reading: Partial<ReadingSettings> & Record<string, unknown>
+  syncMode: SyncMode
+}

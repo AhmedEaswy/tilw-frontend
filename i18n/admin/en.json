@@ -69,7 +69,9 @@
       "calls": "AI calls",
       "ledger": "Credit ledger",
       "audit": "Audit log",
-      "settings": "Settings"
+      "settings": "Settings",
+      "analytics": "Analytics",
+      "admins": "Admins"
     },
     "list": {
       "all": "All",
@@ -171,7 +173,20 @@
       "drives": "Linked drives",
       "takes": "Takes",
       "inPeriod": "In period",
-      "newTakes": "New takes"
+      "newTakes": "New takes",
+      "usage": "Product use",
+      "toAnalytics": "Open analytics →",
+      "newInPeriod": "New in the period",
+      "now": "Now",
+      "hl": {
+        "takes": "Recordings",
+        "minutes": "Minutes recorded",
+        "scripts": "Scripts",
+        "practiceSessions": "Practice sessions",
+        "phoneLinks": "Phone links",
+        "drives": "Linked drives",
+        "ownKeyUsers": "Own-key users"
+      }
     },
     "users": {
       "sub": "Newest first, 50 at a time.",
@@ -206,7 +221,8 @@
       "why": {
         "self": "This is your own account: use your own account settings.",
         "isAdmin": "This person is an admin: remove the admin flag first.",
-        "notActive": "A suspended person, or one leaving, can’t be made an admin."
+        "notActive": "A suspended person, or one leaving, can’t be made an admin.",
+        "super": "This is the super admin: their account can't be changed by anyone."
       },
       "suspendedBy": "Suspended by {by} on {date}: {reason}",
       "deletionDue": "The account will be deleted on {date}.",
@@ -547,6 +563,7 @@
         "user_password_reset": "Sent a reset link",
         "user_plan_change": "Changed a plan",
         "user_admin_grant": "Made an admin",
+        "user_admin_permissions": "Changed admin permissions",
         "user_admin_revoke": "Removed an admin",
         "user_delete_schedule": "Scheduled a deletion",
         "user_delete_cancel": "Cancelled a deletion",
@@ -638,6 +655,295 @@
         "keyRule": "Lower-case letters, digits and _ . - only, starting with a letter, up to 64 characters.",
         "removeTitle": "Remove the flag {key}?",
         "removeText": "The web and phone apps stop seeing it at once; code that reads it treats it as off."
+      }
+    },
+    "analytics": {
+      "recordings": "Recordings",
+      "minutes": "{n} minutes",
+      "practiceSessions": "Practice sessions",
+      "people": "{n} people",
+      "phoneLinks": "Phone links",
+      "avgLength": "Average {time}",
+      "newScripts": "New scripts",
+      "scriptsNow": "{n} scripts in all",
+      "recordingsTitle": "Recordings",
+      "recordingsNote": "Take records made in the period",
+      "byLength": "By length",
+      "length": "Length",
+      "bucket": {
+        "lt1m": "Under 1 minute",
+        "1to5": "1–5 minutes",
+        "5to15": "5–15 minutes",
+        "15to30": "15–30 minutes",
+        "gt30": "Over 30 minutes"
+      },
+      "byKind": "Video and audio",
+      "video": "Video",
+      "audio": "Audio",
+      "recordingsByDay": "Recordings per day",
+      "share": "Share",
+      "practiceTitle": "Practice",
+      "practiceByDay": "Practice sessions per day",
+      "avgDuration": "Average length",
+      "recordedShare": "Ended with a recording",
+      "usersPractising": "People practising",
+      "byVia": "Where they practised",
+      "via": {
+        "web": "Web studio",
+        "app": "Tilw app",
+        "phone": "From a phone link"
+      },
+      "linksTitle": "Phone links",
+      "linksByDay": "Phone links started per day",
+      "linksStarted": "Started",
+      "avgLinkDuration": "Average length (ended links)",
+      "byHost": "Studio side",
+      "host": {
+        "web": "Web studio",
+        "app": "Tilw app"
+      },
+      "scriptsTitle": "Scripts",
+      "scriptsTotal": "All scripts now",
+      "scriptsActive": "Active",
+      "scriptsArchived": "Archived",
+      "scriptsCreated": "Created in the period",
+      "drivesTitle": "Linked drives",
+      "keysTitle": "People with their own AI key",
+      "now": "Now",
+      "provider": "Provider",
+      "linked": "Linked",
+      "people_col": "People",
+      "aiTitle": "AI use by provider and who paid",
+      "paidWith": "Paid with",
+      "paid": {
+        "credits": "Tilw credits",
+        "own_key": "Own key"
+      },
+      "calls": "Calls",
+      "failed": "Failed",
+      "units": "Asked for",
+      "unit": {
+        "words": "{n} words",
+        "seconds": "{n} s of audio"
+      },
+      "credits": "Credits",
+      "total": "Total",
+      "noAi": "No AI calls in this period."
+    },
+    "userTabs": {
+      "label": "Account sections",
+      "readOnly": "You can view this account. Changing it needs edit access to the right sections.",
+      "tab": {
+        "overview": "Overview",
+        "takes": "Recordings",
+        "scripts": "Scripts",
+        "connections": "Connections",
+        "settings": "Settings",
+        "activity": "Activity"
+      },
+      "takes": {
+        "title": "Recordings",
+        "take": "Take",
+        "kind": "Type",
+        "length": "Length",
+        "size": "Size",
+        "recorded": "Recorded",
+        "state": "Backup",
+        "video": "Video",
+        "audio": "Audio",
+        "starred": "Starred",
+        "noScript": "No script",
+        "empty": "No recordings yet. Only take records are listed here, never the files.",
+        "st": {
+          "uploading": "Uploading",
+          "backed_up": "Backed up",
+          "unreachable": "Unreachable",
+          "failed": "Failed"
+        }
+      },
+      "scripts": {
+        "title": "Scripts",
+        "script": "Script",
+        "words": "Words",
+        "takes": "Takes",
+        "practice": "Practice",
+        "opened": "Last opened",
+        "updated": "Updated",
+        "pinned": "Pinned",
+        "archived": "Archived",
+        "untitled": "Untitled",
+        "empty": "No scripts yet."
+      },
+      "conn": {
+        "storage": "Linked storage",
+        "noStorage": "No storage linked.",
+        "since": "since {date}",
+        "storageState": {
+          "linked": "Linked",
+          "revoked": "Access revoked"
+        },
+        "aiKey": "Own AI key",
+        "noKey": "No own key: AI tools use Tilw credits.",
+        "keyOk": "Works",
+        "keyFailed": "Last check failed",
+        "checked": "checked {date}",
+        "devices": "Sessions and devices",
+        "noDevices": "No app devices signed in.",
+        "platform": {
+          "ios": "iOS",
+          "android": "Android",
+          "other": "Other"
+        }
+      },
+      "links": {
+        "title": "Phone links",
+        "script": "Script",
+        "host": "Studio",
+        "remotes": "Phones",
+        "state": "State",
+        "started": "Started",
+        "ended": "Ended",
+        "empty": "No phone links.",
+        "hostKind": {
+          "web": "Web studio",
+          "app": "Tilw app"
+        },
+        "player": {
+          "host": "reads on the studio",
+          "remote": "reads on the phone"
+        },
+        "remoteKind": {
+          "browser": "Browser",
+          "app": "App"
+        },
+        "remoteStatus": {
+          "pending": "Waiting",
+          "active": "Connected",
+          "replaced": "Replaced",
+          "declined": "Declined",
+          "ended": "Ended"
+        },
+        "st": {
+          "waiting": "Waiting",
+          "connected": "Connected",
+          "ended": "Ended"
+        },
+        "reason": {
+          "owner": "ended in the studio",
+          "host_ended": "ended in the studio",
+          "remote": "ended on the phone",
+          "idle": "idle",
+          "script_deleted": "script deleted",
+          "signed_out": "signed out",
+          "device_revoked": "device removed"
+        }
+      },
+      "prefs": {
+        "general": "Language and appearance",
+        "locale": "Language",
+        "theme": "Theme",
+        "themes": {
+          "system": "Follow the device",
+          "light": "Light",
+          "dark": "Dark"
+        },
+        "sync": "Recording backup",
+        "syncModes": {
+          "off": "Off",
+          "manual": "Manual",
+          "auto": "Automatic"
+        },
+        "readingTitle": "Reading settings",
+        "reading": {
+          "mode": "Mode",
+          "wpm": "Speed",
+          "fontSize": "Text size",
+          "mirror": "Mirrored",
+          "lineWidth": "Line width",
+          "countdownSec": "Countdown"
+        },
+        "value": {
+          "constant": "Constant speed",
+          "manual": "Manual",
+          "narrow": "Narrow",
+          "medium": "Medium",
+          "wide": "Wide"
+        },
+        "on": "On",
+        "off": "Off",
+        "seconds": "{n} s",
+        "wpm": "{n} words a minute",
+        "readOnly": "Read only: only the person can change their settings."
+      },
+      "activity": {
+        "title": "Admin activity on this account"
+      }
+    },
+    "admins": {
+      "sub": "Who can use this console, and what each admin can see and change.",
+      "addButton": "Add admin",
+      "addTitle": "Add an admin",
+      "editTitle": "Permissions · {name}",
+      "add": "Add admin",
+      "save": "Save permissions",
+      "edit": "Permissions",
+      "remove": "Remove admin",
+      "admin": "Admin",
+      "role": "Role",
+      "permissions": "Permissions",
+      "lastActive": "Last active",
+      "super": "Super admin",
+      "roleAdmin": "Admin",
+      "locked": "Locked",
+      "you": "You",
+      "everything": "Everything",
+      "nothing": "Nothing yet",
+      "lockedSuper": "The super admin can't be changed or removed.",
+      "lockedSelf": "You can't change your own access.",
+      "lockNote": "The super admin has every permission and can't be changed, suspended or deleted by anyone. Removing an admin keeps their account.",
+      "needEdit": "Managing admins needs edit access to Admins. Ask the super admin.",
+      "matrix": "Permissions by section",
+      "section": "Section",
+      "setAll": "Set every section to {level}",
+      "level": {
+        "none": "None",
+        "view": "View",
+        "edit": "Edit"
+      },
+      "sections": {
+        "users": "People",
+        "money": "Money",
+        "ai": "AI",
+        "plans": "Plans and quotas",
+        "settings": "Settings",
+        "audit": "Audit log",
+        "admins": "Admins"
+      },
+      "sectionHint": {
+        "users": "People, waitlist, invitations, analytics",
+        "money": "Subscriptions, requests, payments, plan changes",
+        "ai": "AI usage, calls, credits",
+        "plans": "Plans, limits, overrides",
+        "settings": "Sign-up mode, platform keys, feature flags",
+        "audit": "The audit log",
+        "admins": "Manage admins (all or nothing)"
+      },
+      "person": "Person",
+      "personPlaceholder": "Search by name or email",
+      "personHint": "They need an active account. Admins, suspended people and people leaving can't be picked.",
+      "pickPerson": "Choose a person first.",
+      "removeTitle": "Remove {name} as an admin?",
+      "removeText": "{name} ({email}) keeps their account but loses access to this console.",
+      "toastAdded": "{name} is now an admin.",
+      "toastSaved": "Permissions saved for {name}.",
+      "toastRemoved": "{name} is no longer an admin.",
+      "err": {
+        "cannotAdd": "This person can't be made an admin: they are one already, suspended, or leaving.",
+        "self": "You can't change your own access.",
+        "cannotRemove": "Can't remove: it's your own account or the last admin.",
+        "locked": "The super admin can't be changed.",
+        "noAccount": "There's no account with this email.",
+        "invalid": "These permissions weren't accepted. Check each section and try again."
       }
     }
   }

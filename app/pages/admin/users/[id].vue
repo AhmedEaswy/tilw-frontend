@@ -4,6 +4,9 @@
  * header with status and every account action, then plan and subscriptions, effective limits with overrides, recent
  * admin activity; on the side credits, storage, sessions and devices, scripts and this month's AI use.
  * Actions the service always refuses are disabled with the reason (FR-010); suspend and deletion need the email typed.
+ * Feature 007: `.adm-seg` tabs (in the address as `?tab=`) — Overview (the above), Recordings, Scripts, Connections,
+ * Settings (read-only preferences) and Activity; each tab loads its own resource the first time it opens. Actions
+ * the admin's permissions don't allow are hidden; the super admin's account is locked.
  */
 import { isPortError, type AdminLimitRow, type AdminSubscription, type AuditEntry } from '~/services/types'
 import { actionAvailability, dateOnly, dateTime, money, num, utc, type ActionKey } from '~/utils/admin'
@@ -16,6 +19,25 @@ const user = useAdminUserStore()
 const errorText = useErrorText()
 const { show } = useToast()
 const id = computed(() => String(route.params.id))
+const { can } = useAdminPermissions()
+
+// ---------- feature 007: tabs ----------
+const TABS = ['overview', 'takes', 'scripts', 'connections', 'settings', 'activity'] as const
+type Tab = (typeof TABS)[number]
+const tabs = computed(() => TABS.filter(x => x !== 'activity' || can('audit')))
+const tab = computed<Tab>(() => {
+  const q = String(route.query.tab ?? '')
+  return (tabs.value as readonly string[]).includes(q) ? (q as Tab) : 'overview'
+})
+const tabTo = (x: Tab) => ({ query: { ...route.query, tab: x === 'overview' ? undefined : x } })
+const PANELS = {
+  takes: resolveComponent('AdminUserTakes'),
+  scripts: resolveComponent('AdminUserScripts'),
+  connections: resolveComponent('AdminUserConnections'),
+  settings: resolveComponent('AdminUserPreferences'),
+  activity: resolveComponent('AdminUserActivity'),
+}
+const panel = computed(() => (tab.value === 'overview' ? null : PANELS[tab.value]))
 const d = computed(() => (user.detail?.id === id.value ? user.detail : null))
 useHead({ title: () => `${d.value?.name ?? t('admin.nav.users')} · ${t('admin.title')}` })
 
@@ -23,7 +45,11 @@ const history = ref<AdminSubscription[]>([])
 const activity = ref<AuditEntry[]>([])
 async function loadSide() {
   const api = useServices().admin
-  const [h, a] = await Promise.allSettled([api.userSubscriptions(id.value), api.auditLog({ targetType: 'User', targetId: id.value }, null)])
+  // Feature 007: only what this admin may read (money for subscriptions, audit for the activity).
+  const [h, a] = await Promise.allSettled([
+    can('money') ? api.userSubscriptions(id.value) : Promise.resolve([]),
+    can('audit') ? api.auditLog({ targetType: 'User', targetId: id.value }, null) : Promise.resolve({ items: [], nextCursor: null }),
+  ])
   history.value = h.status === 'fulfilled' ? h.value : []
   activity.value = a.status === 'fulfilled' ? a.value.items.slice(0, 5) : []
 }
@@ -34,8 +60,24 @@ async function load() {
 watch(id, load, { immediate: true })
 watch(() => user.detail, () => d.value && void loadSide())
 
-const can = computed(() => (d.value ? actionAvailability(d.value, auth.user?.id) : null))
-const why = (k: ActionKey) => (can.value?.[k].why ? t(`admin.detail.why.${can.value[k].why}`) : undefined)
+const avail = computed(() => (d.value ? actionAvailability(d.value, auth.user?.id) : null))
+const isSuperTarget = computed(() => d.value?.adminRole === 'super')
+function why(k: ActionKey) {
+  const w = avail.value?.[k].why
+  // Your own account says so first; anyone else's super admin account is locked.
+  if (w === 'self') return t('admin.detail.why.self')
+  if (isSuperTarget.value && k !== 'reset') return t('admin.detail.why.super')
+  return w ? t(`admin.detail.why.${w}`) : undefined
+}
+/** Feature 007: what this admin may do here (the section's edit level), and never anything to the super admin. */
+const allowed = computed(() => ({
+  users: can('users', 'edit'),
+  money: can('money', 'edit'),
+  ai: can('ai', 'edit'),
+  plans: can('plans', 'edit'),
+  admins: can('admins', 'edit') && !isSuperTarget.value,
+}))
+const anyAction = computed(() => allowed.value.users || allowed.value.money || allowed.value.ai || allowed.value.admins)
 const name = (ar: string | null, en: string | null) => (locale.value === 'ar' ? ar : en) ?? '—'
 const tone = computed(() => (d.value?.status === 'active' ? 'success' : d.value?.status === 'suspended' ? 'error' : 'warning'))
 const limitValue = (l: AdminLimitRow) => (l.type === 'bool' ? (l.value ? t('admin.limits.on') : t('admin.limits.off')) : l.type === 'list' ? (Array.isArray(l.value) && l.value.length ? l.value.join(', ') : '—') : l.value === null ? t('admin.limits.unlimited') : num(l.value as number))
@@ -74,7 +116,7 @@ async function run(reason: string) {
     }
     confirm.value = null
   } catch (e) {
-    confirmError.value = isPortError(e, 'conflict') ? t(`admin.detail.conflict.${k}`) : errorText(e)
+    confirmError.value = isPortError(e, 'conflict') ? t(`admin.detail.conflict.${k}`) : isPortError(e, 'super_admin_locked') ? t('admin.detail.why.super') : errorText(e)
   }
 }
 const planOpen = ref(false)
@@ -104,7 +146,8 @@ const firstLimit = computed(() => d.value?.limits[0] ?? null)
             <h1>{{ d.name }}</h1>
             <span class="adm-chip" :class="tone" data-testid="status">{{ t(`admin.status.${d.status}`) }}</span>
             <span class="adm-chip info">{{ name(d.plan.nameAr, d.plan.nameEn) }}</span>
-            <span v-if="d.isAdmin" class="adm-chip info">{{ t('admin.status.admin') }}</span>
+            <span v-if="d.adminRole === 'super'" class="adm-chip warning" data-testid="super-chip">{{ t('admin.admins.super') }}</span>
+            <span v-else-if="d.isAdmin" class="adm-chip info">{{ t('admin.status.admin') }}</span>
           </div>
           <p class="adm-sub">
             <span class="adm-ltr">{{ d.email }}</span> · {{ t('admin.detail.joined', { date: dateOnly(d.createdAt, locale) }) }}
@@ -113,20 +156,23 @@ const firstLimit = computed(() => d.value?.limits[0] ?? null)
         </div>
       </div>
 
-      <div class="actions" role="group" :aria-label="t('admin.detail.actions')">
-        <button type="button" class="adm-btn" @click="planOpen = true">{{ t('admin.detail.a.changePlan') }}</button>
-        <button type="button" class="adm-btn" @click="creditsOpen = true">{{ t('admin.detail.a.credits') }}</button>
-        <button type="button" class="adm-btn" :disabled="!can?.reset.enabled" :title="why('reset')" @click="ask('reset')">{{ t('admin.detail.a.reset') }}</button>
-        <button v-if="can?.makeAdmin.shown" type="button" class="adm-btn ghost" :disabled="!can.makeAdmin.enabled" :title="why('makeAdmin')" @click="ask('makeAdmin')">{{ t('admin.detail.a.makeAdmin') }}</button>
-        <button v-if="can?.revokeAdmin.shown" type="button" class="adm-btn ghost" :disabled="!can.revokeAdmin.enabled" :title="why('revokeAdmin')" @click="ask('revokeAdmin')">{{ t('admin.detail.a.revokeAdmin') }}</button>
-        <button v-if="can?.unsuspend.shown" type="button" class="adm-btn" @click="ask('unsuspend')">{{ t('admin.detail.a.unsuspend') }}</button>
-        <button v-if="can?.suspend.shown" type="button" class="adm-btn danger" :disabled="!can.suspend.enabled" :title="why('suspend')" @click="ask('suspend')">{{ t('admin.detail.a.suspend') }}</button>
-        <button v-if="can?.cancelDeletion.shown" type="button" class="adm-btn" @click="ask('cancelDeletion')">{{ t('admin.detail.a.cancelDeletion') }}</button>
-        <button v-if="can?.scheduleDeletion.shown" type="button" class="adm-btn danger" :disabled="!can.scheduleDeletion.enabled" :title="why('scheduleDeletion')" @click="ask('scheduleDeletion')">{{ t('admin.detail.a.scheduleDeletion') }}</button>
+      <div v-if="anyAction" class="actions" role="group" :aria-label="t('admin.detail.actions')">
+        <button v-if="allowed.money" type="button" class="adm-btn" @click="planOpen = true">{{ t('admin.detail.a.changePlan') }}</button>
+        <button v-if="allowed.ai" type="button" class="adm-btn" @click="creditsOpen = true">{{ t('admin.detail.a.credits') }}</button>
+        <button v-if="allowed.users" type="button" class="adm-btn" :disabled="!avail?.reset.enabled" :title="why('reset')" @click="ask('reset')">{{ t('admin.detail.a.reset') }}</button>
+        <button v-if="allowed.admins && avail?.makeAdmin.shown" type="button" class="adm-btn ghost" :disabled="!avail.makeAdmin.enabled" :title="why('makeAdmin')" @click="ask('makeAdmin')">{{ t('admin.detail.a.makeAdmin') }}</button>
+        <button v-if="allowed.admins && avail?.revokeAdmin.shown" type="button" class="adm-btn ghost" :disabled="!avail.revokeAdmin.enabled" :title="why('revokeAdmin')" @click="ask('revokeAdmin')">{{ t('admin.detail.a.revokeAdmin') }}</button>
+        <template v-if="allowed.users">
+          <button v-if="avail?.unsuspend.shown" type="button" class="adm-btn" @click="ask('unsuspend')">{{ t('admin.detail.a.unsuspend') }}</button>
+          <button v-if="avail?.suspend.shown" type="button" class="adm-btn danger" :disabled="!avail.suspend.enabled || isSuperTarget" :title="why('suspend')" @click="ask('suspend')">{{ t('admin.detail.a.suspend') }}</button>
+          <button v-if="avail?.cancelDeletion.shown" type="button" class="adm-btn" @click="ask('cancelDeletion')">{{ t('admin.detail.a.cancelDeletion') }}</button>
+          <button v-if="avail?.scheduleDeletion.shown" type="button" class="adm-btn danger" :disabled="!avail.scheduleDeletion.enabled || isSuperTarget" :title="why('scheduleDeletion')" @click="ask('scheduleDeletion')">{{ t('admin.detail.a.scheduleDeletion') }}</button>
+        </template>
       </div>
-      <p v-if="can && (!can.suspend.enabled || !can.scheduleDeletion.enabled || !can.reset.enabled)" class="adm-note" data-testid="why">
+      <p v-if="allowed.users && avail && (isSuperTarget || !avail.suspend.enabled || !avail.scheduleDeletion.enabled || !avail.reset.enabled)" class="adm-note" data-testid="why">
         {{ why('suspend') ?? why('scheduleDeletion') ?? why('reset') }}
       </p>
+      <p v-else-if="!anyAction" class="adm-note" data-testid="read-only">{{ t('admin.userTabs.readOnly') }}</p>
       <p v-if="d.suspension" class="adm-note error">
         {{ t('admin.detail.suspendedBy', { by: d.suspension.byEmail ?? t('admin.audit.deletedAdmin'), date: dateTime(d.suspension.at, locale), reason: d.suspension.reason }) }}
       </p>
@@ -135,9 +181,17 @@ const firstLimit = computed(() => d.value?.limits[0] ?? null)
         {{ d.deletionBy ? t('admin.detail.deletionByAdmin') : t('admin.detail.deletionBySelf') }}
       </p>
 
-      <div class="grid">
+      <nav class="adm-seg tabs" :aria-label="t('admin.userTabs.label')" data-testid="user-tabs">
+        <NuxtLink v-for="x in tabs" :key="x" :to="tabTo(x)" replace :aria-current="tab === x ? 'page' : undefined">{{ t(`admin.userTabs.tab.${x}`) }}</NuxtLink>
+      </nav>
+
+      <KeepAlive>
+        <component :is="panel" v-if="panel" :key="`${tab}-${d.id}`" :user-id="d.id" />
+      </KeepAlive>
+
+      <div v-show="tab === 'overview'" class="grid">
         <div class="col">
-          <section class="adm-card adm-card-pad">
+          <section v-if="can('money')" class="adm-card adm-card-pad">
             <h2>{{ t('admin.detail.plan') }}</h2>
             <dl class="adm-kv">
               <div><dt>{{ t('admin.detail.planInForce') }}</dt><dd>{{ name(d.plan.nameAr, d.plan.nameEn) }}{{ d.plan.subscription ? ` · ${t(`admin.period.${d.plan.subscription.period}`)}` : '' }}</dd></div>
@@ -166,12 +220,12 @@ const firstLimit = computed(() => d.value?.limits[0] ?? null)
           <section class="adm-card">
             <div class="adm-toolbar">
               <h2 class="adm-card-title">{{ t('admin.detail.limits') }}</h2>
-              <button type="button" class="adm-link adm-grow" :disabled="!firstLimit" @click="overrideFor = firstLimit">{{ t('admin.detail.addOverride') }}</button>
+              <button v-if="allowed.plans" type="button" class="adm-link adm-grow" :disabled="!firstLimit" @click="overrideFor = firstLimit">{{ t('admin.detail.addOverride') }}</button>
             </div>
             <div class="adm-scroll">
               <table class="adm-tbl">
                 <caption>{{ t('admin.detail.limits') }}</caption>
-                <thead><tr><th scope="col">{{ t('admin.limits.limit') }}</th><th scope="col">{{ t('admin.limits.value') }}</th><th scope="col" class="n">{{ t('admin.limits.usage') }}</th><th scope="col" class="act"><span class="sr">{{ t('admin.limits.edit') }}</span></th></tr></thead>
+                <thead><tr><th scope="col">{{ t('admin.limits.limit') }}</th><th scope="col">{{ t('admin.limits.value') }}</th><th scope="col" class="n">{{ t('admin.limits.usage') }}</th><th v-if="allowed.plans" scope="col" class="act"><span class="sr">{{ t('admin.limits.edit') }}</span></th></tr></thead>
                 <tbody>
                   <tr v-for="l in d.limits" :key="l.key">
                     <td><span class="adm-person"><b>{{ locale === 'ar' ? l.labelAr : l.labelEn }}</b><small class="adm-ltr">{{ l.key }}</small></span></td>
@@ -180,14 +234,14 @@ const firstLimit = computed(() => d.value?.limits[0] ?? null)
                       <span v-if="l.overridden" class="adm-chip info">{{ override(l.key)?.endsAt ? t('admin.limits.overrideUntil', { date: dateOnly(override(l.key)!.endsAt, locale) }) : t('admin.limits.override') }}</span>
                     </td>
                     <td class="n">{{ l.usage ?? '—' }}</td>
-                    <td class="act"><button type="button" class="adm-link" :aria-label="`${t('admin.limits.edit')} · ${locale === 'ar' ? l.labelAr : l.labelEn}`" @click="overrideFor = l">{{ t('admin.limits.edit') }}</button></td>
+                    <td v-if="allowed.plans" class="act"><button type="button" class="adm-link" :aria-label="`${t('admin.limits.edit')} · ${locale === 'ar' ? l.labelAr : l.labelEn}`" @click="overrideFor = l">{{ t('admin.limits.edit') }}</button></td>
                   </tr>
                 </tbody>
               </table>
             </div>
           </section>
 
-          <section class="adm-card">
+          <section v-if="can('audit')" class="adm-card">
             <div class="adm-toolbar">
               <h2 class="adm-card-title">{{ t('admin.detail.activity') }}</h2>
               <NuxtLink class="adm-link adm-grow" :to="`/admin/audit?targetType=User&targetId=${encodeURIComponent(d.id)}`">{{ t('admin.detail.fullLog') }}</NuxtLink>
@@ -199,7 +253,7 @@ const firstLimit = computed(() => d.value?.limits[0] ?? null)
 
         <aside class="side">
           <section class="adm-card adm-card-pad">
-            <div class="adm-card-head"><h2>{{ t('admin.detail.credits') }}</h2><button type="button" class="adm-link" @click="creditsOpen = true">{{ t('admin.detail.a.credits') }}</button></div>
+            <div class="adm-card-head"><h2>{{ t('admin.detail.credits') }}</h2><button v-if="allowed.ai" type="button" class="adm-link" @click="creditsOpen = true">{{ t('admin.detail.a.credits') }}</button></div>
             <dl class="adm-kv">
               <div><dt>{{ t('admin.detail.balance') }}</dt><dd class="adm-ltr" data-testid="balance">{{ num(d.credits.balance) }}</dd></div>
               <div><dt>{{ t('admin.detail.monthly') }}</dt><dd>{{ t('admin.detail.monthlyLeft', { n: d.credits.monthly, left: d.credits.monthlyLeft }) }}</dd></div>
@@ -265,6 +319,10 @@ const firstLimit = computed(() => d.value?.limits[0] ?? null)
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
+}
+.tabs {
+  justify-self: start;
   flex-wrap: wrap;
 }
 .actions {

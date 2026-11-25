@@ -3,8 +3,9 @@
  * Lists come back as `Page<T>`: `GET /api/admin/users` keeps its array answer with the cursor in `X-Next-Cursor`;
  * the other paged lists answer `{<items>, nextCursor}`; the audit log's cursor is an integer id.
  */
-import type { AdminPort, SettingsPort } from '../ports'
+import type { AdminPort, PracticePort, SettingsPort } from '../ports'
 import type {
+  AdminAnalytics, AdminConnections, AdminLink, AdminList, AdminPreferences, AdminRow, AdminScript, AdminTake, PracticeSession,
   AdminAiCall, AdminDashboard, AdminOverride, AdminPlan, AdminPlanLimit, AdminSettings, AdminSubscription, AdminSubscriptionRow,
   AdminUpgradeRequest, AdminUserDetail, AdminUserRow, AiKeyState, AiUsage, AuditAction, AuditEntry, CreditEntry, FeatureFlag,
   Invitation, LedgerEntry, LimitDefinition, Page, PaymentsPage, PublicSettings, WaitlistEntry,
@@ -28,6 +29,11 @@ function page<T>(key: string) {
     items: ((res?.[key] as T[] | undefined) ?? []),
     nextCursor: (res?.nextCursor as string | null | undefined) ?? null,
   })
+}
+
+/** `{<key>: T[], nextCursor}` → exactly `Page<T>` (feature 007 sub-resources). */
+function items<T>(key: string) {
+  return (res: Record<string, unknown> | null): Page<T> => ({ items: ((res?.[key] as T[] | undefined) ?? []), nextCursor: (res?.nextCursor as string | null | undefined) ?? null })
 }
 
 export function createHttpAdmin(api: HttpClient): AdminPort {
@@ -101,7 +107,24 @@ export function createHttpAdmin(api: HttpClient): AdminPort {
       return { items: res?.entries ?? [], nextCursor: res?.nextCursor == null ? null : String(res.nextCursor) }
     },
     auditActions: () => api.get<AuditAction[]>('/api/admin/audit-log/actions'),
+
+    // ---------- feature 007 (backend specs/007-admin-insights) ----------
+    analytics: days => api.get<AdminAnalytics>(`/api/admin/analytics${query({ days })}`),
+    userTakes: async (id, cursor, limit) => items<AdminTake>('takes')(await api.get(`/api/admin/users/${seg(id)}/takes${query({ cursor, limit })}`)),
+    userScripts: async (id, cursor, limit) => items<AdminScript>('scripts')(await api.get(`/api/admin/users/${seg(id)}/scripts${query({ cursor, limit })}`)),
+    userLinks: async (id, cursor, limit) => items<AdminLink>('links')(await api.get(`/api/admin/users/${seg(id)}/links${query({ cursor, limit })}`)),
+    userConnections: id => api.get<AdminConnections>(`/api/admin/users/${seg(id)}/connections`),
+    userPreferences: id => api.get<AdminPreferences>(`/api/admin/users/${seg(id)}/preferences`),
+    admins: () => api.get<AdminList>('/api/admin/admins'),
+    addAdmin: input => api.post<AdminRow>('/api/admin/admins', input),
+    updateAdmin: (id, permissions) => api.patch<AdminRow>(`/api/admin/admins/${seg(id)}`, { permissions }),
+    removeAdmin: id => api.del<void>(`/api/admin/admins/${seg(id)}`),
   }
+}
+
+/** Feature 007: `POST /api/practice-sessions`. */
+export function createHttpPractice(api: HttpClient): PracticePort {
+  return { log: input => api.post<PracticeSession>('/api/practice-sessions', input) }
 }
 
 export function createHttpSettings(api: HttpClient): SettingsPort {

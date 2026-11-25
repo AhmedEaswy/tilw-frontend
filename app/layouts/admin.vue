@@ -6,6 +6,7 @@
  */
 import '~/assets/css/admin.css'
 import type { GlyphName } from '~/components/ui/UiGlyph.vue'
+import type { AdminSection } from '~/services/types'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -13,28 +14,39 @@ const router = useRouter()
 const config = useRuntimeConfig()
 const mockMode = config.public.servicesMode === 'mock'
 
-const groups: { key: string; items: { to: string; key: string; icon: GlyphName }[] }[] = [
-  { key: 'overview', items: [{ to: '/admin', key: 'dashboard', icon: 'expand' }] },
+// Feature 007: each item names the section it needs (null = any admin); sections the admin can't view are hidden.
+const { can } = useAdminPermissions()
+type NavItem = { to: string; key: string; icon: GlyphName; section: AdminSection | null; need?: 'view' | 'edit' }
+const allGroups: { key: string; items: NavItem[] }[] = [
+  { key: 'overview', items: [
+    { to: '/admin', key: 'dashboard', icon: 'expand', section: null },
+    { to: '/admin/analytics', key: 'analytics', icon: 'up', section: 'users' },
+  ] },
   { key: 'people', items: [
-    { to: '/admin/users', key: 'users', icon: 'privacy' },
-    { to: '/admin/waitlist', key: 'waitlist', icon: 'clock' },
-    { to: '/admin/invitations', key: 'invitations', icon: 'mail' },
+    { to: '/admin/users', key: 'users', icon: 'privacy', section: 'users' },
+    { to: '/admin/waitlist', key: 'waitlist', icon: 'clock', section: 'users' },
+    { to: '/admin/invitations', key: 'invitations', icon: 'mail', section: 'users' },
   ] },
   { key: 'money', items: [
-    { to: '/admin/plans', key: 'plans', icon: 'file' },
-    { to: '/admin/subscriptions', key: 'subscriptions', icon: 'pin' },
-    { to: '/admin/payments', key: 'payments', icon: 'check' },
+    { to: '/admin/plans', key: 'plans', icon: 'file', section: 'plans' },
+    { to: '/admin/subscriptions', key: 'subscriptions', icon: 'pin', section: 'money' },
+    { to: '/admin/payments', key: 'payments', icon: 'check', section: 'money' },
   ] },
   { key: 'ai', items: [
-    { to: '/admin/ai/usage', key: 'usage', icon: 'sun' },
-    { to: '/admin/ai/calls', key: 'calls', icon: 'keyboard' },
-    { to: '/admin/ai/ledger', key: 'ledger', icon: 'archive' },
+    { to: '/admin/ai/usage', key: 'usage', icon: 'sun', section: 'ai' },
+    { to: '/admin/ai/calls', key: 'calls', icon: 'keyboard', section: 'ai' },
+    { to: '/admin/ai/ledger', key: 'ledger', icon: 'archive', section: 'ai' },
   ] },
   { key: 'system', items: [
-    { to: '/admin/audit', key: 'audit', icon: 'edit' },
-    { to: '/admin/settings', key: 'settings', icon: 'settings' },
+    { to: '/admin/audit', key: 'audit', icon: 'edit', section: 'audit' },
+    { to: '/admin/settings', key: 'settings', icon: 'settings', section: 'settings' },
+    // Every /admin/admins route needs admins: edit, reads too.
+    { to: '/admin/admins', key: 'admins', icon: 'field-lock', section: 'admins', need: 'edit' },
   ] },
 ]
+const groups = computed(() => allGroups
+  .map(g => ({ ...g, items: g.items.filter(i => !i.section || can(i.section, i.need ?? 'view')) }))
+  .filter(g => g.items.length))
 const isCurrent = (to: string) => (to === '/admin' ? route.path.replace(/\/$/, '') === '/admin' : route.path === to || route.path.startsWith(`${to}/`))
 
 const env = computed(() => {
