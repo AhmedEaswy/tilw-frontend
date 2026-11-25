@@ -105,6 +105,8 @@ test('no speech recognition: Dictate shows disabled and its tooltip says why', a
   const text = 'الإملاء غير متاح في هذا المتصفح. استخدم ميكروفون لوحة المفاتيح، أو افتح Tilw في Chrome أو Safari.'
   // aria-disabled: Playwright treats it as not enabled, so force the pointer (people can still tap and hover it).
   if (isMobile) {
+    // Centre it: at the bottom edge the phone's sticky action bar covers it.
+    await button.evaluate(el => el.scrollIntoView({ block: 'center' }))
     await button.tap({ force: true })
   } else {
     await button.hover({ force: true })
