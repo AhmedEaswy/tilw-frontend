@@ -1,7 +1,9 @@
 <script setup lang="ts">
 /**
- * Profile button in the studio header (6:18) with an account menu: profile, settings, dark mode, back to the
- * website, sign out.
+ * Profile button in the studio header (6:18) with an account menu: profile, settings, appearance (System / Light /
+ * Dark), language (العربية / English), back to the website, sign out. Appearance and language apply at once and are
+ * saved to the account (`useThemeChoice` / `useLocaleChoice`); both are `menuitemradio` groups, so ↑/↓ walk through
+ * every option like any other item and Enter/Space picks one without closing the menu.
  * Figma draws only the initial; the menu itself has no frame yet (logged in gaps.md) and is built from the
  * design-system surfaces, switch and glyphs.
  * Keyboard: Enter/Space/↓ opens and focuses the first item, ↑/↓ move, Home/End jump, Esc closes and
@@ -9,7 +11,6 @@
  */
 const { t } = useI18n()
 const auth = useAuthStore()
-const prefs = usePrefsStore()
 const { signOut, busy } = useSignOut()
 
 const open = ref(false)
@@ -28,12 +29,13 @@ function openUpgrade() {
   upgrade.open()
 }
 
-// Effective theme: an explicit choice, or the system setting when none is saved.
-const systemDark = usePreferredDark()
-const dark = computed(() => (prefs.theme === 'system' ? systemDark.value : prefs.theme === 'dark'))
-function toggleTheme() {
-  prefs.setTheme(dark.value ? 'light' : 'dark')
-}
+const { theme, choose: chooseTheme } = useThemeChoice()
+const { locale, options: languages, choose: chooseLocale } = useLocaleChoice()
+const themes = computed(() => [
+  { value: 'system' as const, label: t('menu.themeSystem') },
+  { value: 'light' as const, label: t('settings.themeLight') },
+  { value: 'dark' as const, label: t('settings.themeDark') },
+])
 
 const items = () => [...(menu.value?.querySelectorAll<HTMLElement>('[role^="menuitem"]') ?? [])]
 function focusItem(i: number) {
@@ -118,11 +120,37 @@ async function onSignOut() {
       <button v-if="plan.my && !plan.isPro" type="button" class="item" role="menuitem" tabindex="-1" @click="openUpgrade">
         <UiGlyph name="up" :size="18" />{{ t('upgrade.cta') }}
       </button>
-      <button type="button" class="item" role="menuitemcheckbox" :aria-checked="dark" tabindex="-1" @click="toggleTheme">
-        <UiGlyph name="sun" :size="18" />
-        <span class="grow">{{ t('nav.darkMode') }}</span>
-        <span class="track" :class="{ on: dark }" aria-hidden="true"><span class="thumb" /></span>
-      </button>
+      <hr>
+      <div class="choice" role="group" :aria-label="t('menu.appearance')" data-testid="menu-theme">
+        <span class="choice-h" aria-hidden="true"><UiGlyph name="sun" :size="18" />{{ t('menu.appearance') }}</span>
+        <div class="seg">
+          <button
+            v-for="th in themes"
+            :key="th.value"
+            type="button"
+            role="menuitemradio"
+            :aria-checked="theme === th.value"
+            tabindex="-1"
+            @click="chooseTheme(th.value)"
+          >{{ th.label }}</button>
+        </div>
+      </div>
+      <div class="choice" role="group" :aria-label="t('menu.language')" data-testid="menu-language">
+        <span class="choice-h" aria-hidden="true"><UiGlyph name="language" :size="18" />{{ t('menu.language') }}</span>
+        <div class="seg">
+          <button
+            v-for="l in languages"
+            :key="l.code"
+            type="button"
+            role="menuitemradio"
+            :lang="l.code"
+            :class="{ lat: l.code === 'en' }"
+            :aria-checked="locale === l.code"
+            tabindex="-1"
+            @click="chooseLocale(l.code)"
+          >{{ l.name }}</button>
+        </div>
+      </div>
       <hr>
       <NuxtLink to="/" class="item" role="menuitem" tabindex="-1">
         <UiGlyph name="back" :size="18" />{{ t('nav.backToSite') }}
@@ -169,7 +197,7 @@ async function onSignOut() {
   z-index: 40;
   display: grid;
   gap: 2px;
-  inline-size: 260px;
+  inline-size: 272px;
   max-inline-size: calc(100vw - 32px);
   padding: 8px;
   border: 1px solid var(--tilw-border-subtle);
@@ -257,38 +285,55 @@ hr {
   opacity: 0.5;
   cursor: default;
 }
-.grow {
+.choice {
+  display: grid;
+  gap: 6px;
+  padding: 6px 10px 8px;
+}
+.choice-h {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--tilw-text-muted);
+  font: var(--tilw-type-label);
+}
+.seg {
+  display: flex;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--tilw-surface-quiet);
+}
+.seg button {
   flex: 1;
+  min-inline-size: 0;
+  min-block-size: 32px;
+  padding-inline: 6px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: var(--tilw-text-muted);
+  font: 500 14px/1.2 var(--tilw-font-ar);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
 }
-/* Same look as UiSwitch (5:126), drawn inline because the whole row is the control. */
-.track {
-  position: relative;
-  flex: 0 0 auto;
-  inline-size: 40px;
-  block-size: 22px;
-  border-radius: 11px;
-  background: var(--tilw-border-strong);
-  transition: background-color 0.2s;
+.seg button.lat {
+  font-family: var(--tilw-font-lat);
 }
-.track.on {
-  background: var(--tilw-action-primary);
+.seg button:hover {
+  color: var(--tilw-text-ink);
 }
-.thumb {
-  position: absolute;
-  inset-block-start: 3px;
-  inset-inline-start: 3px;
-  inline-size: 16px;
-  block-size: 16px;
-  border-radius: 50%;
-  background: var(--tilw-text-on-solid);
-  transition: inset-inline-start 0.2s;
+.seg button[aria-checked='true'] {
+  background: var(--tilw-surface-white);
+  color: var(--tilw-action-primary);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
-.track.on .thumb {
-  inset-inline-start: 21px;
+.seg button:focus-visible {
+  outline: 2px solid var(--tilw-focus-ring);
+  outline-offset: 1px;
 }
 @media (prefers-reduced-motion: reduce) {
-  .track,
-  .thumb,
+  .seg button,
   .avatar {
     transition: none;
   }

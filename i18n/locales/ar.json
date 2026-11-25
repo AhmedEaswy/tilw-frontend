@@ -29,6 +29,11 @@
     "backToSite": "العودة إلى الموقع",
     "admin": "الإدارة"
   },
+  "menu": {
+    "appearance": "المظهر",
+    "language": "اللغة",
+    "themeSystem": "تلقائي"
+  },
   "legal": {
     "privacy": "سياسة الخصوصية",
     "terms": "شروط الاستخدام",
@@ -455,10 +460,6 @@
   },
   "settings": {
     "account": "الحساب",
-    "editAccount": "تعديل الاسم وكلمة المرور",
-    "language": "اللغة",
-    "appearance": "المظهر",
-    "themeSystem": "حسب الجهاز",
     "themeLight": "فاتح",
     "themeDark": "داكن",
     "readingHint": "السرعة وحجم الخط وطريقة القراءة",
@@ -509,12 +510,10 @@
     "deletedTitle": "حُذف حسابك",
     "deletedLede": "شكراً لأنك جربت تِلو. سجلنا خروجك من هذا المتصفح.",
     "toHome": "إلى الصفحة الرئيسية",
-    "planLabel": "الخطة: {plan}",
-    "planHint": "حدود خطتك وما استخدمته منها",
-    "planHintFree": "{n} من {max} نصاً نشطاً",
-    "planHintPro": "Tilw Pro مفعّلة",
     "storageHintNone": "اربط Google Drive لتحفظ نسخة من محاولاتك",
-    "storageHintLinked": "Google Drive مرتبط · النسخ: {mode}"
+    "storageHintLinked": "Google Drive مرتبط · النسخ: {mode}",
+    "aiPlatforms": "اربط منصات الذكاء الاصطناعي المختلفة",
+    "viewFullPlan": "عرض الخطة كاملة"
   },
   "errorPage": {
     "notFoundTitle": "لم نجد هذه الصفحة",

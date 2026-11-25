@@ -15,11 +15,55 @@ async function signIn(page: Page, password = 'password123') {
   await page.evaluate(() => localStorage.setItem('tilw:mock:knobs', JSON.stringify({ latencyMs: 50 })))
 }
 
-test('appearance and reading settings save to the account', async ({ page }) => {
+test('settings shows the account row, the plan card and the AI platforms row', async ({ page }) => {
   await signIn(page)
   await page.goto('/app/settings')
-  await page.getByRole('radio', { name: 'داكن' }).click()
+  const account = page.getByTestId('settings-account')
+  await expect(account).toContainText('layan@example.com')
+  await expect(account).toContainText('المجانية')
+  await expect(page.getByText('خطتك', { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'ما الذي تضيفه Pro؟' })).toBeVisible()
+  await expect(page.getByTestId('settings-ai')).toContainText('اربط منصات الذكاء الاصطناعي المختلفة')
+  await page.getByRole('link', { name: 'عرض الخطة كاملة' }).click()
+  await expect(page).toHaveURL(/\/app\/settings\/plan$/)
+  await expect(page.getByRole('heading', { name: 'الاستخدام', exact: true })).toBeVisible()
+  await page.goto('/app/settings')
+  await account.click()
+  await expect(page).toHaveURL(/\/app\/settings\/account$/)
+})
+
+test('the account menu switches appearance and language and saves them to the account', async ({ page }) => {
+  await signIn(page)
+  const avatar = page.getByRole('button', { name: /حساب/ })
+  await avatar.click()
+  const menu = page.getByRole('menu')
+  await menu.getByRole('menuitemradio', { name: 'داكن' }).click()
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark')
+  await expect(menu.getByRole('menuitemradio', { name: 'داكن' })).toHaveAttribute('aria-checked', 'true')
+  await menu.getByRole('menuitemradio', { name: 'تلقائي' }).click()
+  await expect(page.locator('html')).not.toHaveAttribute('data-theme', /.+/)
+
+  await menu.getByRole('menuitemradio', { name: 'English' }).click()
+  await expect(page.locator('html')).toHaveAttribute('dir', 'ltr')
+  await expect(menu.getByRole('menuitemradio', { name: 'Dark' })).toBeVisible()
+  await page.waitForTimeout(300) // the account save runs in the background
+  await page.reload()
+  await expect(page.locator('html')).toHaveAttribute('lang', /^en/)
+
+  // keyboard: Esc closes and returns focus to the button
+  await page.getByRole('button', { name: /account/ }).click()
+  await page.keyboard.press('ArrowDown')
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('menu')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /account/ })).toBeFocused()
+  await page.getByRole('button', { name: /account/ }).click()
+  await page.getByRole('menu').getByRole('menuitemradio', { name: 'العربية' }).click()
+  await expect(page.locator('html')).toHaveAttribute('dir', 'rtl')
+})
+
+test('reading settings save to the account', async ({ page }) => {
+  await signIn(page)
+  await page.goto('/app/settings')
 
   await page.getByRole('button', { name: /إعدادات القراءة/ }).click()
   await page.getByRole('button', { name: 'زيادة كلمة في الدقيقة' }).click()
