@@ -5,6 +5,7 @@
  */
 import type { AdminDashboard } from '~/services/types'
 import { dateTime, money, num } from '~/utils/admin'
+import { decimal } from '~/utils/adminInsights'
 
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 const { t, locale } = useI18n()
@@ -37,6 +38,24 @@ watch(days, load, { immediate: true })
 const setDays = (d: number) => router.replace({ query: d === 30 ? {} : { days: String(d) } })
 
 const bytes = (n: number) => formatBytes(n, locale.value)
+
+// Feature 007: headline counts for the period, each opening Analytics (when the admin may view it).
+const { can } = useAdminPermissions()
+const analyticsTo = computed(() => ({ path: '/admin/analytics', query: days.value === 30 ? {} : { days: String(days.value) } }))
+const headlines = computed(() => {
+  const d = data.value
+  if (!d?.headlines) return []
+  const h = d.headlines
+  return [
+    { key: 'takes', value: num(h.takes), note: t('admin.dash.inDays', { n: days.value }) },
+    { key: 'minutes', value: decimal(h.minutes), note: t('admin.dash.inDays', { n: days.value }) },
+    { key: 'scripts', value: num(h.scripts), note: t('admin.dash.newInPeriod') },
+    { key: 'practiceSessions', value: num(h.practiceSessions), note: t('admin.dash.inDays', { n: days.value }) },
+    { key: 'phoneLinks', value: num(h.phoneLinks), note: t('admin.dash.inDays', { n: days.value }) },
+    { key: 'drives', value: num(d.storage.linkedDrives), note: t('admin.dash.now') },
+    { key: 'ownKeyUsers', value: num(h.ownKeyUsers), note: t('admin.dash.now') },
+  ]
+})
 const chart = computed(() => (data.value?.signups.byDay ?? []).map(d => ({ label: d.date, value: d.count })))
 </script>
 
@@ -81,6 +100,19 @@ const chart = computed(() => (data.value?.signups.byDay ?? []).map(d => ({ label
           <NuxtLink class="adm-link" to="/admin/users?status=suspended">{{ t('admin.dash.suspended', { n: data.users.suspended }) }}</NuxtLink>
           <NuxtLink class="adm-link" to="/admin/users?status=deletion_scheduled">{{ t('admin.dash.deletion', { n: data.users.deletionScheduled }) }}</NuxtLink>
         </p>
+      </section>
+
+      <section v-if="headlines.length" class="adm-card adm-card-pad" :aria-label="t('admin.dash.usage')" data-testid="headlines">
+        <div class="adm-card-head">
+          <h2>{{ t('admin.dash.usage') }}</h2>
+          <NuxtLink v-if="can('users')" class="adm-link" :to="analyticsTo">{{ t('admin.dash.toAnalytics') }}</NuxtLink>
+        </div>
+        <div class="adm-stats">
+          <template v-for="h in headlines" :key="h.key">
+            <NuxtLink v-if="can('users')" :to="analyticsTo" class="hl" :data-testid="`hl-${h.key}`"><AdminStat :label="t(`admin.dash.hl.${h.key}`)" :value="h.value" :note="h.note" /></NuxtLink>
+            <AdminStat v-else :label="t(`admin.dash.hl.${h.key}`)" :value="h.value" :note="h.note" :data-testid="`hl-${h.key}`" />
+          </template>
+        </div>
       </section>
 
       <section class="adm-card adm-card-pad">
@@ -142,6 +174,19 @@ const chart = computed(() => (data.value?.signups.byDay ?? []).map(d => ({ label
   gap: 8px 24px;
   color: var(--tilw-text-muted);
   font: 500 13px/1.4 var(--tilw-font-ar);
+}
+.hl {
+  display: grid;
+  border-radius: var(--tilw-radius-field);
+  color: inherit;
+  text-decoration: none;
+}
+.hl:hover :deep(.stat) {
+  background: var(--tilw-row-hover);
+}
+.hl:focus-visible {
+  outline: 2px solid var(--tilw-focus-ring);
+  outline-offset: 2px;
 }
 .two {
   display: grid;

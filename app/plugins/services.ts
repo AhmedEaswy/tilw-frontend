@@ -103,6 +103,8 @@ export default defineNuxtPlugin(async (nuxtApp) => {
     speech: base.speech,
     // Feature 006: public settings need no sign-in.
     settings: base.settings,
+    // Feature 007: a practice run is logged in the background; a failure never signs anyone out from here.
+    practice: base.practice,
   }
 
   return {

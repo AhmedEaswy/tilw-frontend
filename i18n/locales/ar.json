@@ -124,7 +124,9 @@
     "aiUnavailable": "الذكاء الاصطناعي غير متاح الآن. أُعيد إليك الرصيد.",
     "accountSuspended": "هذا الحساب موقوف.",
     "accountSuspendedContact": "هذا الحساب موقوف. تواصل مع الدعم على {email}.",
-    "signupClosed": "التسجيل بالدعوة فقط الآن."
+    "signupClosed": "التسجيل بالدعوة فقط الآن.",
+    "forbidden": "ليست لديك صلاحية لهذا الجزء من لوحة الإدارة. اطلبها من المشرف الأعلى.",
+    "superAdminLocked": "لا يمكن تغيير حساب المشرف الأعلى."
   },
   "placeholder": {
     "title": "{screen}",

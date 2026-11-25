@@ -161,6 +161,14 @@ const unsaved = shallowRef<{ blob: Blob; mimeType: string } | null>(null)
 
 async function keep(take: FinishedTake) {
   engine.stop()
+  // Feature 007: a take is a practice run with a recording (logged in the background, never blocking the save).
+  logPractice({
+    scriptId: id.value,
+    startedAt: takeStartedAt.value ?? new Date(Date.now() - take.durationMs).toISOString(),
+    durationMs: take.durationMs,
+    recorded: true,
+    via: link.status === 'connected' ? 'phone' : 'web',
+  })
   saving.value = true
   try {
     if (!take.blob.size) throw new Error('empty')

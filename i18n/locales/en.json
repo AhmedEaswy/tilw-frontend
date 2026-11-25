@@ -124,7 +124,9 @@
     "aiUnavailable": "AI is unavailable right now. Your credits were refunded.",
     "accountSuspended": "This account is suspended.",
     "accountSuspendedContact": "This account is suspended. Contact support at {email}.",
-    "signupClosed": "Sign-up is by invitation only right now."
+    "signupClosed": "Sign-up is by invitation only right now.",
+    "forbidden": "You don't have access to this part of the console. Ask the super admin.",
+    "superAdminLocked": "The super admin's account can't be changed."
   },
   "placeholder": {
     "title": "{screen}",

@@ -19,6 +19,17 @@ useHead({ title: () => `${t('reader.title')} · ${reader.script?.title ?? ''} ·
 const settings = computed(() => reader.settings)
 const engine = useReaderEngine({ words: computed(() => reader.paragraphWords), pauses: computed(() => reader.pauses), settings })
 const link = useLinkStore()
+// Feature 007: each finished run (10 s or more) is logged as practice in the background; driven from a linked phone
+// it counts as `phone`. Manual mode has no playing state, so each step is activity.
+const practice = usePracticeRun({
+  scriptId: () => reader.script?.id ?? null,
+  playing: engine.playing,
+  ended: engine.ended,
+  via: () => (link.status === 'connected' ? 'phone' : 'web'),
+})
+watch(() => engine.paragraph.value, () => {
+  if (settings.value.mode === 'manual' && reader.status === 'ready') practice.touch()
+})
 
 const uiDir = computed<'rtl' | 'ltr'>(() => (localeProperties.value.dir === 'rtl' ? 'rtl' : 'ltr'))
 const reducedMotion = usePreferredReducedMotion()

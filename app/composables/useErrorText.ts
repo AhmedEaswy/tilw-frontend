@@ -25,6 +25,9 @@ export function useErrorText() {
       case 'ai_unavailable': return t('errors.aiUnavailable')
       case 'account_suspended': return support ? t('errors.accountSuspendedContact', { email: support }) : t('errors.accountSuspended')
       case 'signup_closed': return t('errors.signupClosed')
+      // Feature 007: an admin without the section's level, and the locked super admin.
+      case 'forbidden': return t('errors.forbidden')
+      case 'super_admin_locked': return t('errors.superAdminLocked')
       default: return t('errors.unknown')
     }
   }

@@ -78,7 +78,8 @@ export function createMockServices(kv: KV, opts: MockOptions = {}) {
 
   const publicUser = (u: User & { password?: string }): User => {
     const { password: _pw, ...rest } = u
-    return rest
+    // Feature 007: the profile names the admin role and permissions (null for everyone else).
+    return { ...rest, ...adminMock.hooks.profile(u) }
   }
   function sessionUser() {
     return db.s.users.find(x => x.id === db.s.sessionUserId) ?? null
@@ -317,6 +318,7 @@ export function createMockServices(kv: KV, opts: MockOptions = {}) {
   const services: Services = {
     admin: adminMock.admin,
     settings: adminMock.settings,
+    practice: adminMock.practice,
     ai: aiMock.ai,
     speech: aiMock.speech,
     links: phone.links,
@@ -611,6 +613,8 @@ export function createMockServices(kv: KV, opts: MockOptions = {}) {
       deleteAccount: ({ password }) => call(() => {
         const u = currentUser()
         if (u.password !== password) throw new PortError('invalid_credentials')
+        // Feature 007: the super admin can't delete their own account.
+        if (adminMock.hooks.isSuper(u.id)) throw new PortError('super_admin_locked')
         const due = now() + DELETION_GRACE
         db.write((s) => {
           s.deletion[u.id] = due

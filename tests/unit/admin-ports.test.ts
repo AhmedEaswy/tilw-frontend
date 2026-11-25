@@ -101,10 +101,11 @@ describe('admin port · mock', () => {
   })
 
   it('refuses the admin\'s own account, an admin target, and the plan already in force', async () => {
-    expect(await code(api().suspend(MOCK_ADMIN_ID, 'x'))).toBe('conflict')
-    expect(await code(api().scheduleDeletion(MOCK_ADMIN_ID, 'x'))).toBe('conflict')
+    // Feature 007: the demo admin is the super admin, locked whoever asks (their own account included).
+    expect(await code(api().suspend(MOCK_ADMIN_ID, 'x'))).toBe('super_admin_locked')
+    expect(await code(api().scheduleDeletion(MOCK_ADMIN_ID, 'x'))).toBe('super_admin_locked')
     expect(await code(api().sendPasswordReset(MOCK_ADMIN_ID))).toBe('conflict')
-    expect(await code(api().revokeAdmin(MOCK_ADMIN_ID))).toBe('conflict')
+    expect(await code(api().revokeAdmin(MOCK_ADMIN_ID))).toBe('super_admin_locked')
     expect(await code(api().suspend('u_admin2', 'x'))).toBe('conflict')
     expect(await code(api().changePlan('u_layan', { planId: 'free', note: 'x' }))).toBe('conflict')
     const before = (await audit()).length
