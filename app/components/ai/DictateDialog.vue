@@ -1,113 +1,93 @@
 <script setup lang="ts">
 /**
- * Feature 005, US3 (A3 `295:356`: recording, confirm cost, working, microphone refused). The microphone is asked for
- * when the dialog opens from the Dictate action, never before. Stop shows the cost (TranscribePanel); the text is
- * handed to the editor, which inserts it at the cursor as one undo step. Discarding the recording costs nothing.
+ * Feature 005, US3 on the device (gaps G-A5, frame A3): the browser's own speech recognition turns speech into text
+ * while the person talks. No AI service, no credits, and Tilw receives no audio. The microphone is asked for (by the
+ * browser) when the dialog opens from the Dictate action, never before. Stop, then Insert hands the text to the
+ * editor, which inserts it at the cursor as one undo step.
  */
-import type { TranscribeRun } from '~/services/ai/transcribe'
-import { checkAudio, clockLabel } from '~/services/ai/audio'
-import type { FinishedTake } from '~/composables/useRecorder'
+import { DICTATION_LANGS, DICTATION_LANG_KEY, dictationLang, type DictationLang } from '~/services/ai/recognition'
 
 const open = defineModel<boolean>('open', { required: true })
+const props = defineProps<{ direction: 'rtl' | 'ltr' }>()
 const emit = defineEmits<{ insert: [text: string] }>()
 const { t } = useI18n()
-const plan = usePlanStore()
-const { show } = useToast()
 
-const maxMinutes = () => {
-  const v = plan.limit('ai.audio_max_minutes')
-  return typeof v === 'number' && v > 0 ? v : 60
-}
-const phase = ref<'starting' | 'denied' | 'missing' | 'recording' | 'confirm' | 'refused'>('starting')
-const take = shallowRef<{ blob: Blob; seconds: number } | null>(null)
-const refused = ref('')
-const busy = ref(false)
-
-const dictation = useDictation({ maxMinutes, onAutoStop: t2 => void onStopped(t2, true) })
-
-async function begin() {
-  phase.value = 'starting'
-  take.value = null
-  const ok = await dictation.start()
-  // Closed while the permission prompt was up: the run was cancelled and its tracks stopped.
-  if (!open.value) return
-  if (ok) {
-    phase.value = 'recording'
-    return
+function saved(): string | null {
+  try {
+    return localStorage.getItem(DICTATION_LANG_KEY)
+  } catch {
+    return null
   }
-  phase.value = dictation.state.value === 'denied' ? 'denied' : 'missing'
 }
-
-async function stop() {
-  const t2 = await dictation.stop()
-  if (t2) await onStopped(t2, false)
-}
-
-async function onStopped(t2: FinishedTake, auto: boolean) {
-  dictation.cancel()
-  if (auto) show(t('ai.speech.autoStopped'), 'info')
-  const read = await readAudioLength(t2.blob)
-  const seconds = read ?? t2.durationMs / 1000
-  const problem = checkAudio({ type: t2.blob.type || t2.mimeType, size: t2.blob.size }, seconds, maxMinutes())
-  if (problem) {
-    refused.value = t(`ai.speech.refused.${problem.reason}`, { maxMb: 200, maxMinutes: maxMinutes() })
-    phase.value = 'refused'
-    return
+const lang = ref<DictationLang>(dictationLang(props.direction, import.meta.client ? saved() : null))
+const langOptions = computed(() => DICTATION_LANGS.map(v => ({ value: v, label: t(`ai.dictate.langs.${v}`) })))
+watch(lang, (v) => {
+  try {
+    localStorage.setItem(DICTATION_LANG_KEY, v)
+  } catch {
+    // Private mode: the choice lasts for this dialog only.
   }
-  take.value = { blob: t2.blob, seconds }
-  phase.value = 'confirm'
-}
+  dictation.setLang(v)
+})
 
-function done(run: TranscribeRun) {
-  emit('insert', run.result.transcript)
+const dictation = useDictation()
+const state = dictation.state
+const listening = computed(() => state.value === 'listening' || state.value === 'starting')
+
+function insert() {
+  const text = dictation.text.value.trim()
+  if (text) emit('insert', text)
   close()
+}
+function again() {
+  dictation.start(lang.value)
 }
 function close() {
   dictation.cancel()
-  take.value = null
   open.value = false
 }
 
 watch(open, (v) => {
-  if (v) void begin()
+  if (v) dictation.start(lang.value)
   else dictation.cancel()
 }, { immediate: true })
 
-const title = computed(() => (phase.value === 'confirm' ? t('ai.speech.confirmTitle') : phase.value === 'denied' ? t('ai.speech.micDeniedTitle') : t('ai.speech.dictateTitle')))
+const problem = computed(() => {
+  switch (state.value) {
+    case 'denied': return { title: t('ai.speech.micDeniedTitle'), text: t('ai.dictate.denied') }
+    case 'missing': return { title: t('ai.speech.micMissing'), text: undefined }
+    case 'offline': return { title: t('ai.dictate.offlineTitle'), text: t('ai.dictate.offline') }
+    case 'unavailable': return { title: t('ai.dictate.unavailableTitle'), text: t('ai.dictate.unavailable') }
+    default: return null
+  }
+})
 </script>
 
 <template>
-  <UiDialog v-model:open="open" :title="title" :dismissible="!busy" data-testid="dictate-dialog" @close="close">
+  <UiDialog v-model:open="open" :title="t('ai.speech.dictateTitle')" data-testid="dictate-dialog" @close="close">
     <div class="dd">
-      <template v-if="phase === 'starting'">
-        <p class="muted" aria-busy="true">{{ t('ai.speech.starting') }}</p>
+      <div class="lang">
+        <label for="dictate-lang">{{ t('ai.dictate.lang') }}</label>
+        <UiSelect id="dictate-lang" v-model="lang" :options="langOptions" size="sm" data-testid="dictate-lang" />
+      </div>
+      <AiMessage v-if="problem" :title="problem.title" :text="problem.text" tone="error" />
+      <template v-else>
+        <p v-if="listening" class="live" data-testid="dictate-listening">
+          <i aria-hidden="true" />{{ state === 'starting' ? t('ai.speech.starting') : t('ai.dictate.listening') }}
+        </p>
+        <div class="said" :dir="direction" aria-live="polite" data-testid="dictate-text">
+          <span v-if="dictation.finalText.value">{{ dictation.finalText.value }}</span>
+          <span v-if="dictation.liveText.value" class="interim"> {{ dictation.liveText.value }}</span>
+          <span v-if="!dictation.text.value" class="placeholder">{{ listening ? t('ai.dictate.speakNow') : t('ai.dictate.nothing') }}</span>
+        </div>
       </template>
-      <template v-else-if="phase === 'denied' || phase === 'missing'">
-        <AiMessage :title="phase === 'denied' ? t('ai.speech.micDeniedTitle') : t('ai.speech.micMissing')" :text="phase === 'denied' ? t('ai.speech.micDenied') : undefined" tone="error" />
-      </template>
-      <template v-else-if="phase === 'recording'">
-        <p class="live"><i aria-hidden="true" />{{ t('ai.speech.recordingLive') }}</p>
-        <b class="timer" dir="ltr" role="timer" aria-live="off">{{ clockLabel(dictation.elapsedMs.value / 1000) }}</b>
-        <LevelMeter :level="dictation.level.value" size="md" />
-        <p class="muted">{{ t('ai.speech.recordingNote', { minutes: maxMinutes() }) }}</p>
-      </template>
-      <template v-else-if="phase === 'refused'">
-        <AiMessage :title="t('ai.speech.refusedTitle')" :text="`${refused} ${t('ai.speech.noCharge')}`" tone="error" />
-      </template>
-      <TranscribePanel
-        v-else-if="phase === 'confirm' && take"
-        :blob="take.blob"
-        :seconds="take.seconds"
-        purpose="text"
-        :cancel-label="t('ai.speech.discardRecording')"
-        @busy="b => (busy = b)"
-        @done="done"
-        @cancel="close"
-      />
+      <p class="privacy">{{ t('ai.dictate.privacy') }}</p>
     </div>
-    <template v-if="phase !== 'confirm'" #actions>
-      <UiButton v-if="phase === 'recording'" icon="stop" data-testid="dictate-stop" @click="stop">{{ t('ai.speech.stop') }}</UiButton>
-      <UiButton tone="secondary" @click="close">{{ phase === 'recording' || phase === 'starting' ? t('ai.common.cancel') : t('ai.common.close') }}</UiButton>
+    <template #actions>
+      <UiButton v-if="listening" icon="stop" data-testid="dictate-stop" @click="dictation.stop()">{{ t('ai.speech.stop') }}</UiButton>
+      <UiButton v-else-if="state === 'done' && dictation.text.value" data-testid="dictate-insert" @click="insert">{{ t('ai.dictate.insert') }}</UiButton>
+      <UiButton v-if="!listening && state !== 'unavailable'" tone="secondary" data-testid="dictate-again" @click="again">{{ t('ai.dictate.again') }}</UiButton>
+      <UiButton tone="secondary" @click="close">{{ state === 'done' && dictation.text.value ? t('ai.dictate.discard') : t('ai.common.cancel') }}</UiButton>
     </template>
   </UiDialog>
 </template>
@@ -117,10 +97,12 @@ const title = computed(() => (phase.value === 'confirm' ? t('ai.speech.confirmTi
   display: grid;
   gap: 14px;
 }
-.muted {
-  margin: 0;
-  color: var(--tilw-text-muted);
-  font: 400 15px/1.6 var(--tilw-font-ar);
+.lang {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font: 500 14px/1.4 var(--tilw-font-ar);
 }
 .live {
   display: flex;
@@ -136,8 +118,23 @@ const title = computed(() => (phase.value === 'confirm' ? t('ai.speech.confirmTi
   border-radius: 50%;
   background: currentColor;
 }
-.timer {
-  justify-self: start;
-  font: 700 44px/1.2 var(--tilw-font-lat);
+.said {
+  min-block-size: 96px;
+  max-block-size: 40vh;
+  overflow-y: auto;
+  padding: 12px 14px;
+  border: 1px solid var(--tilw-border-subtle);
+  border-radius: 8px;
+  font: 400 17px/1.8 var(--tilw-font-ar);
+  white-space: pre-wrap;
+}
+.interim,
+.placeholder {
+  color: var(--tilw-text-muted);
+}
+.privacy {
+  margin: 0;
+  color: var(--tilw-text-muted);
+  font: 400 13px/1.6 var(--tilw-font-ar);
 }
 </style>

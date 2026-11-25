@@ -1046,7 +1046,7 @@
       "waiting": "A suggestion is waiting",
       "formatting": "Formatting…",
       "dictate": "Dictate",
-      "dictateHint": "Record your voice; the text goes where the cursor is"
+      "dictateHint": "Speak; the text goes where the cursor is"
     },
     "format": {
       "title": "Format for reading",
@@ -1285,6 +1285,30 @@
       "notUsed": "Not used on your current plan.",
       "speechNote": "Own keys are for formatting only. Speech always uses Tilw credits.",
       "invalid": "A key is 20 to 300 characters."
+    },
+    "dictate": {
+      "lang": "Language",
+      "langs": {
+        "ar-EG": "Arabic (Egypt)",
+        "ar-SA": "Arabic (Saudi)",
+        "ar-AE": "Arabic (Gulf)",
+        "ar-JO": "Arabic (Levant)",
+        "en-US": "English"
+      },
+      "listening": "Listening…",
+      "speakNow": "Start speaking; the words appear here.",
+      "nothing": "Nothing was heard. Try again.",
+      "insert": "Insert",
+      "discard": "Discard",
+      "again": "Dictate again",
+      "privacy": "Your browser's own speech service turns speech into text (Google in Chrome, Apple in Safari). Tilw receives no audio and charges no credits.",
+      "denied": "Allow the microphone (and speech recognition) for this site in your browser, then try again. Writing works as usual.",
+      "offlineTitle": "Speech recognition lost the connection",
+      "offline": "Your browser needs the internet to recognise speech. The text so far is kept below; check the connection and dictate again.",
+      "unavailableTitle": "Dictation isn't available here",
+      "unavailable": "Dictation isn't available in this browser. Use your keyboard's microphone, or open Tilw in Chrome or Safari.",
+      "unsupported": "Dictation isn't available in this browser. Use your keyboard's microphone, or open Tilw in Chrome or Safari.",
+      "unsupportedHint": "Not available in this browser"
     }
   },
   "signup": {
