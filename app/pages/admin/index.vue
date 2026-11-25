@@ -86,64 +86,74 @@ const chart = computed(() => (data.value?.signups.byDay ?? []).map(d => ({ label
         <NuxtLink v-if="data.attention.waitlistNotInvited" class="adm-link" to="/admin/waitlist?invited=false">{{ t('admin.dash.waitlistNotInvited', { n: data.attention.waitlistNotInvited }) }}</NuxtLink>
       </section>
 
-      <section class="adm-card adm-card-pad" :aria-label="t('admin.dash.people')">
-        <h2>{{ t('admin.dash.people') }}</h2>
-        <div class="adm-stats">
-          <AdminStat :label="t('admin.dash.signups')" :value="num(data.signups.total)" :note="t('admin.dash.inDays', { n: days })" />
-          <AdminStat :label="t('admin.dash.activeDay')" :value="num(data.active.day)" :note="t('admin.dash.last24h')" />
-          <AdminStat :label="t('admin.dash.activeWeek')" :value="num(data.active.week)" :note="t('admin.dash.last7')" />
-          <AdminStat :label="t('admin.dash.activeMonth')" :value="num(data.active.month)" :note="t('admin.dash.last30')" />
+      <!-- People: the KPI strip and the chart of the selected figure (sign-ups) share one panel. -->
+      <section class="adm-group" :aria-label="t('admin.dash.people')">
+        <div class="adm-ghead"><h2>{{ t('admin.dash.people') }}</h2></div>
+        <div class="adm-panel">
+          <div class="adm-stats adm-strip">
+            <AdminStat class="is-sel" :label="t('admin.dash.signups')" :value="num(data.signups.total)" :note="t('admin.dash.inDays', { n: days })" />
+            <AdminStat :label="t('admin.dash.activeDay')" :value="num(data.active.day)" :note="t('admin.dash.last24h')" />
+            <AdminStat :label="t('admin.dash.activeWeek')" :value="num(data.active.week)" :note="t('admin.dash.last7')" />
+            <AdminStat :label="t('admin.dash.activeMonth')" :value="num(data.active.month)" :note="t('admin.dash.last30')" />
+          </div>
+          <div class="adm-chartbox">
+            <div class="adm-charthead"><h3>{{ t('admin.dash.signupsByDay') }}</h3><span class="adm-muted">{{ t('admin.dash.utcDays') }}</span></div>
+            <AdminBarChart :data="chart" :caption="t('admin.dash.signupsByDay')" />
+          </div>
+          <p class="adm-foot tot">
+            <span>{{ t('admin.dash.total', { n: num(data.users.total) }) }}</span>
+            <span>{{ t('admin.dash.admins', { n: data.users.admins }) }}</span>
+            <NuxtLink class="adm-link" to="/admin/users?status=suspended">{{ t('admin.dash.suspended', { n: data.users.suspended }) }}</NuxtLink>
+            <NuxtLink class="adm-link" to="/admin/users?status=deletion_scheduled">{{ t('admin.dash.deletion', { n: data.users.deletionScheduled }) }}</NuxtLink>
+          </p>
         </div>
-        <p class="tot">
-          <span>{{ t('admin.dash.total', { n: num(data.users.total) }) }}</span>
-          <span>{{ t('admin.dash.admins', { n: data.users.admins }) }}</span>
-          <NuxtLink class="adm-link" to="/admin/users?status=suspended">{{ t('admin.dash.suspended', { n: data.users.suspended }) }}</NuxtLink>
-          <NuxtLink class="adm-link" to="/admin/users?status=deletion_scheduled">{{ t('admin.dash.deletion', { n: data.users.deletionScheduled }) }}</NuxtLink>
-        </p>
       </section>
 
-      <section v-if="headlines.length" class="adm-card adm-card-pad" :aria-label="t('admin.dash.usage')" data-testid="headlines">
-        <div class="adm-card-head">
+      <section v-if="headlines.length" class="adm-group" :aria-label="t('admin.dash.usage')" data-testid="headlines">
+        <div class="adm-ghead">
           <h2>{{ t('admin.dash.usage') }}</h2>
-          <NuxtLink v-if="can('users')" class="adm-link" :to="analyticsTo">{{ t('admin.dash.toAnalytics') }}</NuxtLink>
+          <NuxtLink v-if="can('users')" class="adm-link adm-end" :to="analyticsTo">{{ t('admin.dash.toAnalytics') }}</NuxtLink>
         </div>
-        <div class="adm-stats">
-          <template v-for="h in headlines" :key="h.key">
-            <NuxtLink v-if="can('users')" :to="analyticsTo" class="hl" :data-testid="`hl-${h.key}`"><AdminStat :label="t(`admin.dash.hl.${h.key}`)" :value="h.value" :note="h.note" /></NuxtLink>
-            <AdminStat v-else :label="t(`admin.dash.hl.${h.key}`)" :value="h.value" :note="h.note" :data-testid="`hl-${h.key}`" />
-          </template>
+        <div class="adm-panel">
+          <div class="adm-stats adm-strip">
+            <template v-for="h in headlines" :key="h.key">
+              <NuxtLink v-if="can('users')" :to="analyticsTo" :data-testid="`hl-${h.key}`"><AdminStat :label="t(`admin.dash.hl.${h.key}`)" :value="h.value" :note="h.note" /></NuxtLink>
+              <AdminStat v-else :label="t(`admin.dash.hl.${h.key}`)" :value="h.value" :note="h.note" :data-testid="`hl-${h.key}`" />
+            </template>
+          </div>
         </div>
-      </section>
-
-      <section class="adm-card adm-card-pad">
-        <div class="adm-card-head"><h2>{{ t('admin.dash.signupsByDay') }}</h2><span class="adm-muted">{{ t('admin.dash.utcDays') }}</span></div>
-        <AdminBarChart :data="chart" :caption="t('admin.dash.signupsByDay')" />
       </section>
 
       <div class="two">
-        <section class="adm-card adm-card-pad">
-          <h2>{{ t('admin.dash.revenue') }}</h2>
-          <div class="adm-stats">
-            <AdminStat :label="t('admin.dash.mrr')" :value="money(data.revenue.mrrCents)" :note="t('admin.dash.paying', { n: data.revenue.payingSubscriptions })" />
-            <AdminStat :label="t('admin.dash.payments')" :value="num(data.revenue.payments)" :note="money(data.revenue.paymentsCents)" />
+        <section class="adm-group">
+          <div class="adm-ghead"><h2>{{ t('admin.dash.revenue') }}</h2></div>
+          <div class="adm-panel">
+            <div class="adm-stats adm-strip">
+              <AdminStat :label="t('admin.dash.mrr')" :value="money(data.revenue.mrrCents)" :note="t('admin.dash.paying', { n: data.revenue.payingSubscriptions })" />
+              <AdminStat :label="t('admin.dash.payments')" :value="num(data.revenue.payments)" :note="money(data.revenue.paymentsCents)" />
+            </div>
           </div>
         </section>
-        <section class="adm-card adm-card-pad">
-          <h2>{{ t('admin.dash.ai') }}</h2>
-          <div class="adm-stats">
-            <AdminStat :label="t('admin.dash.creditsUsed')" :value="num(data.ai.creditsUsed)" :note="t('admin.dash.thisMonth', { n: num(data.ai.creditsUsedThisMonth) })" />
-            <AdminStat :label="t('admin.dash.calls')" :value="num(data.ai.calls)" :note="t('admin.dash.failed', { n: data.ai.failedCalls })" />
-            <AdminStat :label="t('admin.dash.ownKey')" :value="num(data.ai.ownKeyCalls)" :note="t('admin.dash.noCredits')" />
+        <section class="adm-group">
+          <div class="adm-ghead"><h2>{{ t('admin.dash.ai') }}</h2></div>
+          <div class="adm-panel">
+            <div class="adm-stats adm-strip">
+              <AdminStat :label="t('admin.dash.creditsUsed')" :value="num(data.ai.creditsUsed)" :note="t('admin.dash.thisMonth', { n: num(data.ai.creditsUsedThisMonth) })" />
+              <AdminStat :label="t('admin.dash.calls')" :value="num(data.ai.calls)" :note="t('admin.dash.failed', { n: data.ai.failedCalls })" />
+              <AdminStat :label="t('admin.dash.ownKey')" :value="num(data.ai.ownKeyCalls)" :note="t('admin.dash.noCredits')" />
+            </div>
           </div>
         </section>
       </div>
 
-      <section class="adm-card adm-card-pad">
-        <h2>{{ t('admin.dash.storage') }}</h2>
-        <div class="adm-stats">
-          <AdminStat :label="t('admin.dash.drives')" :value="num(data.storage.linkedDrives)" note="Google Drive" />
-          <AdminStat :label="t('admin.dash.takes')" :value="num(data.storage.takes)" :note="bytes(data.storage.bytes)" />
-          <AdminStat :label="t('admin.dash.inPeriod')" :value="`+${bytes(data.storage.bytesInPeriod)}`" :note="t('admin.dash.newTakes')" />
+      <section class="adm-group">
+        <div class="adm-ghead"><h2>{{ t('admin.dash.storage') }}</h2></div>
+        <div class="adm-panel">
+          <div class="adm-stats adm-strip">
+            <AdminStat :label="t('admin.dash.drives')" :value="num(data.storage.linkedDrives)" note="Google Drive" />
+            <AdminStat :label="t('admin.dash.takes')" :value="num(data.storage.takes)" :note="bytes(data.storage.bytes)" />
+            <AdminStat :label="t('admin.dash.inPeriod')" :value="`+${bytes(data.storage.bytesInPeriod)}`" :note="t('admin.dash.newTakes')" />
+          </div>
         </div>
       </section>
     </template>
@@ -169,28 +179,12 @@ const chart = computed(() => (data.value?.signups.byDay ?? []).map(d => ({ label
   text-underline-offset: 3px;
 }
 .tot {
-  display: flex;
-  flex-wrap: wrap;
   gap: 8px 24px;
-  color: var(--tilw-text-muted);
-  font: 500 13px/1.4 var(--tilw-font-ar);
-}
-.hl {
-  display: grid;
-  border-radius: var(--tilw-radius-field);
-  color: inherit;
-  text-decoration: none;
-}
-.hl:hover :deep(.stat) {
-  background: var(--tilw-row-hover);
-}
-.hl:focus-visible {
-  outline: 2px solid var(--tilw-focus-ring);
-  outline-offset: 2px;
 }
 .two {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
   gap: 18px;
+  align-items: start;
 }
 </style>

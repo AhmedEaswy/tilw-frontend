@@ -61,16 +61,16 @@ const TONE = { account: 'success', invited: 'info', waiting: '' } as const
       <div class="adm-actions"><button type="button" class="adm-btn primary" @click="inviting = true">{{ t('admin.inviteButton') }}</button></div>
     </div>
 
-    <section class="adm-card">
-      <div class="adm-toolbar">
-        <UiSearchField v-model="q" kind="email" size="sm" :placeholder="t('admin.search')" :label="t('admin.search')" />
-        <div class="adm-seg" role="group" :aria-label="t('admin.waitlist.filter')">
-          <button type="button" :aria-pressed="filters.invited === undefined" @click="filters.invited = undefined">{{ t('admin.list.all') }}</button>
-          <button type="button" :aria-pressed="filters.invited === 'false'" @click="filters.invited = 'false'">{{ t('admin.waitlist.notInvited') }}</button>
-          <button type="button" :aria-pressed="filters.invited === 'true'" @click="filters.invited = 'true'">{{ t('admin.waitlist.invited') }}</button>
-        </div>
-        <span class="adm-grow adm-muted">{{ t('admin.users.newest') }}</span>
+    <div class="adm-filter">
+      <UiSearchField v-model="q" kind="email" size="sm" :placeholder="t('admin.search')" :label="t('admin.search')" />
+      <div class="adm-seg" role="group" :aria-label="t('admin.waitlist.filter')">
+        <button type="button" :aria-pressed="filters.invited === undefined" @click="filters.invited = undefined">{{ t('admin.list.all') }}</button>
+        <button type="button" :aria-pressed="filters.invited === 'false'" @click="filters.invited = 'false'">{{ t('admin.waitlist.notInvited') }}</button>
+        <button type="button" :aria-pressed="filters.invited === 'true'" @click="filters.invited = 'true'">{{ t('admin.waitlist.invited') }}</button>
       </div>
+      <span class="adm-grow adm-muted">{{ t('admin.users.newest') }}</span>
+    </div>
+    <section class="adm-card">
       <div v-if="rows.length" class="adm-scroll">
         <table class="adm-tbl">
           <caption>{{ t('admin.nav.waitlist') }}</caption>

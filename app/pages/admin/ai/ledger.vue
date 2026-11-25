@@ -51,13 +51,13 @@ const tone = (k: CreditKind) => (k === 'grant' ? 'info' : k === 'refund' ? 'succ
       </div>
       <div class="adm-actions"><button type="button" class="adm-btn primary" @click="startGrant">{{ t('admin.detail.a.credits') }}</button></div>
     </div>
+    <div class="adm-filter">
+      <AdminPersonField v-model="who" class="who" inline :label="t('admin.ledger.person')" />
+      <span class="adm-field"><label for="f-kind">{{ t('admin.ledger.kind') }}</label><UiSelect id="f-kind" v-model="kind" :options="kindOptions" size="sm" /></span>
+      <span class="adm-field"><label for="f-range">{{ t('admin.range.label') }}</label><UiDatePicker id="f-range" v-model="range" mode="range" size="sm" :max="today" /></span>
+      <span v-if="filters.userId && !who" class="adm-chip info">{{ t('admin.subs.onePerson') }} <button type="button" class="adm-link" :aria-label="t('common.close')" @click="filters.userId = undefined">×</button></span>
+    </div>
     <section class="adm-card">
-      <div class="adm-toolbar">
-        <AdminPersonField v-model="who" class="who" inline :label="t('admin.ledger.person')" />
-        <span class="adm-field"><label for="f-kind">{{ t('admin.ledger.kind') }}</label><UiSelect id="f-kind" v-model="kind" :options="kindOptions" size="sm" /></span>
-        <span class="adm-field"><label for="f-range">{{ t('admin.range.label') }}</label><UiDatePicker id="f-range" v-model="range" mode="range" size="sm" :max="today" /></span>
-        <span v-if="filters.userId && !who" class="adm-chip info">{{ t('admin.subs.onePerson') }} <button type="button" class="adm-link" :aria-label="t('common.close')" @click="filters.userId = undefined">×</button></span>
-      </div>
       <div v-if="list.items.value.length" class="adm-scroll">
         <table class="adm-tbl">
           <caption>{{ t('admin.nav.ledger') }}</caption>

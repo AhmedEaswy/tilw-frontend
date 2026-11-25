@@ -161,85 +161,89 @@ onMounted(() => {
       <button type="button" :aria-pressed="tab === 'requests'" @click="setTab('requests')">{{ t('admin.reqs.tab') }}</button>
     </div>
 
-    <section v-if="tab === 'subscriptions'" class="adm-card">
-      <div class="adm-toolbar">
+    <template v-if="tab === 'subscriptions'">
+      <div class="adm-filter">
         <span class="adm-field"><label for="f-state">{{ t('admin.subs.state') }}</label><UiSelect id="f-state" v-model="state" :options="stateOptions" size="sm" /></span>
         <span class="adm-field"><label for="f-plan">{{ t('admin.users.plan') }}</label><AdminPlanSelect id="f-plan" v-model="plan" :plans="admin.plans ?? []" :all-label="t('admin.list.all')" /></span>
         <span class="adm-field"><label for="f-source">{{ t('admin.detail.source') }}</label><UiSelect id="f-source" v-model="source" :options="sourceOptions" size="sm" /></span>
         <span v-if="filters.userId" class="adm-chip info">{{ t('admin.subs.onePerson') }} <button type="button" class="adm-link" :aria-label="t('common.close')" @click="filters.userId = undefined">×</button></span>
       </div>
-      <div v-if="subs.items.value.length" class="adm-scroll">
-        <table class="adm-tbl">
-          <caption>{{ t('admin.subs.tab') }}</caption>
-          <thead><tr>
-            <th scope="col">{{ t('admin.users.person') }}</th><th scope="col">{{ t('admin.users.plan') }}</th><th scope="col">{{ t('admin.detail.period') }}</th>
-            <th scope="col">{{ t('admin.detail.from') }}</th><th scope="col">{{ t('admin.detail.to') }}</th><th scope="col">{{ t('admin.detail.source') }}</th>
-            <th scope="col">{{ t('admin.users.status') }}</th><th scope="col" class="act"><span class="adm-muted">{{ t('admin.list.actions') }}</span></th>
-          </tr></thead>
-          <tbody>
-            <tr v-for="s in subs.items.value" :key="s.id">
-              <td>
-                <NuxtLink v-if="s.user.email" :to="`/admin/users/${encodeURIComponent(s.user.id)}`" class="adm-person"><b>{{ s.user.name }}</b><small class="adm-ltr">{{ s.user.email }}</small></NuxtLink>
-                <span v-else class="adm-muted">{{ t('admin.deletedPerson') }}</span>
-              </td>
-              <td class="adm-ltr">{{ s.plan }}</td>
-              <td>{{ t(`admin.period.${s.period}`) }}</td>
-              <td class="nowrap" :title="utc(s.startsAt)">{{ dateOnly(s.startsAt, locale) }}</td>
-              <td class="nowrap" :title="utc(s.endsAt)">{{ dateOnly(s.endsAt, locale) }}</td>
-              <td>{{ t(`admin.source.${s.source}`) }}</td>
-              <td><span class="adm-chip" :class="tone(s.state)">{{ t(`admin.subState.${s.state}`) }}{{ s.endedReason ? ` · ${t(`admin.endedReason.${s.endedReason}`)}` : '' }}</span></td>
-              <td class="act">
-                <template v-if="s.state !== 'ended'">
-                  <button type="button" class="adm-link" @click="openEdit(s, 'move')">{{ t('admin.subs.move') }}</button>
-                  <button type="button" class="adm-link danger" @click="openEdit(s, 'end')">{{ t('admin.subs.end') }}</button>
-                </template>
-                <span v-else class="adm-muted">—</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <AdminListState
-        :loading="subs.loading.value" :loaded="subs.loaded.value" :error="subs.error.value" :empty="!subs.items.value.length"
-        :done="subs.done.value" paged :count="subs.items.value.length" @retry="subs.reload" @more="subs.more"
-      />
-    </section>
+      <section class="adm-card">
+        <div v-if="subs.items.value.length" class="adm-scroll">
+          <table class="adm-tbl">
+            <caption>{{ t('admin.subs.tab') }}</caption>
+            <thead><tr>
+              <th scope="col">{{ t('admin.users.person') }}</th><th scope="col">{{ t('admin.users.plan') }}</th><th scope="col">{{ t('admin.detail.period') }}</th>
+              <th scope="col">{{ t('admin.detail.from') }}</th><th scope="col">{{ t('admin.detail.to') }}</th><th scope="col">{{ t('admin.detail.source') }}</th>
+              <th scope="col">{{ t('admin.users.status') }}</th><th scope="col" class="act"><span class="adm-muted">{{ t('admin.list.actions') }}</span></th>
+            </tr></thead>
+            <tbody>
+              <tr v-for="s in subs.items.value" :key="s.id">
+                <td>
+                  <NuxtLink v-if="s.user.email" :to="`/admin/users/${encodeURIComponent(s.user.id)}`" class="adm-person"><b>{{ s.user.name }}</b><small class="adm-ltr">{{ s.user.email }}</small></NuxtLink>
+                  <span v-else class="adm-muted">{{ t('admin.deletedPerson') }}</span>
+                </td>
+                <td class="adm-ltr">{{ s.plan }}</td>
+                <td>{{ t(`admin.period.${s.period}`) }}</td>
+                <td class="nowrap" :title="utc(s.startsAt)">{{ dateOnly(s.startsAt, locale) }}</td>
+                <td class="nowrap" :title="utc(s.endsAt)">{{ dateOnly(s.endsAt, locale) }}</td>
+                <td>{{ t(`admin.source.${s.source}`) }}</td>
+                <td><span class="adm-chip" :class="tone(s.state)">{{ t(`admin.subState.${s.state}`) }}{{ s.endedReason ? ` · ${t(`admin.endedReason.${s.endedReason}`)}` : '' }}</span></td>
+                <td class="act">
+                  <template v-if="s.state !== 'ended'">
+                    <button type="button" class="adm-link" @click="openEdit(s, 'move')">{{ t('admin.subs.move') }}</button>
+                    <button type="button" class="adm-link danger" @click="openEdit(s, 'end')">{{ t('admin.subs.end') }}</button>
+                  </template>
+                  <span v-else class="adm-muted">—</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <AdminListState
+          :loading="subs.loading.value" :loaded="subs.loaded.value" :error="subs.error.value" :empty="!subs.items.value.length"
+          :done="subs.done.value" paged :count="subs.items.value.length" @retry="subs.reload" @more="subs.more"
+        />
+      </section>
+    </template>
 
-    <section v-else class="adm-card">
-      <div class="adm-toolbar">
+    <template v-else>
+      <div class="adm-filter">
         <UiSearchField v-model="q" size="sm" :placeholder="t('admin.reqs.search')" :label="t('admin.reqs.search')" />
         <span class="adm-field"><label for="f-rstate">{{ t('admin.subs.state') }}</label><UiSelect id="f-rstate" v-model="state" :options="rstateOptions" size="sm" /></span>
         <span class="adm-grow adm-muted">{{ t('admin.reqs.latest') }}</span>
       </div>
-      <div v-if="requests?.length" class="adm-scroll">
-        <table class="adm-tbl">
-          <caption>{{ t('admin.reqs.tab') }}</caption>
-          <thead><tr>
-            <th scope="col">{{ t('admin.reqs.reference') }}</th><th scope="col">{{ t('admin.users.person') }}</th><th scope="col">{{ t('admin.users.plan') }}</th>
-            <th scope="col" class="n">{{ t('admin.reqs.price') }}</th><th scope="col">{{ t('admin.reqs.sent') }}</th><th scope="col">{{ t('admin.users.status') }}</th>
-            <th scope="col" class="act"><span class="adm-muted">{{ t('admin.list.actions') }}</span></th>
-          </tr></thead>
-          <tbody>
-            <tr v-for="r in requests" :key="r.id">
-              <td><b class="adm-ltr">{{ r.reference }}</b></td>
-              <td><NuxtLink :to="`/admin/users/${encodeURIComponent(r.userId)}`" class="adm-person"><b>{{ r.name }}</b><small class="adm-ltr">{{ r.email }}</small></NuxtLink></td>
-              <td>{{ r.plan }} · {{ t(`admin.period.${r.period}`) }}</td>
-              <td class="n">{{ money(r.priceCents) }}</td>
-              <td class="nowrap" :title="utc(r.createdAt)">{{ dateOnly(r.createdAt, locale) }}</td>
-              <td><span class="adm-chip" :class="rtone(r.state)">{{ t(`admin.reqState.${r.state}`) }}</span></td>
-              <td class="act">
-                <template v-if="r.state === 'pending'">
-                  <button type="button" class="adm-btn primary" @click="openPay(r)">{{ t('admin.reqs.markPaid') }}</button>
-                  <button type="button" class="adm-link danger" @click="rejectError = ''; rejecting = r">{{ t('admin.reqs.reject') }}</button>
-                </template>
-                <span v-else class="adm-muted">—</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <AdminListState :loading="reqLoading" :loaded="requests !== null" :error="reqError" :empty="!requests?.length" @retry="loadRequests" />
-    </section>
+      <section class="adm-card">
+        <div v-if="requests?.length" class="adm-scroll">
+          <table class="adm-tbl">
+            <caption>{{ t('admin.reqs.tab') }}</caption>
+            <thead><tr>
+              <th scope="col">{{ t('admin.reqs.reference') }}</th><th scope="col">{{ t('admin.users.person') }}</th><th scope="col">{{ t('admin.users.plan') }}</th>
+              <th scope="col" class="n">{{ t('admin.reqs.price') }}</th><th scope="col">{{ t('admin.reqs.sent') }}</th><th scope="col">{{ t('admin.users.status') }}</th>
+              <th scope="col" class="act"><span class="adm-muted">{{ t('admin.list.actions') }}</span></th>
+            </tr></thead>
+            <tbody>
+              <tr v-for="r in requests" :key="r.id">
+                <td><b class="adm-ltr">{{ r.reference }}</b></td>
+                <td><NuxtLink :to="`/admin/users/${encodeURIComponent(r.userId)}`" class="adm-person"><b>{{ r.name }}</b><small class="adm-ltr">{{ r.email }}</small></NuxtLink></td>
+                <td>{{ r.plan }} · {{ t(`admin.period.${r.period}`) }}</td>
+                <td class="n">{{ money(r.priceCents) }}</td>
+                <td class="nowrap" :title="utc(r.createdAt)">{{ dateOnly(r.createdAt, locale) }}</td>
+                <td><span class="adm-chip" :class="rtone(r.state)">{{ t(`admin.reqState.${r.state}`) }}</span></td>
+                <td class="act">
+                  <template v-if="r.state === 'pending'">
+                    <button type="button" class="adm-btn primary" @click="openPay(r)">{{ t('admin.reqs.markPaid') }}</button>
+                    <button type="button" class="adm-link danger" @click="rejectError = ''; rejecting = r">{{ t('admin.reqs.reject') }}</button>
+                  </template>
+                  <span v-else class="adm-muted">—</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <AdminListState :loading="reqLoading" :loaded="requests !== null" :error="reqError" :empty="!requests?.length" @retry="loadRequests" />
+      </section>
+    </template>
 
     <UiDialog v-model:open="editOpen" :title="editing ? t(editing.mode === 'end' ? 'admin.subs.endTitle' : 'admin.subs.moveTitle', { name: editing.row.user.name ?? '' }) : ''">
       <form v-if="editing" class="adm-form" @submit.prevent="saveEdit">

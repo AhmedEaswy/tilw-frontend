@@ -162,60 +162,71 @@ async function createLimit() {
     <AdminListState :loading="!loaded" :loaded="loaded" :error="error" :empty="false" @retry="load" />
 
     <div v-if="loaded" class="cards">
-      <section v-for="p in plans" :key="p.id" class="adm-card adm-card-pad" :aria-label="p.key">
-        <div class="adm-card-head">
+      <section v-for="p in plans" :key="p.id" class="adm-group" :aria-label="p.key">
+        <div class="adm-ghead">
           <h2 class="adm-ltr">{{ p.key }}</h2>
           <span class="adm-chip" :class="p.active ? 'success' : ''">{{ p.active ? t('admin.plans.active') : t('admin.plans.inactive') }}</span>
-          <span class="adm-muted">{{ money(p.priceMonthlyCents) }} / {{ money(p.priceYearlyCents) }}</span>
+          <span class="adm-muted adm-end">{{ money(p.priceMonthlyCents) }} / {{ money(p.priceYearlyCents) }}</span>
         </div>
-        <form v-if="drafts[p.id]" class="adm-form" @submit.prevent="savePlan(p)">
-          <div class="adm-row">
-            <label class="adm-label">{{ t('admin.plans.nameAr') }}<input v-model="drafts[p.id]!.nameAr" class="adm-input" dir="rtl" maxlength="60"></label>
-            <label class="adm-label">{{ t('admin.plans.nameEn') }}<input v-model="drafts[p.id]!.nameEn" class="adm-input" dir="ltr" maxlength="60"></label>
+        <form v-if="drafts[p.id]" class="adm-panel" @submit.prevent="savePlan(p)">
+          <label class="adm-line"><span class="adm-lab"><b>{{ t('admin.plans.nameAr') }}</b></span><input v-model="drafts[p.id]!.nameAr" class="adm-input adm-w-name" dir="rtl" maxlength="60"></label>
+          <label class="adm-line"><span class="adm-lab"><b>{{ t('admin.plans.nameEn') }}</b></span><input v-model="drafts[p.id]!.nameEn" class="adm-input adm-w-name" dir="ltr" maxlength="60"></label>
+          <label class="adm-line"><span class="adm-lab"><b>{{ t('admin.plans.monthly') }}</b></span><input v-model="drafts[p.id]!.monthly" class="adm-input adm-ltr adm-w-num" type="number" min="0" step="0.01" :aria-label="`${t('admin.plans.monthly')} ${p.key}`"></label>
+          <label class="adm-line"><span class="adm-lab"><b>{{ t('admin.plans.yearly') }}</b></span><input v-model="drafts[p.id]!.yearly" class="adm-input adm-ltr adm-w-num" type="number" min="0" step="0.01" :aria-label="`${t('admin.plans.yearly')} ${p.key}`"></label>
+          <label class="adm-line"><span class="adm-lab"><b>{{ t('admin.plans.sort') }}</b></span><input v-model="drafts[p.id]!.sort" class="adm-input adm-ltr adm-w-sort" type="number" step="1"></label>
+          <div class="adm-line">
+            <span class="adm-lab">
+              <label :for="`act-${p.id}`"><b>{{ t('admin.plans.activeLabel') }}</b></label>
+              <small v-if="p.key === 'free'">{{ t('admin.plans.freeAlwaysActive') }}</small>
+            </span>
+            <input :id="`act-${p.id}`" v-model="drafts[p.id]!.active" type="checkbox" role="switch" :disabled="p.key === 'free'">
           </div>
-          <div class="adm-row">
-            <label class="adm-label">{{ t('admin.plans.monthly') }}<input v-model="drafts[p.id]!.monthly" class="adm-input adm-ltr" type="number" min="0" step="0.01" :aria-label="`${t('admin.plans.monthly')} ${p.key}`"></label>
-            <label class="adm-label">{{ t('admin.plans.yearly') }}<input v-model="drafts[p.id]!.yearly" class="adm-input adm-ltr" type="number" min="0" step="0.01" :aria-label="`${t('admin.plans.yearly')} ${p.key}`"></label>
-            <label class="adm-label sort">{{ t('admin.plans.sort') }}<input v-model="drafts[p.id]!.sort" class="adm-input adm-ltr" type="number" step="1"></label>
-          </div>
-          <div class="adm-row">
-            <label class="chk"><input v-model="drafts[p.id]!.active" type="checkbox" :disabled="p.key === 'free'"> {{ t('admin.plans.activeLabel') }}</label>
-            <span v-if="p.key === 'free'" class="adm-hint">{{ t('admin.plans.freeAlwaysActive') }}</span>
-            <button type="submit" class="adm-btn primary save" :disabled="busy === p.id">{{ t('common.save') }}</button>
-          </div>
+          <div class="adm-foot"><button type="submit" class="adm-btn primary adm-end" :disabled="busy === p.id">{{ t('common.save') }}</button></div>
         </form>
       </section>
     </div>
 
-    <section v-if="loaded" class="adm-card">
-      <div class="adm-toolbar"><h2 class="adm-card-title">{{ t('admin.plans.limits') }}</h2><span class="adm-grow adm-muted">{{ t('admin.plans.limitsHint') }}</span></div>
-      <div class="adm-scroll">
-        <table class="adm-tbl">
-          <caption>{{ t('admin.plans.limits') }}</caption>
-          <thead><tr><th scope="col">{{ t('admin.limits.limit') }}</th><th v-for="p in plans" :key="p.id" scope="col" class="adm-ltr">{{ p.key }}</th></tr></thead>
-          <tbody>
-            <tr v-for="d in defs" :key="d.key">
-              <th scope="row" class="rowh"><span class="adm-person"><b>{{ label(d) }}</b><small class="adm-ltr">{{ d.key }}</small></span></th>
-              <td v-for="p in plans" :key="p.id">
-                <button type="button" class="val" :aria-label="`${label(d)} · ${p.key}: ${show_(cell(p, d.key), d.type)}`" @click="edit(p, d)">
-                  {{ show_(cell(p, d.key), d.type) }}
-                </button>
-                <span v-if="!cell(p, d.key)?.set" class="adm-muted"> · {{ t('admin.plans.default') }}</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+    <section v-if="loaded" class="adm-group" aria-labelledby="lim-h">
+      <div class="adm-ghead">
+        <h2 id="lim-h">{{ t('admin.plans.limits') }}</h2>
+        <span class="adm-gsub">{{ t('admin.plans.limitsHint') }}</span>
+      </div>
+      <div class="adm-panel">
+        <div class="adm-scroll">
+          <table class="adm-tbl">
+            <caption>{{ t('admin.plans.limits') }}</caption>
+            <thead><tr><th scope="col">{{ t('admin.limits.limit') }}</th><th v-for="p in plans" :key="p.id" scope="col" class="adm-ltr">{{ p.key }}</th></tr></thead>
+            <tbody>
+              <tr v-for="d in defs" :key="d.key">
+                <th scope="row" class="rowh"><span class="adm-person"><b>{{ label(d) }}</b><small class="adm-ltr">{{ d.key }}</small></span></th>
+                <td v-for="p in plans" :key="p.id">
+                  <button type="button" class="val" :aria-label="`${label(d)} · ${p.key}: ${show_(cell(p, d.key), d.type)}`" @click="edit(p, d)">
+                    {{ show_(cell(p, d.key), d.type) }}
+                  </button>
+                  <span v-if="!cell(p, d.key)?.set" class="adm-muted"> · {{ t('admin.plans.default') }}</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </section>
-
     <UiDialog v-model:open="editOpen" :title="editing ? `${label(editing.def)} · ${editing.plan.key}` : ''">
-      <form v-if="editing" class="adm-form" @submit.prevent="saveCell">
-        <template v-if="editing.def.type === 'int'">
-          <label class="adm-label">{{ t('admin.limits.value') }}<input v-model="ev.int" class="adm-input adm-ltr" type="number" min="0" step="1" :disabled="ev.unlimited"></label>
-          <label class="chk"><input v-model="ev.unlimited" type="checkbox"> {{ t('admin.limits.unlimited') }}</label>
-        </template>
-        <label v-else-if="editing.def.type === 'bool'" class="chk"><input v-model="ev.bool" type="checkbox"> {{ t('admin.limits.on') }}</label>
-        <label v-else class="adm-label">{{ t('admin.override.list') }}<input v-model="ev.list" class="adm-input adm-ltr"></label>
+      <form v-if="editing" class="adm-form dlgform" @submit.prevent="saveCell">
+        <div class="adm-panel dlgpanel">
+          <template v-if="editing.def.type === 'int'">
+            <label class="adm-line"><span class="adm-lab"><b>{{ t('admin.limits.value') }}</b></span><input v-model="ev.int" class="adm-input adm-ltr adm-w-num big" type="number" min="0" step="1" :disabled="ev.unlimited"></label>
+            <div class="adm-line">
+              <span class="adm-lab"><label for="lim-unl"><b>{{ t('admin.limits.unlimited') }}</b></label></span>
+              <input id="lim-unl" v-model="ev.unlimited" type="checkbox" role="switch">
+            </div>
+          </template>
+          <div v-else-if="editing.def.type === 'bool'" class="adm-line">
+            <span class="adm-lab"><label for="lim-on"><b>{{ t('admin.limits.on') }}</b></label></span>
+            <input id="lim-on" v-model="ev.bool" type="checkbox" role="switch">
+          </div>
+          <label v-else class="adm-line"><span class="adm-lab"><b>{{ t('admin.override.list') }}</b></span><input v-model="ev.list" class="adm-input adm-ltr big"></label>
+        </div>
         <div class="adm-dialog-actions">
           <button v-if="cell(editing.plan, editing.def.key)?.set" type="button" class="adm-link rm" @click="unsetCell">{{ t('admin.plans.useDefault') }}</button>
           <button type="button" class="adm-btn" @click="editing = null">{{ t('common.cancel') }}</button>
@@ -260,20 +271,25 @@ async function createLimit() {
 <style scoped>
 .cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 18px;
+  align-items: start;
+}
+.cards .adm-line {
+  gap: 8px 14px;
+  padding: 12px 18px;
+}
+.cards .adm-panel > * + *::before {
+  inset-inline: 18px;
+}
+.cards .adm-foot {
+  padding: 10px 18px;
 }
 .chk {
   display: flex;
   gap: 8px;
   align-items: center;
   font: 500 14px/1.4 var(--tilw-font-ar);
-}
-.save {
-  margin-inline-start: auto;
-}
-.sort {
-  flex: 0 0 90px !important;
 }
 .rowh {
   position: static;
@@ -322,6 +338,22 @@ async function createLimit() {
 .val:hover::after,
 .val:focus-visible::after {
   opacity: 1;
+}
+/* the limit dialog: the value as a row card on the dialog paper, a larger field */
+.dlgform {
+  gap: var(--tilw-space-24);
+}
+.dlgpanel .adm-line {
+  padding: 16px 22px;
+}
+.dlgpanel .adm-lab b,
+.dlgpanel .adm-lab label {
+  font-size: 16px;
+}
+.dlgpanel .big {
+  inline-size: 160px;
+  block-size: 44px;
+  font-size: 15px;
 }
 .rm {
   margin-inline-end: auto;

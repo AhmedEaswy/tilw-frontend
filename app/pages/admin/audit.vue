@@ -47,13 +47,13 @@ const targetId = textModel(filters, 'targetId')
         <p class="adm-sub">{{ t('admin.audit.sub') }}</p>
       </div>
     </div>
+    <div class="adm-filter">
+      <span class="adm-field"><label for="f-action">{{ t('admin.audit.action.label') }}</label><UiAutocomplete id="f-action" v-model="action" class="act" :source="findAction" :selected-options="actionOptions" :debounce="0" size="sm" :placeholder="t('admin.audit.allActions')" /></span>
+      <UiSearchField v-model="targetId" kind="id" size="sm" :placeholder="t('admin.audit.targetId')" :label="t('admin.audit.targetId')" />
+      <span class="adm-field"><label for="f-range">{{ t('admin.range.label') }}</label><UiDatePicker id="f-range" v-model="range" mode="range" size="sm" :max="today" /></span>
+      <span v-if="filters.adminId" class="adm-chip info">{{ t('admin.audit.oneAdmin') }} <button type="button" class="adm-link" :aria-label="t('common.close')" @click="filters.adminId = undefined">×</button></span>
+    </div>
     <section class="adm-card">
-      <div class="adm-toolbar">
-        <span class="adm-field"><label for="f-action">{{ t('admin.audit.action.label') }}</label><UiAutocomplete id="f-action" v-model="action" class="act" :source="findAction" :selected-options="actionOptions" :debounce="0" size="sm" :placeholder="t('admin.audit.allActions')" /></span>
-        <UiSearchField v-model="targetId" kind="id" size="sm" :placeholder="t('admin.audit.targetId')" :label="t('admin.audit.targetId')" />
-        <span class="adm-field"><label for="f-range">{{ t('admin.range.label') }}</label><UiDatePicker id="f-range" v-model="range" mode="range" size="sm" :max="today" /></span>
-        <span v-if="filters.adminId" class="adm-chip info">{{ t('admin.audit.oneAdmin') }} <button type="button" class="adm-link" :aria-label="t('common.close')" @click="filters.adminId = undefined">×</button></span>
-      </div>
       <AuditTable v-if="list.items.value.length" :entries="list.items.value" />
       <AdminListState
         :loading="list.loading.value" :loaded="list.loaded.value" :error="list.error.value" :empty="!list.items.value.length"

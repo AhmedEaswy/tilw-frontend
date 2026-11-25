@@ -39,19 +39,23 @@ function show(key: string, v: unknown): string {
     </div>
     <UiSkeleton v-else-if="!data" h="200px" />
     <div v-else class="cols">
-      <section class="adm-card adm-card-pad">
-        <h2>{{ t('admin.userTabs.prefs.general') }}</h2>
-        <dl class="adm-kv">
-          <div><dt>{{ t('admin.userTabs.prefs.locale') }}</dt><dd>{{ data.locale === 'ar' ? 'العربية' : 'English' }}</dd></div>
-          <div><dt>{{ t('admin.userTabs.prefs.theme') }}</dt><dd>{{ t(`admin.userTabs.prefs.themes.${data.theme}`) }}</dd></div>
-          <div><dt>{{ t('admin.userTabs.prefs.sync') }}</dt><dd>{{ t(`admin.userTabs.prefs.syncModes.${data.syncMode}`) }}</dd></div>
-        </dl>
+      <section class="adm-group">
+        <div class="adm-ghead"><h2>{{ t('admin.userTabs.prefs.general') }}</h2></div>
+        <div class="adm-panel">
+          <dl class="adm-kv">
+            <div><dt>{{ t('admin.userTabs.prefs.locale') }}</dt><dd>{{ data.locale === 'ar' ? 'العربية' : 'English' }}</dd></div>
+            <div><dt>{{ t('admin.userTabs.prefs.theme') }}</dt><dd>{{ t(`admin.userTabs.prefs.themes.${data.theme}`) }}</dd></div>
+            <div><dt>{{ t('admin.userTabs.prefs.sync') }}</dt><dd>{{ t(`admin.userTabs.prefs.syncModes.${data.syncMode}`) }}</dd></div>
+          </dl>
+        </div>
       </section>
-      <section class="adm-card adm-card-pad">
-        <h2>{{ t('admin.userTabs.prefs.readingTitle') }}</h2>
-        <dl class="adm-kv">
-          <div v-for="r in reading" :key="r.key"><dt>{{ r.label }}</dt><dd class="adm-ltr">{{ r.value }}</dd></div>
-        </dl>
+      <section class="adm-group">
+        <div class="adm-ghead"><h2>{{ t('admin.userTabs.prefs.readingTitle') }}</h2></div>
+        <div class="adm-panel">
+          <dl class="adm-kv">
+            <div v-for="r in reading" :key="r.key"><dt>{{ r.label }}</dt><dd class="adm-ltr">{{ r.value }}</dd></div>
+          </dl>
+        </div>
       </section>
     </div>
     <p class="adm-muted ro">{{ t('admin.userTabs.prefs.readOnly') }}</p>
@@ -62,7 +66,7 @@ function show(key: string, v: unknown): string {
 .cols {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 16px;
+  gap: 24px;
   align-items: start;
 }
 .ro {

@@ -207,6 +207,7 @@
       "active": "active {date}",
       "neverActive": "never active",
       "actions": "Account actions",
+      "moreActions": "More account actions",
       "a": {
         "changePlan": "Change plan",
         "credits": "Grant credits",
