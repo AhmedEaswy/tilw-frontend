@@ -29,10 +29,6 @@ watch(open, (on) => {
   else document.removeEventListener('keydown', onKey, true)
 })
 onBeforeUnmount(() => typeof document !== 'undefined' && document.removeEventListener('keydown', onKey, true))
-function toggle() {
-  if (open.value) hide()
-  else void show()
-}
 </script>
 
 <template>
@@ -43,7 +39,7 @@ function toggle() {
     @mouseleave="hide"
     @focusin="show"
     @focusout="hide"
-    @click="toggle"
+    @click="show"
   >
     <slot :describedby="id" />
     <span :id="id" ref="pop" role="tooltip" popover="manual" class="tip" :class="{ on: open }" data-testid="tooltip">{{ text }}</span>
