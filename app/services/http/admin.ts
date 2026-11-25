@@ -45,7 +45,7 @@ export function createHttpAdmin(api: HttpClient): AdminPort {
     resend: id => api.post<Invitation>(`/api/admin/invitations/${seg(id)}/resend`),
     withdraw: id => api.del<void>(`/api/admin/invitations/${seg(id)}`),
 
-    dashboard: days => api.get<AdminDashboard>(`/api/admin/dashboard${query({ days })}`),
+    dashboard: p => api.get<AdminDashboard>(`/api/admin/dashboard${query(typeof p === 'number' ? { days: p } : p)}`),
     users: async (f, cursor, limit) => {
       const res = await api.get<{ body: AdminUserRow[] | null; headers: Headers }>(
         `/api/admin/users${query({ q: f.q, plan: f.plan, status: f.status, cursor, limit })}`,
@@ -109,7 +109,7 @@ export function createHttpAdmin(api: HttpClient): AdminPort {
     auditActions: () => api.get<AuditAction[]>('/api/admin/audit-log/actions'),
 
     // ---------- feature 007 (backend specs/007-admin-insights) ----------
-    analytics: days => api.get<AdminAnalytics>(`/api/admin/analytics${query({ days })}`),
+    analytics: p => api.get<AdminAnalytics>(`/api/admin/analytics${query(typeof p === 'number' ? { days: p } : p)}`),
     userTakes: async (id, cursor, limit) => items<AdminTake>('takes')(await api.get(`/api/admin/users/${seg(id)}/takes${query({ cursor, limit })}`)),
     userScripts: async (id, cursor, limit) => items<AdminScript>('scripts')(await api.get(`/api/admin/users/${seg(id)}/scripts${query({ cursor, limit })}`)),
     userLinks: async (id, cursor, limit) => items<AdminLink>('links')(await api.get(`/api/admin/users/${seg(id)}/links${query({ cursor, limit })}`)),

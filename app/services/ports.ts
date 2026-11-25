@@ -10,7 +10,7 @@ import type {
   PresenceMember, RealtimeSettings, StudioState,
   AiProvider, Credits, FormatEstimate, FormatSuggestion, OwnKey, SpeechLanguage, SpeechPurpose, SpeechResult, SpeechUpload,
   Transcription, TranscriptionEstimate, TranscriptionPermission,
-  AddCreditsInput, AdminDashboard, AdminOverride, AdminPlan, AdminPlanLimit, AdminSettings, AdminSubscription, AdminSubscriptionRow,
+  AddCreditsInput, AdminDashboard, AdminPeriodQuery, AdminOverride, AdminPlan, AdminPlanLimit, AdminSettings, AdminSubscription, AdminSubscriptionRow,
   AdminUpgradeRequest, AdminUserDetail, AdminUserFilters, AdminUserRow, AdminAiCall, AiCallFilters, AiKeyState, AiUsage, AuditAction,
   AuditEntry, AuditFilters, ChangePlanInput, CreditEntry, FeatureFlag, GrantSubscriptionInput, LedgerEntry, LedgerFilters,
   LimitDefinition, OverrideInput, Page, PaymentsPage, Period, PlanInput, PublicSettings, SignupMode, SubscriptionFilters,
@@ -148,7 +148,7 @@ export interface AdminPort {
   withdraw(id: string): Promise<void>
 
   // ---------- dashboard and people ----------
-  dashboard(days: number): Promise<AdminDashboard>
+  dashboard(period: AdminPeriodQuery): Promise<AdminDashboard>
   users(filters: AdminUserFilters, cursor?: string | null, limit?: number): Promise<Page<AdminUserRow>>
   user(id: string): Promise<AdminUserDetail>
   suspend(id: string, reason: string): Promise<AdminUserDetail>
@@ -203,7 +203,7 @@ export interface AdminPort {
 
   // ---------- feature 007: analytics, one person's insights, admins ----------
   /** Aggregates over the last `days` (1..365) ending now. Section users (view). */
-  analytics(days: number): Promise<AdminAnalytics>
+  analytics(period: AdminPeriodQuery): Promise<AdminAnalytics>
   /** Newest recording first; metadata only. */
   userTakes(id: string, cursor?: string | null, limit?: number): Promise<Page<AdminTake>>
   /** Most recently updated first; never the text. */

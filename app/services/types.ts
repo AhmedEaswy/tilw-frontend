@@ -1172,3 +1172,6 @@ export interface AdminPreferences {
   reading: Partial<ReadingSettings> & Record<string, unknown>
   syncMode: SyncMode
 }
+
+/** An admin report period: the last N days (1–365) ending now, or whole UTC days `from`–`to` (`YYYY-MM-DD`, ≤ 366 days, not after today). */
+export type AdminPeriodQuery = number | { from: string; to: string }

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * Admin · analytics (feature 007, backend `GET /api/admin/analytics?days=`): product use over the last 7/30/90/365 days
+ * Admin · analytics (feature 007, backend `GET /api/admin/analytics?days=` or `?from=&to=`): product use over the last 7/30/90/365 days or a custom range
  * (period in the address): recordings by length and by day, practice sessions, phone links, scripts, linked drives,
  * own AI keys, and AI use by provider × who paid. Aggregates only, no per-person data. Section users (view).
  */
@@ -11,16 +11,9 @@ import { clockTime, decimal, percent, providerMark, providerName } from '~/utils
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 const { t, locale } = useI18n()
 useHead({ title: () => `${t('admin.nav.analytics')} · ${t('admin.title')}` })
-const route = useRoute()
-const router = useRouter()
 const errorText = useErrorText()
 
-const PERIODS = [7, 30, 90, 365] as const
-const days = computed<number>(() => {
-  const d = Number(route.query.days)
-  return (PERIODS as readonly number[]).includes(d) ? d : 30
-})
-const setDays = (d: number) => router.replace({ query: d === 30 ? {} : { days: String(d) } })
+const { period, sub: periodSub } = useAdminPeriod()
 
 const data = ref<AdminAnalytics | null>(null)
 const error = ref<unknown>(null)
@@ -31,7 +24,7 @@ async function load() {
   loading.value = true
   error.value = null
   try {
-    const a = await useServices().admin.analytics(days.value)
+    const a = await useServices().admin.analytics(period.value)
     if (mine === seq) data.value = a
   } catch (e) {
     if (mine === seq) error.value = e
@@ -39,7 +32,7 @@ async function load() {
     if (mine === seq) loading.value = false
   }
 }
-watch(days, load, { immediate: true })
+watch(period, load, { immediate: true, deep: true })
 
 const buckets = computed(() => DURATION_BUCKETS.map(b => ({ key: b, label: t(`admin.analytics.bucket.${b}`), value: data.value?.takes.durationBuckets[b] ?? 0 })))
 const takesByDay = computed(() => (data.value?.takes.byDay ?? []).map(d => ({ label: d.date, value: d.count })))
@@ -61,12 +54,10 @@ const aiTotals = computed(() => (data.value?.aiUsage ?? []).reduce((n, r) => ({ 
     <div class="adm-head">
       <div>
         <h1>{{ t('admin.nav.analytics') }}</h1>
-        <p v-if="data" class="adm-sub">{{ t('admin.dash.sub', { n: days, at: dateTime(data.generatedAt, locale) }) }}</p>
+        <p v-if="data" class="adm-sub">{{ periodSub(dateTime(data.generatedAt, locale)) }}</p>
       </div>
       <div class="adm-actions">
-        <div class="adm-seg" role="group" :aria-label="t('admin.dash.period')">
-          <button v-for="p in PERIODS" :key="p" type="button" :aria-pressed="days === p" @click="setDays(p)">{{ t('admin.dash.days', { n: p }) }}</button>
-        </div>
+        <AdminPeriodPicker />
       </div>
     </div>
 

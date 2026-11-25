@@ -14,7 +14,7 @@ import {
   type AdminAnalytics, type AdminConnections, type AdminLevel, type AdminLink, type AdminPermissions, type AdminPermissionsInput,
   type AdminPreferences, type AdminRole, type AdminRow, type AdminScript, type AdminSection, type AdminTake, type AiProvider,
   type AnalyticsAiRow, type DashboardHeadlines, type DurationBucket, type PracticeSession, type PracticeVia, type RemoteTake, type Script,
-  type AddCreditsInput, type AdminAiCall, type AdminDashboard, type AdminLimitValue, type AdminOverride, type AdminPlan, type AdminSettings,
+  type AddCreditsInput, type AdminAiCall, type AdminDashboard, type AdminPeriodQuery, type AdminLimitValue, type AdminOverride, type AdminPlan, type AdminSettings,
   type AdminStatus, type AdminSubscription, type AdminSubscriptionRow, type AdminUpgradeRequest, type AdminUserDetail, type AdminUserRow,
   type AiCapability, type AiKeyState, type AiUsage, type AuditAction, type AuditEntry, type CreditEntry, type CreditKind, type FeatureFlag,
   type Invitation, type LedgerEntry, type Page, type PaymentsPage, type PendingRequestRef, type PersonRef, type SignupMode, type UsageFigures,
@@ -500,9 +500,24 @@ export function createMockAdmin(d: MockAdminDeps) {
     const sec = ms / 1000
     return sec < 60 ? 'lt1m' : sec < 300 ? '1to5' : sec < 900 ? '5to15' : sec < 1800 ? '15to30' : 'gt30'
   }
-  function analyticsOf(days: number): AdminAnalytics {
+  /** The backend's period rules (AdminPeriod): last N days ending now, or whole UTC days from–to. */
+  function periodOf(p: AdminPeriodQuery): { from: number; to: number; days: number } {
     const t = d.now()
-    const from = t - days * DAY
+    if (typeof p === 'number') {
+      if (!Number.isInteger(p) || p < 1 || p > 365) throw new PortError('validation', { days: 'invalid' })
+      return { from: t - p * DAY, to: t, days: p }
+    }
+    const ok = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(`${v}T00:00:00Z`))
+    if (!ok(p.from) || !ok(p.to) || p.from > p.to || p.to > dayOf(t)) throw new PortError('validation', { to: 'invalid' })
+    const from = Date.parse(`${p.from}T00:00:00Z`)
+    const days = Math.round((Date.parse(`${p.to}T00:00:00Z`) - from) / DAY) + 1
+    if (days > 366) throw new PortError('validation', { to: 'invalid' })
+    return { from, to: Math.min(Date.parse(`${p.to}T23:59:59.999Z`), t), days }
+  }
+
+  function analyticsOf(p: { from: number; to: number; days: number }): AdminAnalytics {
+    const now = d.now()
+    const { from, to: t, days } = p
     const empty = knobs().emptyDashboard
     const inP = (ms: number) => ms >= from && ms <= t
     const dates: string[] = []
@@ -531,7 +546,7 @@ export function createMockAdmin(d: MockAdminDeps) {
     aiUsage.sort((a, b) => a.provider.localeCompare(b.provider) || a.paidWith.localeCompare(b.paidWith) || a.unit.localeCompare(b.unit))
     const avg = (list: number[]) => (list.length ? Math.round(list.reduce((n, x) => n + x, 0) / list.length) : null)
     return {
-      generatedAt: iso(t),
+      generatedAt: iso(now),
       period: { days, from: iso(from), to: iso(t) },
       takes: {
         count: takes.length,
@@ -569,8 +584,8 @@ export function createMockAdmin(d: MockAdminDeps) {
       aiUsage,
     }
   }
-  function headlinesOf(days: number): DashboardHeadlines {
-    const a = analyticsOf(days)
+  function headlinesOf(p: { from: number; to: number; days: number }): DashboardHeadlines {
+    const a = analyticsOf(p)
     return { takes: a.takes.count, minutes: a.takes.totalMinutes, scripts: a.scripts.createdInPeriod, practiceSessions: a.practice.sessions, phoneLinks: a.phoneLinks.started, ownKeyUsers: a.ownKeys.users }
   }
 
@@ -800,19 +815,19 @@ export function createMockAdmin(d: MockAdminDeps) {
       tx(s => audit(s, a.id, 'invitation.withdraw', 'Invitation', id, { state: 'pending' }, { state: 'withdrawn' }))
     }),
 
-    dashboard: days => adminRead((): AdminDashboard => {
-      if (!Number.isInteger(days) || days < 1 || days > 365) throw new PortError('validation', { days: 'invalid' })
+    dashboard: period => adminRead((): AdminDashboard => {
+      const p = periodOf(period)
       st = read()
       const t = d.now()
-      const from = t - days * DAY
+      const { from, to, days } = p
       const empty = knobs().emptyDashboard
       const users = empty ? [] : db.s.users
       const byDay: { date: string; count: number }[] = []
-      for (let x = Date.parse(dayOf(from)); x <= t; x += DAY) byDay.push({ date: dayOf(x), count: 0 })
+      for (let x = Date.parse(dayOf(from)); x <= to; x += DAY) byDay.push({ date: dayOf(x), count: 0 })
       let signups = 0
       for (const u of users) {
         const c = Date.parse(u.createdAt)
-        if (c >= from && c <= t) {
+        if (c >= from && c <= to) {
           signups++
           const b = byDay.find(x => x.date === dayOf(c))
           if (b) b.count++
@@ -821,7 +836,7 @@ export function createMockAdmin(d: MockAdminDeps) {
       const activeIn = (ms: number) => users.filter(u => (st.lastActive[u.id] ?? 0) >= t - ms).length
       const takes = empty ? [] : Object.values(db.s.remoteTakes).flat()
       const calls = empty ? [] : callsAll()
-      const inPeriod = calls.filter(c => c.createdAt >= from)
+      const inPeriod = calls.filter(c => c.createdAt >= from && c.createdAt <= to)
       const thisMonth = calls.filter(c => monthOf(c.createdAt) === monthOf(t))
       const paying = empty ? [] : db.s.subscriptions.filter(x => subState(x) === 'active' && x.source === 'request')
       const mrr = paying.reduce((n, x) => {
@@ -829,16 +844,16 @@ export function createMockAdmin(d: MockAdminDeps) {
         const cents = r?.priceCents ?? 0
         return n + (r?.period === 'yearly' ? Math.round(cents / 12) : cents)
       }, 0)
-      const paid = empty ? [] : db.s.requests.filter(r => r.state === 'fulfilled' && r.handledAt && Date.parse(r.handledAt) >= from)
+      const paid = empty ? [] : db.s.requests.filter(r => r.state === 'fulfilled' && r.handledAt && Date.parse(r.handledAt) >= from && Date.parse(r.handledAt) <= to)
       return {
         generatedAt: iso(t),
-        period: { days, from: iso(from), to: iso(t) },
+        period: { days, from: iso(from), to: iso(to) },
         users: { total: users.length, admins: users.filter(u => u.isAdmin).length, suspended: users.filter(u => st.suspensions[u.id]).length, deletionScheduled: users.filter(u => db.s.deletion[u.id] !== undefined).length },
         signups: { total: signups, byDay },
         active: { day: activeIn(DAY), week: activeIn(7 * DAY), month: activeIn(30 * DAY) },
         storage: {
           linkedDrives: empty ? 0 : Object.values(db.s.storage).filter(x => x.state === 'linked').length, takes: takes.length,
-          bytes: takes.reduce((n, x) => n + x.sizeBytes, 0), bytesInPeriod: takes.filter(x => Date.parse(x.recordedAt) >= from).reduce((n, x) => n + x.sizeBytes, 0),
+          bytes: takes.reduce((n, x) => n + x.sizeBytes, 0), bytesInPeriod: takes.filter(x => Date.parse(x.recordedAt) >= from && Date.parse(x.recordedAt) <= to).reduce((n, x) => n + x.sizeBytes, 0),
         },
         ai: { creditsUsed: inPeriod.reduce((n, c) => n + c.credits, 0), creditsUsedThisMonth: thisMonth.reduce((n, c) => n + c.credits, 0), calls: inPeriod.length, failedCalls: inPeriod.filter(c => c.status === 'failed').length, ownKeyCalls: inPeriod.filter(c => c.paidWith === 'own_key').length },
         revenue: { currency: 'USD', mrrCents: mrr, payingSubscriptions: paying.length, payments: paid.length, paymentsCents: paid.reduce((n, r) => n + r.priceCents, 0) },
@@ -846,7 +861,7 @@ export function createMockAdmin(d: MockAdminDeps) {
           pendingRequests: empty ? 0 : db.s.requests.filter(r => r.state === 'pending' && Date.parse(r.expiresAt) > t).length,
           waitlistNotInvited: empty ? 0 : db.s.waitlist.filter(w => !db.s.invites.some(i => i.email === w.email) && !db.s.users.some(u => u.email === w.email)).length,
         },
-        headlines: headlinesOf(days),
+        headlines: headlinesOf(p),
       }
     }),
     users: (f, cursor, limit = 50) => adminRead(() => {
@@ -1282,10 +1297,7 @@ export function createMockAdmin(d: MockAdminDeps) {
     }),
     auditActions: () => adminRead(() => AUDIT_ACTIONS.map(x => ({ ...x }))),
     // ---------- feature 007 ----------
-    analytics: days => adminRead(() => {
-      if (!Number.isInteger(days) || days < 1 || days > 365) throw new PortError('validation', { days: 'invalid' })
-      return analyticsOf(days)
-    }),
+    analytics: period => adminRead(() => analyticsOf(periodOf(period))),
     userTakes: (id, cursor, limit) => adminRead(() => {
       findUser(id)
       const all = [...(db.s.remoteTakes[id] ?? [])]

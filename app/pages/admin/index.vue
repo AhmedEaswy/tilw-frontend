@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * Admin · dashboard (feature 006 US1, Figma D1 `308:404`, EN D12 `316:2114`): figures for the last 7/30/90/365 days
- * (period in the address), a day-by-day sign-up chart, and attention items that open the matching filtered pages.
+ * or a custom from–to range (period in the address), a day-by-day sign-up chart, and attention items that open the matching filtered pages.
  */
 import type { AdminDashboard } from '~/services/types'
 import { dateTime, money, num } from '~/utils/admin'
@@ -10,14 +10,8 @@ import { decimal } from '~/utils/adminInsights'
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 const { t, locale } = useI18n()
 useHead({ title: () => `${t('admin.nav.dashboard')} · ${t('admin.title')}` })
-const route = useRoute()
-const router = useRouter()
 
-const PERIODS = [7, 30, 90, 365] as const
-const days = computed<number>(() => {
-  const d = Number(route.query.days)
-  return (PERIODS as readonly number[]).includes(d) ? d : 30
-})
+const { period, query: periodQuery, sub: periodSub, inPeriod } = useAdminPeriod()
 const data = ref<AdminDashboard | null>(null)
 const error = ref<unknown>(null)
 const loading = ref(false)
@@ -27,31 +21,30 @@ async function load() {
   loading.value = true
   error.value = null
   try {
-    data.value = await useServices().admin.dashboard(days.value)
+    data.value = await useServices().admin.dashboard(period.value)
   } catch (e) {
     error.value = e
   } finally {
     loading.value = false
   }
 }
-watch(days, load, { immediate: true })
-const setDays = (d: number) => router.replace({ query: d === 30 ? {} : { days: String(d) } })
+watch(period, load, { immediate: true, deep: true })
 
 const bytes = (n: number) => formatBytes(n, locale.value)
 
 // Feature 007: headline counts for the period, each opening Analytics (when the admin may view it).
 const { can } = useAdminPermissions()
-const analyticsTo = computed(() => ({ path: '/admin/analytics', query: days.value === 30 ? {} : { days: String(days.value) } }))
+const analyticsTo = computed(() => ({ path: '/admin/analytics', query: periodQuery.value }))
 const headlines = computed(() => {
   const d = data.value
   if (!d?.headlines) return []
   const h = d.headlines
   return [
-    { key: 'takes', value: num(h.takes), note: t('admin.dash.inDays', { n: days.value }) },
-    { key: 'minutes', value: decimal(h.minutes), note: t('admin.dash.inDays', { n: days.value }) },
+    { key: 'takes', value: num(h.takes), note: inPeriod.value },
+    { key: 'minutes', value: decimal(h.minutes), note: inPeriod.value },
     { key: 'scripts', value: num(h.scripts), note: t('admin.dash.newInPeriod') },
-    { key: 'practiceSessions', value: num(h.practiceSessions), note: t('admin.dash.inDays', { n: days.value }) },
-    { key: 'phoneLinks', value: num(h.phoneLinks), note: t('admin.dash.inDays', { n: days.value }) },
+    { key: 'practiceSessions', value: num(h.practiceSessions), note: inPeriod.value },
+    { key: 'phoneLinks', value: num(h.phoneLinks), note: inPeriod.value },
     { key: 'drives', value: num(d.storage.linkedDrives), note: t('admin.dash.now') },
     { key: 'ownKeyUsers', value: num(h.ownKeyUsers), note: t('admin.dash.now') },
   ]
@@ -64,12 +57,10 @@ const chart = computed(() => (data.value?.signups.byDay ?? []).map(d => ({ label
     <div class="adm-head">
       <div>
         <h1>{{ t('admin.nav.dashboard') }}</h1>
-        <p v-if="data" class="adm-sub">{{ t('admin.dash.sub', { n: days, at: dateTime(data.generatedAt, locale) }) }}</p>
+        <p v-if="data" class="adm-sub">{{ periodSub(dateTime(data.generatedAt, locale)) }}</p>
       </div>
       <div class="adm-actions">
-        <div class="adm-seg" role="group" :aria-label="t('admin.dash.period')">
-          <button v-for="p in PERIODS" :key="p" type="button" :aria-pressed="days === p" @click="setDays(p)">{{ t('admin.dash.days', { n: p }) }}</button>
-        </div>
+        <AdminPeriodPicker />
       </div>
     </div>
 
@@ -91,7 +82,7 @@ const chart = computed(() => (data.value?.signups.byDay ?? []).map(d => ({ label
         <div class="adm-ghead"><h2>{{ t('admin.dash.people') }}</h2></div>
         <div class="adm-panel">
           <div class="adm-stats adm-strip">
-            <AdminStat class="is-sel" :label="t('admin.dash.signups')" :value="num(data.signups.total)" :note="t('admin.dash.inDays', { n: days })" />
+            <AdminStat class="is-sel" :label="t('admin.dash.signups')" :value="num(data.signups.total)" :note="inPeriod" />
             <AdminStat :label="t('admin.dash.activeDay')" :value="num(data.active.day)" :note="t('admin.dash.last24h')" />
             <AdminStat :label="t('admin.dash.activeWeek')" :value="num(data.active.week)" :note="t('admin.dash.last7')" />
             <AdminStat :label="t('admin.dash.activeMonth')" :value="num(data.active.month)" :note="t('admin.dash.last30')" />

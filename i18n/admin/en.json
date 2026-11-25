@@ -946,6 +946,17 @@
         "noAccount": "There's no account with this email.",
         "invalid": "These permissions weren't accepted. Check each section and try again."
       }
+    },
+    "customPeriod": {
+      "tab": "Custom",
+      "label": "Custom period",
+      "placeholder": "Pick a start and end day",
+      "range": "{from} – {to}",
+      "sub": "{range} · as of {at}"
+    },
+    "rail": {
+      "collapse": "Collapse the side menu",
+      "expand": "Expand the side menu"
     }
   }
 }

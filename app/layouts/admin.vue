@@ -2,7 +2,9 @@
 /**
  * Admin console layout (feature 006, Figma D1 `308:404`, D12 `316:2114`, narrow D14 `317:2221` / `317:2318`):
  * a fixed side rail on the inline-start side with the sections, a top bar with the people search, the environment
- * badge, a link back to the studio and the admin's menu. 1024–1279px: icon rail; under 1024px: a drawer.
+ * badge, a link back to the studio and the admin's menu. From 1024px the rail collapses to icons or expands from the
+ * button beside the logo (remembered in this browser); with no choice made it is full from 1280px and icons below.
+ * Under 1024px it is a drawer.
  */
 import '~/assets/css/admin.css'
 import type { GlyphName } from '~/components/ui/UiGlyph.vue'
@@ -61,17 +63,36 @@ function find() {
   void router.push({ path: '/admin/users', query: q ? { q } : {} })
 }
 
+// Rail size from 1024px: the admin's choice, else full from 1280px and icons below (the CSS default, so no flash).
+// Both are read after mount so the first client render matches the server's.
+const railPref = useLocalStorage<'mini' | 'full' | null>('tilw-admin-rail', null, { initOnMounted: true })
+const mounted = useMounted()
+const midWidth = useMediaQuery('(max-width: 1279px)')
+const railMini = computed(() => railPref.value === 'mini' || (railPref.value !== 'full' && mounted.value && midWidth.value))
+const toggleRail = () => (railPref.value = railMini.value ? 'full' : 'mini')
+
 const drawer = ref(false)
 watch(() => route.fullPath, () => (drawer.value = false))
 useHead({ htmlAttrs: { class: 'adm-html' } })
 </script>
 
 <template>
-  <div class="adm-shell" :class="{ open: drawer }">
+  <div class="adm-shell" :class="{ open: drawer, 'rail-mini': railPref === 'mini', 'rail-full': railPref === 'full' }">
     <a href="#adm-main" class="skip">{{ t('admin.skip') }}</a>
     <aside class="rail" :aria-label="t('admin.title')">
       <div class="brand">
-        <NuxtLink to="/admin" :aria-label="t('admin.title')"><BrandSignature :width="138" /></NuxtLink>
+        <NuxtLink to="/admin" class="logo" :aria-label="t('admin.title')"><BrandSignature :width="138" /></NuxtLink>
+        <button
+          type="button"
+          class="fold"
+          :aria-label="railMini ? t('admin.rail.expand') : t('admin.rail.collapse')"
+          :title="railMini ? t('admin.rail.expand') : t('admin.rail.collapse')"
+          :aria-expanded="!railMini"
+          data-testid="rail-toggle"
+          @click="toggleRail"
+        >
+          <UiGlyph :name="railMini ? 'expand' : 'menu'" :size="18" />
+        </button>
         <span class="tag">{{ t('admin.title') }}</span>
         <button type="button" class="close" :aria-label="t('common.close')" @click="drawer = false"><UiGlyph name="close" :size="20" /></button>
       </div>
@@ -118,6 +139,7 @@ useHead({ htmlAttrs: { class: 'adm-html' } })
   grid-template-columns: 240px minmax(0, 1fr);
   min-block-size: 100dvh;
   background: var(--tilw-surface-paper);
+  transition: grid-template-columns 0.2s;
 }
 .skip {
   position: absolute;
@@ -141,8 +163,32 @@ useHead({ htmlAttrs: { class: 'adm-html' } })
 }
 .brand {
   display: grid;
-  gap: 4px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 8px;
   padding: 4px 8px 16px;
+}
+.brand .tag {
+  grid-column: 1 / -1;
+}
+.fold {
+  display: inline-grid;
+  place-items: center;
+  inline-size: 32px;
+  block-size: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--tilw-text-muted);
+  cursor: pointer;
+}
+.fold:hover {
+  background: var(--tilw-surface-quiet);
+  color: var(--tilw-text-ink);
+}
+.fold:focus-visible {
+  outline: 2px solid var(--tilw-focus-ring);
+  outline-offset: 2px;
 }
 .brand .tag {
   color: var(--tilw-action-primary);
@@ -242,24 +288,54 @@ main:focus {
   display: none;
 }
 
-/* 1024–1279px: icon rail (labels as tooltips and accessible names). */
-@media (max-width: 1279px) and (min-width: 1024px) {
-  .adm-shell {
+/* Icon rail (labels as tooltips and accessible names): chosen from 1024px, or the default at 1024–1279px. */
+@media (min-width: 1024px) {
+  .adm-shell.rail-mini {
     grid-template-columns: 64px minmax(0, 1fr);
   }
-  .rail {
+  .rail-mini .rail {
     padding: 20px 12px;
   }
-  .brand,
-  .gl,
-  .lbl {
+  .rail-mini .brand {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    padding-inline: 0;
+  }
+  .rail-mini .logo,
+  .rail-mini .tag,
+  .rail-mini .gl,
+  .rail-mini .lbl {
     position: absolute;
     inline-size: 1px;
     block-size: 1px;
     overflow: hidden;
     clip-path: inset(50%);
   }
-  .item {
+  .rail-mini .item {
+    justify-content: center;
+    padding: 8px;
+  }
+}
+@media (max-width: 1279px) and (min-width: 1024px) {
+  .adm-shell:not(.rail-full) {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
+  .adm-shell:not(.rail-full) .rail {
+    padding: 20px 12px;
+  }
+  .adm-shell:not(.rail-full) .brand {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    padding-inline: 0;
+  }
+  .adm-shell:not(.rail-full) :is(.logo, .tag, .gl, .lbl) {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .adm-shell:not(.rail-full) .item {
     justify-content: center;
     padding: 8px;
   }
@@ -285,8 +361,8 @@ main:focus {
   .open .rail {
     transform: none;
   }
-  .brand {
-    grid-template-columns: 1fr auto;
+  .fold {
+    display: none;
   }
   .brand .close {
     display: inline-flex;
@@ -314,6 +390,7 @@ main:focus {
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  .adm-shell,
   .rail {
     transition: none;
   }
