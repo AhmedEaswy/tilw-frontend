@@ -16,7 +16,7 @@ import {
   type MyPlan,
   type RemoteTake,
   type Script,
-  type ScriptSummary,
+  type ScriptPage, type ScriptSummary,
   type ScriptVersion,
   type SyncMode,
   type UpgradeRequest,
@@ -461,6 +461,32 @@ export function createMockServices(kv: KV, opts: MockOptions = {}) {
         const u = currentUser()
         const ro = readOnlyIds(u.id)
         return userScripts(u.id).map(s => withReadOnly(summarize(s), ro))
+      }),
+      // The backend's paged list (ScriptController::page): offset cursors are enough for the in-browser mock.
+      page: ({ limit, filter = 'all', sort = 'recent', q, cursor }) => call((): ScriptPage => {
+        if (!Number.isInteger(limit) || limit < 1 || limit > 100) throw new PortError('validation', { limit: 'invalid' })
+        const u = currentUser()
+        const ro = readOnlyIds(u.id)
+        const all = userScripts(u.id)
+        const fq = foldForSearch((q ?? '').trim())
+        const list = all
+          .filter(s => (filter === 'archived' ? !!s.archivedAt : !s.archivedAt))
+          .filter(s => (filter === 'pinned' ? s.pinned : true))
+          .filter(s => (filter === 'opened' || sort === 'opened' ? !!s.lastOpenedAt : true))
+          .filter(s => !fq || foldForSearch(`${s.title}
+${s.body}`).includes(fq))
+          .sort((a, b) => sort === 'title'
+            ? a.title.localeCompare(b.title) || a.id.localeCompare(b.id)
+            : sort === 'opened'
+              ? (b.lastOpenedAt ?? '').localeCompare(a.lastOpenedAt ?? '') || b.id.localeCompare(a.id)
+              : b.updatedAt.localeCompare(a.updatedAt) || b.id.localeCompare(a.id))
+        const start = cursor ? Number(cursor) || 0 : 0
+        const slice = list.slice(start, start + limit)
+        return {
+          data: slice.map(s => withReadOnly(summarize(s), ro)),
+          nextCursor: start + limit < list.length ? String(start + limit) : null,
+          libraryCount: all.length,
+        }
       }),
       search: query => call(() => {
         const q = foldForSearch(query.trim())

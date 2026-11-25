@@ -29,6 +29,9 @@ watch(open, (v) => {
   if (!plan.plans.length) void plan.loadPublic().catch(e => (error.value = errorText(e)))
   if (!plan.my) void plan.load()
 }, { immediate: true }) // `?upgrade=1` opens the sheet before this component mounts
+// Opened before the catalogue was read (e.g. `?upgrade=1`), then no paid plan is on sale (the admin disabled Pro):
+// there is nothing to upgrade to, so the sheet closes.
+watch(() => upgrade.available.value, (v) => { if (!v) upgrade.close() }, { immediate: true })
 
 async function go() {
   if (busy.value) return

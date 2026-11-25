@@ -21,7 +21,7 @@ const { can } = useAdminPermissions()
 type NavItem = { to: string; key: string; icon: GlyphName; section: AdminSection | null; need?: 'view' | 'edit' }
 const allGroups: { key: string; items: NavItem[] }[] = [
   { key: 'overview', items: [
-    { to: '/admin', key: 'dashboard', icon: 'expand', section: null },
+    { to: '/admin', key: 'dashboard', icon: 'dashboard', section: null },
     { to: '/admin/analytics', key: 'analytics', icon: 'up', section: 'users' },
   ] },
   { key: 'people', items: [

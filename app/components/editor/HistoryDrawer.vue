@@ -117,7 +117,7 @@ const paragraphs = computed(() => splitParagraphs(preview.value?.body ?? ''))
             </button>
           </li>
         </ul>
-        <p class="keep">{{ keepLine }}<template v-if="!plan.isPro && plan.my"> <button type="button" class="link" @click="upgrade.open()">{{ t('history.morePro') }}</button></template></p>
+        <p class="keep">{{ keepLine }}<template v-if="!plan.isPro && plan.my && upgrade.available.value"> <button type="button" class="link" @click="upgrade.open()">{{ t('history.morePro') }}</button></template></p>
       </template>
     </div>
 

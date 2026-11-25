@@ -8,6 +8,7 @@ export const UNITS = {
   minute: { ar: ['دقيقة', 'دقيقتان', 'دقائق', 'دقيقة'], en: ['minute', 'minutes'] },
   word: { ar: ['كلمة', 'كلمتان', 'كلمات', 'كلمة'], en: ['word', 'words'] },
   paragraph: { ar: ['فقرة', 'فقرتان', 'فقرات', 'فقرة'], en: ['paragraph', 'paragraphs'] },
+  recording: { ar: ['تسجيل', 'تسجيلان', 'تسجيلات', 'تسجيلاً'], en: ['recording', 'recordings'] },
 } satisfies Record<string, Forms>
 
 export function unitFor(n: number, unit: keyof typeof UNITS, locale: string): string {

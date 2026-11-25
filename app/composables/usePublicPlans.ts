@@ -3,7 +3,8 @@ import type { LimitValue, Plan } from '~/services/types'
 /**
  * Release 2 (US4): plans for the prerendered landing page. The HTML is built with the starting values from runtime
  * config (so the section never shows a broken state); after hydration the live catalogue from the service replaces
- * them in place (FR-001, SC-006). If the service can't be reached, the fallback stays.
+ * them in place (FR-001, SC-006). If the service can't be reached, the fallback stays. The live catalogue lists active
+ * plans only, so a Pro the admin disabled disappears from the page.
  */
 type Fallback = Record<'free' | 'pro', { priceMonthlyCents: number; priceYearlyCents: number }>
 
@@ -39,7 +40,7 @@ export function usePublicPlans() {
   onMounted(async () => {
     try {
       const list = await useServices().plans.listPlans()
-      if (list.some(p => p.key === 'free') && list.some(p => p.key === 'pro')) {
+      if (list.some(p => p.key === 'free')) {
         plans.value = list
         live.value = true
       }

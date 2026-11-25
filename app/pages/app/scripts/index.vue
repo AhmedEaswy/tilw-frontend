@@ -5,6 +5,7 @@
  */
 import type { ScriptSummary } from '~/services/types'
 import type { LibraryDialog } from '~/components/scripts/LibraryDialogs.vue'
+import type { ScriptAction } from '~/components/scripts/ScriptRow.vue'
 import type { ScriptFilter } from '~/stores/scripts'
 
 definePageMeta({ layout: 'app' })
@@ -14,22 +15,61 @@ useHead({ title: () => `${t('nav.scripts')} · tilwprompter` })
 const store = useScriptsStore()
 const errorText = useErrorText()
 const plan = usePlanStore()
-onMounted(() => store.load())
+// Recordings per script (this device and Drive), for the count on each row.
+const takes = useTakesStore()
+onMounted(() => {
+  void store.load()
+  if (!takes.loaded) void takes.load().catch(() => {})
+  void takes.loadRemote().catch(() => {})
+})
+const takesBy = computed(() => {
+  const m = new Map<string, number>()
+  for (const x of takes.all) if (x.scriptId) m.set(x.scriptId, (m.get(x.scriptId) ?? 0) + 1)
+  return m
+})
 
 // Release 2 (R2-2): "14 من 20 نصاً نشطاً" next to Import when the plan caps active scripts.
 const activeCap = computed(() => {
   const max = plan.limit('scripts.max_active')
   if (typeof max !== 'number') return null
-  return { n: store.items.filter(s => !s.archivedAt).length, max }
+  // The plan's usage counts every active script; the library only has the pages loaded so far.
+  const used = plan.usage('scripts.max_active')
+  return { n: typeof used === 'number' ? used : store.items.filter(s => !s.archivedAt).length, max }
 })
 
 const dialog = ref<LibraryDialog>(null)
 // Feature 005 (US3, A4): a new script from an audio file.
 const audioOpen = ref(false)
 const target = ref<ScriptSummary | null>(null)
-function openActions(s: ScriptSummary) {
-  target.value = s
-  dialog.value = 'actions'
+// A row's options menu: rename and download open their dialog; the others run at once.
+const { show } = useToast()
+const limitError = useLimitError()
+const busy = ref(false)
+async function onAction(s: ScriptSummary, action: ScriptAction) {
+  if (action === 'rename' || action === 'download') {
+    target.value = s
+    dialog.value = action
+    return
+  }
+  if (busy.value) return
+  busy.value = true
+  try {
+    if (action === 'duplicate') {
+      const copy = await store.duplicate(s.id)
+      show(t('library.duplicated', { title: copy.title }))
+    } else if (action === 'pin') {
+      await store.setPinned(s.id, !s.pinned)
+      show(s.pinned ? t('library.unpinnedToast') : t('library.pinnedToast'))
+    } else {
+      await store.setArchived(s.id, !s.archivedAt)
+      show(s.archivedAt ? t('library.restoredToast') : t('library.archivedToast'))
+    }
+  } catch (e) {
+    // Release 2: over a plan limit (duplicate, restore) the limit dialog explains it (R2-2).
+    if (!limitError.handle(e)) show(errorText(e), 'error')
+  } finally {
+    busy.value = false
+  }
 }
 // Keep the dialog's script in sync after optimistic changes (pin label, archive state).
 watch(() => store.items, () => {
@@ -60,6 +100,13 @@ async function toggleSearch() {
   }
 }
 
+// Skeletons for waits after the first load; a fast answer never flashes them. A new filter or search shows row
+// skeletons only when none of the scripts already here belong to it (instead of a wrong "no scripts" line); rows that
+// do belong stay, so a row someone is about to use is never swapped out from under them.
+const reloadWaiting = useSkeletonDelay(() => store.reloading)
+const listWaiting = computed(() => reloadWaiting.value && !store.visible.length)
+const moreWaiting = useSkeletonDelay(() => store.loadingMore, 0)
+
 const emptyText = computed(() => {
   if (store.query.trim()) return t('library.noResults', { q: store.query.trim() })
   if (store.filter === 'pinned') return t('library.noPinned')
@@ -84,14 +131,19 @@ const emptyText = computed(() => {
     <ProEndingBanner class="pro-end" />
 
     <!-- Loading -->
-    <div v-if="store.status === 'idle' || store.status === 'loading'" class="body" aria-busy="true">
+    <!-- Loading: the same two columns as the library — the last-opened card and the list (heading, search, filters, rows). -->
+    <SkeletonRegion v-if="store.status === 'idle' || store.status === 'loading'" class="body" data-testid="library-skeleton">
+      <LastOpenedSkeleton class="card-skel" />
       <div class="list-col">
-        <UiSkeleton h="36px" w="40%" />
-        <UiSkeleton h="48px" r="12px" />
-        <UiSkeleton v-for="i in 3" :key="i" h="76px" r="9px" />
+        <div class="list-head"><UiSkeleton h="37px" w="34%" r="8px" /></div>
+        <UiSkeleton class="search-skel" h="48px" r="12px" />
+        <div class="tools">
+          <span class="pills-skel"><UiSkeleton v-for="w in ['64px', '84px', '92px']" :key="w" h="36px" :w="w" r="999px" /></span>
+          <UiSkeleton h="16px" w="72px" r="4px" />
+        </div>
+        <SkeletonRows variant="plain" :count="5" height="76px" lead="square" title-h="21px" meta-h="14px" trail="menu" />
       </div>
-      <UiSkeleton class="card-skel" h="506px" r="18px" />
-    </div>
+    </SkeletonRegion>
 
     <!-- Error -->
     <UiBanner v-else-if="store.status === 'error'" tone="error" class="err">
@@ -133,16 +185,28 @@ const emptyText = computed(() => {
           <button type="button" class="sort" @click="dialog = 'sort'">{{ t(`library.sort.${store.sort}`) }}</button>
         </div>
 
-        <ul v-if="store.visible.length" class="rows">
+        <!-- A new filter or search with nothing to show yet: rows' shape until the new page lands. -->
+        <SkeletonRegion v-if="listWaiting">
+          <SkeletonRows variant="plain" :count="4" height="76px" lead="square" title-h="21px" meta-h="14px" trail="menu" />
+        </SkeletonRegion>
+        <ul v-else-if="store.visible.length" class="rows">
           <ScriptRow
             v-for="s in store.visible"
             :key="s.id"
             :script="s"
             :current="s.id === store.lastOpened?.id && store.filter !== 'archived'"
-            @actions="openActions(s)"
+            :takes="takesBy.get(s.id) ?? 0"
+            @action="a => onAction(s, a)"
           />
         </ul>
-        <p v-else class="none">{{ emptyText }}</p>
+        <p v-else-if="!store.reloading" class="none">{{ emptyText }}</p>
+        <!-- Load more: the next rows' shape appended under the list while the page arrives. -->
+        <SkeletonRegion v-if="moreWaiting && !listWaiting" data-testid="library-more-skeleton">
+          <SkeletonRows variant="plain" :count="3" height="76px" lead="square" title-h="21px" meta-h="14px" trail="menu" />
+        </SkeletonRegion>
+        <div v-if="store.visible.length && store.hasMore && !listWaiting" class="more-row">
+          <UiButton tone="secondary" :loading="store.loadingMore" data-testid="scripts-load-more" @click="store.loadMore()">{{ t('library.loadMore') }}</UiButton>
+        </div>
       </section>
     </div>
 
@@ -208,6 +272,10 @@ h1 {
   display: grid;
   gap: 18px;
 }
+.pills-skel {
+  display: flex;
+  gap: 8px;
+}
 .list-head {
   display: flex;
   align-items: center;
@@ -271,6 +339,11 @@ h1 {
   margin: 0;
   padding: 0;
   list-style: none;
+}
+.more-row {
+  display: flex;
+  justify-content: center;
+  padding-block: 20px 8px;
 }
 .none {
   padding: 24px 14px;
@@ -339,7 +412,8 @@ h1 {
   .search-toggle {
     display: grid;
   }
-  .search:not(.open) {
+  .search:not(.open),
+  .search-skel {
     display: none;
   }
   .list-head h2 {

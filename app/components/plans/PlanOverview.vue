@@ -9,13 +9,14 @@ const props = defineProps<{ my: MyPlan }>()
 const emit = defineEmits<{ upgrade: [] }>()
 const { t } = useI18n()
 const pro = computed(() => props.my.plan.key !== 'free')
+const upgrade = useUpgrade()
 </script>
 
 <template>
   <div class="plan-overview">
     <PlanCard :my="my" @upgrade="emit('upgrade')" />
     <RequestPanel v-if="my.pendingRequest" :request="my.pendingRequest" />
-    <section v-else class="why">
+    <section v-else-if="pro || upgrade.available.value" class="why">
       <h2>{{ pro ? t('plan.proIncludes') : t('plan.whyPro') }}</h2>
       <ul>
         <li v-for="k in (['minutes', 'scripts', 'sync', 'history'] as const)" :key="k">{{ t(`plan.proLines.${k}`) }}</li>

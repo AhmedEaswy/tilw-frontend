@@ -23,6 +23,7 @@ onMounted(async () => {
   }
 })
 
+const meterWidths = KNOWN_LIMITS.map((_, i) => ['34%', '26%', '41%', '30%', '37%'][i % 5]!)
 const rows = computed(() => {
   const limits = plan.my?.limits ?? []
   return KNOWN_LIMITS.map(k => limits.find(l => l.key === k)).filter(l => !!l)
@@ -34,10 +35,17 @@ const rows = computed(() => {
     <NuxtLink to="/app/settings" class="back">{{ t('settings.backToSettings') }}</NuxtLink>
     <h1>{{ t('plan.title') }}</h1>
 
-    <div v-if="!plan.my && (plan.loading || !plan.error)" class="grid" aria-busy="true">
-      <UiSkeleton h="219px" r="12px" />
-      <UiSkeleton h="219px" r="12px" />
-    </div>
+    <!-- Loading: plan card + why block, then the usage heading and one meter row per known limit. -->
+    <SkeletonRegion v-if="!plan.my && (plan.loading || !plan.error)" data-testid="plan-skeleton">
+      <PlanOverviewSkeleton class="grid" />
+      <div class="use-h" aria-hidden="true"><UiSkeleton h="28px" w="160px" /></div>
+      <div class="rows" aria-hidden="true">
+        <div v-for="(w, i) in meterWidths" :key="i" class="meter-skel">
+          <span class="top"><UiSkeleton h="20px" :w="w" r="4px" /><UiSkeleton h="16px" w="72px" r="4px" /></span>
+          <UiSkeleton h="6px" r="3px" />
+        </div>
+      </div>
+    </SkeletonRegion>
 
     <UiBanner v-else-if="!plan.my" tone="error" class="err">
       {{ errorText(plan.error) }}
@@ -95,6 +103,19 @@ h1 {
   gap: 12px;
   margin-block-start: 16px;
 }
+/* UsageMeter.vue's row box */
+.meter-skel {
+  display: grid;
+  gap: 12px;
+  padding: 18px 22px;
+  border-radius: 8px;
+  background: var(--tilw-surface-white);
+}
+.meter-skel .top {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
 @media (max-width: 760px) {
   .plan {
     padding-block: 20px;
@@ -106,6 +127,9 @@ h1 {
     grid-template-columns: 1fr;
     gap: 14px;
     margin-block-start: 18px;
+  }
+  .meter-skel {
+    padding: 14px 16px;
   }
 }
 </style>

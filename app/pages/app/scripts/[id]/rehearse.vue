@@ -218,7 +218,7 @@ onBeforeUnmount(() => {
         <NuxtLink :to="editorPath" class="round back" :aria-label="t('library.backToScripts')">
           <UiGlyph name="back" :size="20" />
         </NuxtLink>
-        <h1 class="name" dir="auto">{{ reader.script?.title ?? '' }}</h1>
+        <h1 class="name" dir="auto"><UiSkeleton v-if="!reader.script && (reader.status === 'idle' || reader.status === 'loading')" tone="stage" h="22px" w="min(220px, 100%)" r="6px" inline /><template v-else>{{ reader.script?.title ?? '' }}</template></h1>
         <p class="mode">{{ t('reader.title') }}</p>
         <div class="link-ind">
           <LinkIndicator
@@ -252,7 +252,9 @@ onBeforeUnmount(() => {
       </header>
 
       <div class="stage-body">
-        <div v-if="reader.status === 'idle' || reader.status === 'loading'" class="state" aria-busy="true">{{ t('common.loading') }}</div>
+        <SkeletonRegion v-if="reader.status === 'idle' || reader.status === 'loading'" class="surface wait" data-testid="reader-skeleton">
+          <ReaderSkeleton class="wait-monitor" />
+        </SkeletonRegion>
         <div v-else-if="reader.status === 'missing' || reader.status === 'error'" class="state">
           <p>{{ reader.status === 'missing' ? t('editor.missingTitle') : errorText(reader.loadError) }}</p>
           <UiButton v-if="reader.status === 'error'" tone="cue" @click="load">{{ t('common.retry') }}</UiButton>
@@ -287,8 +289,13 @@ onBeforeUnmount(() => {
         </ReaderSurface>
       </div>
 
+      <!-- The transport bar's place while the script loads, so the monitor does not grow and shrink back. -->
+      <div v-if="reader.status === 'idle' || reader.status === 'loading'" class="controls transport-skel" aria-hidden="true">
+        <span class="t-main"><UiSkeleton tone="stage" h="44px" w="44px" r="50%" /><UiSkeleton tone="stage" h="48px" w="132px" r="12px" /><UiSkeleton tone="stage" h="44px" w="44px" r="50%" /></span>
+        <span class="t-extra"><UiSkeleton tone="stage" h="44px" w="44px" r="50%" /><UiSkeleton tone="stage" h="16px" w="90px" r="4px" /></span>
+      </div>
       <ReaderControls
-        v-if="reader.status === 'ready' && reader.paragraphs.length && !link.studioIsRemote"
+        v-else-if="reader.status === 'ready' && reader.paragraphs.length && !link.studioIsRemote"
         class="controls"
         :playing="engine.playing.value"
         :counting="engine.countdown.value > 0"
@@ -441,6 +448,40 @@ onBeforeUnmount(() => {
 .surface {
   inline-size: min(1152px, 100%);
   justify-self: center;
+}
+/* Loading: the monitor's shape fills the stage like the real one; the transport bar's shape sits below. */
+.wait {
+  display: grid;
+  min-block-size: 0;
+}
+.transport-skel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  min-block-size: 86px;
+  padding-inline: 18px 40px;
+  border: 1px solid rgba(247, 242, 233, 0.16);
+  border-radius: 25px;
+  background: var(--tilw-stage-surface);
+}
+.transport-skel :deep(.ui-skel.t-stage) {
+  --skel-base: color-mix(in srgb, var(--tilw-stage-background) 75%, var(--tilw-stage-surface));
+}
+.t-main,
+.t-extra {
+  display: flex;
+  align-items: center;
+  gap: 17px;
+}
+@media (max-width: 760px) {
+  .t-extra {
+    display: none;
+  }
+  .transport-skel {
+    justify-content: center;
+    padding-inline: 18px;
+  }
 }
 .state {
   display: grid;

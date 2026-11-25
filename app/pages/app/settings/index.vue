@@ -61,10 +61,9 @@ onBeforeUnmount(() => reader.flushSettings())
 
     <!-- plan: same card and "why" block as Plan & usage, with the way to the full page -->
     <section class="plan" :aria-label="t('plan.title')">
-      <div v-if="!plan.my && (plan.loading || !plan.error)" class="plan-wait" aria-busy="true">
-        <UiSkeleton h="200px" r="12px" />
-        <UiSkeleton h="200px" r="12px" />
-      </div>
+      <SkeletonRegion v-if="!plan.my && (plan.loading || !plan.error)" data-testid="settings-plan-skeleton">
+        <PlanOverviewSkeleton />
+      </SkeletonRegion>
       <PlanOverview v-else-if="plan.my" :my="plan.my" @upgrade="upgrade.open()" />
       <UiButton tone="secondary" to="/app/settings/plan" class="full-plan" data-testid="settings-full-plan">{{ t('settings.viewFullPlan') }}</UiButton>
     </section>
@@ -77,6 +76,7 @@ onBeforeUnmount(() => reader.flushSettings())
           <small class="email"><bdi dir="ltr">{{ auth.user?.email }}</bdi></small>
         </span>
         <span v-if="planName" class="plan-badge" :class="{ pro: plan.isPro }">{{ planName }}</span>
+        <UiSkeleton v-else-if="plan.loading" h="27px" w="64px" r="999px" />
         <UiGlyph class="chev" name="arr" :size="20" />
       </NuxtLink>
       <NuxtLink to="/app/settings/storage" class="row">
@@ -85,7 +85,7 @@ onBeforeUnmount(() => reader.flushSettings())
           <i v-if="storage.status?.state === 'linked'" class="dot ok" aria-hidden="true" />
           <i v-else-if="storage.status?.state === 'revoked'" class="dot bad" aria-hidden="true" />
         </span></span>
-        <span class="txt"><b>{{ t('storage.title') }}</b><small>{{ storageHint }}</small></span>
+        <span class="txt"><b>{{ t('storage.title') }}</b><UiSkeleton v-if="!storage.status && storage.loading" class="hint-skel" h="15px" w="min(260px, 70%)" r="4px" /><small v-else>{{ storageHint }}</small></span>
         <span class="go">{{ t('settings.open') }}</span>
       </NuxtLink>
       <NuxtLink to="/app/settings/ai" class="row" data-testid="settings-ai">
@@ -157,11 +157,6 @@ h1 {
 }
 .plan {
   margin-block-start: 33px;
-}
-.plan-wait {
-  display: grid;
-  grid-template-columns: minmax(0, 376fr) minmax(0, 558fr);
-  gap: 22px;
 }
 .full-plan {
   margin-block-start: 14px;
@@ -276,6 +271,10 @@ h1 {
   color: var(--tilw-text-muted);
   font: 400 15px/1.36 var(--tilw-font-ar);
 }
+/* Holds the hint's line box (15px × 1.36) so the row keeps its height when the hint arrives. */
+.hint-skel {
+  margin-block: 3px;
+}
 .go {
   color: var(--tilw-action-primary);
   font: 500 16px/1.36 var(--tilw-font-ar);
@@ -352,10 +351,6 @@ h1 {
   }
   .plan {
     margin-block-start: 18px;
-  }
-  .plan-wait {
-    grid-template-columns: 1fr;
-    gap: 14px;
   }
   .full-plan {
     inline-size: 100%;

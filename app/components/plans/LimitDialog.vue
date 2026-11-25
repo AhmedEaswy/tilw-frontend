@@ -17,7 +17,7 @@ const open = computed({
   set: v => !v && close(),
 })
 const copy = computed(() => describeLimit(current.value))
-const showUpgrade = computed(() => copy.value.upgrade && !plan.isPro)
+const showUpgrade = computed(() => copy.value.upgrade && !plan.isPro && upgrade.available.value)
 
 async function archive() {
   close()

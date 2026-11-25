@@ -178,7 +178,7 @@ defineExpose({ focus: () => doneBtn.value?.$el.focus() })
         </div>
         <div class="acts end">
           <UiButton tone="secondary" to="/app/settings/plan">{{ t('link.myPlan') }}</UiButton>
-          <UiButton tone="primary" @click="upgrade.open()">{{ t('upgrade.cta') }}</UiButton>
+          <UiButton v-if="upgrade.available.value" tone="primary" @click="upgrade.open()">{{ t('upgrade.cta') }}</UiButton>
         </div>
       </template>
 

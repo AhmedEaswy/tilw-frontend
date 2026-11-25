@@ -74,6 +74,26 @@ export interface Script {
 /** List rows omit the body; `excerpt` is the first line. */
 export type ScriptSummary = Omit<Script, 'body' | 'marks'> & { excerpt: string; wordCount: number; paragraphCount: number }
 
+/** Library list filters: active scripts, pinned (active), archived, or active scripts opened at least once. */
+export type ScriptListFilter = 'all' | 'pinned' | 'archived' | 'opened'
+/** Library order: last edited, title, or last opened. */
+export type ScriptListSort = 'recent' | 'title' | 'opened'
+export interface ScriptListQuery {
+  filter?: ScriptListFilter
+  sort?: ScriptListSort
+  /** Title and text search (case-, diacritic- and letter-variant-insensitive). */
+  q?: string
+  /** From the previous page's `nextCursor`. */
+  cursor?: string | null
+  limit: number
+}
+/** One page of the library (GET /api/scripts?limit=…). `libraryCount` counts every script, archived ones too. */
+export interface ScriptPage {
+  data: ScriptSummary[]
+  nextCursor: string | null
+  libraryCount: number
+}
+
 export type ScriptPatch = Partial<Pick<Script, 'title' | 'body' | 'marks' | 'direction' | 'pinned' | 'archivedAt' | 'lastOpenedAt'>>
 
 /** Admin area (real API only). A waitlist entry is "invited" once any invitation exists for its email. */

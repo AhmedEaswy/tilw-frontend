@@ -24,13 +24,17 @@ const fieldError = ref('')
 const message = ref<{ title: string; text: string } | null>(null)
 const confirming = ref(false)
 
+// Until the saved key is known the card shows its shape, not the empty "add a key" form (which would be wrong when
+// a key exists). If the read fails the form shows, as before.
+const keyFailed = ref(false)
+const keyWaiting = computed(() => !ai.keyLoaded && !keyFailed.value)
 onMounted(() => {
-  if (!ai.keyLoaded) void ai.loadKey().catch(() => {})
+  if (!ai.keyLoaded) void ai.loadKey().catch(() => (keyFailed.value = true))
 })
 
 const allowed = computed(() => plan.limit('byok.allowed') !== false)
 const key = computed(() => ai.key)
-const showForm = computed(() => allowed.value && (!key.value || editing.value))
+const showForm = computed(() => !keyWaiting.value && allowed.value && (!key.value || editing.value))
 const providerName = (p: AiProvider) => PROVIDER_NAMES[p]
 const providers: AiProvider[] = ['anthropic', 'openai']
 // Provider choice: a radio group with the marks (same keys as UiSegmented: ←/→ follow reading direction).
@@ -107,10 +111,18 @@ function startReplace() {
   <section class="key" :aria-labelledby="titleId" data-testid="own-key">
     <h2 :id="titleId">{{ t('ai.key.title') }}</h2>
 
+    <SkeletonRegion v-if="keyWaiting" class="key-wait" data-testid="own-key-skeleton">
+      <UiSkeleton h="14px" w="90%" r="4px" />
+      <UiSkeleton h="14px" w="60%" r="4px" />
+      <span class="prov-skel"><UiSkeleton h="40px" r="10px" /><UiSkeleton h="40px" r="10px" /></span>
+      <UiSkeleton h="48px" r="10px" />
+      <UiSkeleton h="48px" r="12px" />
+    </SkeletonRegion>
+
     <!-- locked by plan -->
-    <template v-if="!allowed && !key">
+    <template v-if="!keyWaiting && !allowed && !key">
       <p class="muted">{{ t('ai.key.lockedText') }}</p>
-      <UiButton v-if="!plan.isPro" block @click="upgrade.open()">{{ t('ai.common.upgrade') }}</UiButton>
+      <UiButton v-if="!plan.isPro && upgrade.available.value" block @click="upgrade.open()">{{ t('ai.common.upgrade') }}</UiButton>
     </template>
 
     <!-- saved -->
@@ -178,6 +190,15 @@ function startReplace() {
 </template>
 
 <style scoped>
+.key-wait {
+  display: grid;
+  gap: 12px;
+}
+.prov-skel {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
 .key {
   display: grid;
   gap: 12px;

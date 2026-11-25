@@ -8,7 +8,7 @@ export type GlyphName =
   | 'play' | 'pause' | 'next' | 'prev' | 'close' | 'back' | 'arr' | 'settings' | 'expand' | 'search'
   | 'mic' | 'video' | 'file' | 'download' | 'check' | 'more' | 'menu' | 'rewind' | 'pin' | 'headset'
   | 'clock' | 'stop' | 'plus' | 'down' | 'up' | 'sun' | 'keyboard' | 'mail' | 'edit' | 'copy'
-  | 'archive' | 'language' | 'privacy'
+  | 'archive' | 'language' | 'privacy' | 'dashboard'
   // form controls (UiSelect, UiDatePicker, UiSearchField)
   | 'calendar' | 'chevron-down' | 'hash'
   // field and action icons from the sign-in frame (6:62)

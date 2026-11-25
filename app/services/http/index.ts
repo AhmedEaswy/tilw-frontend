@@ -6,7 +6,7 @@ import type { Services } from '../ports'
 import { createDriveUploader } from '../drive/uploader'
 import {
   PortError, isPortError, type Device, type MyPlan, type PendingEmail, type Plan, type RemoteTake, type Script,
-  type ScriptSummary, type ScriptVersion, type ScriptVersionSummary, type StorageStatus, type SyncMode, type UpgradeRequest,
+  type ScriptPage, type ScriptSummary, type ScriptVersion, type ScriptVersionSummary, type StorageStatus, type SyncMode, type UpgradeRequest,
   type UploadToken, type User,
 } from '../types'
 import type { LinkAuth, Pairing, PairingCode, PhoneLink, PhoneLinkWithCode, RealtimeSettings } from '../types'
@@ -68,6 +68,14 @@ export function createHttpServices(opts: HttpClientOptions & { realtime?: Realti
 
     scripts: {
       list: () => api.get<ScriptSummary[]>('/api/scripts'),
+      page: ({ limit, filter, sort, q, cursor }) => {
+        const qs = new URLSearchParams({ limit: String(limit) })
+        if (filter) qs.set('filter', filter)
+        if (sort) qs.set('sort', sort)
+        if (q?.trim()) qs.set('q', q.trim())
+        if (cursor) qs.set('cursor', cursor)
+        return api.get<ScriptPage>(`/api/scripts?${qs}`)
+      },
       search: query => api.get<string[]>(`/api/scripts/search?q=${seg(query)}`),
       get: id => api.get<Script>(`/api/scripts/${seg(id)}`),
       create: input => api.post<Script>('/api/scripts', input),

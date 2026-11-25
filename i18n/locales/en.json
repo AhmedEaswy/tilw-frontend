@@ -199,7 +199,8 @@
     "archive": "Move to archive",
     "restore": "Restore from archive",
     "archivedToast": "Moved to archive.",
-    "restoredToast": "Restored from archive."
+    "restoredToast": "Restored from archive.",
+    "loadMore": "Load more"
   },
   "editor": {
     "bodyLabel": "Script text",
@@ -458,7 +459,11 @@
       "interrupted": "Recording stopped before you finished; what was captured is saved. Download it to keep a copy.",
       "quota": "Browser storage filled up, so recording stopped; what was captured is saved. Download it to keep a copy.",
       "limitN": "Stopped at {time} and saved automatically. Download the original to keep a copy."
-    }
+    },
+    "scriptEmptyTitle": "No recordings of this script yet",
+    "scriptEmptyLede": "Open recording to make your first take of this script.",
+    "recordThis": "Record this script",
+    "openScript": "Open script"
   },
   "settings": {
     "account": "Account",
@@ -1167,7 +1172,13 @@
       "noCharge": "No credits were used.",
       "otherFile": "Choose another file",
       "untitled": "Script from audio",
-      "settleLater": "Here's your text. Your credits will be settled shortly from the provider's record."
+      "settleLater": "Here's your text. Your credits will be settled shortly from the provider's record.",
+      "fromDrive": "From Google Drive",
+      "readingDrive": "Getting the file from Drive…",
+      "dropHint": "or drop an audio file here",
+      "driveFailed": "Couldn't get the file from Google Drive. Try again, or choose a file from this device.",
+      "driveNotLinked": "To pick a file from Google Drive, link it first.",
+      "linkDrive": "Link Google Drive"
     },
     "captions": {
       "action": "Captions",
@@ -1299,5 +1310,10 @@
     "choice": {
       "selectAll": "Select all"
     }
+  },
+  "scriptTabs": {
+    "label": "Script views",
+    "script": "Script",
+    "recordings": "Recordings"
   }
 }

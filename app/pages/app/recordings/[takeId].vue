@@ -144,7 +144,34 @@ const endedNote = computed(() => {
     </header>
 
     <main class="wrap">
-      <div v-if="status === 'loading'" class="state" aria-busy="true"><UiSkeleton h="420px" r="14px" /></div>
+      <!-- Loading: the review's own layout — title row, then the details column beside the player. -->
+      <SkeletonRegion v-if="status === 'loading'" data-testid="take-skeleton">
+        <div class="head" aria-hidden="true">
+          <div class="head-skel">
+            <UiSkeleton h="44px" w="min(360px, 70vw)" r="8px" />
+            <UiSkeleton h="15px" w="120px" r="4px" />
+          </div>
+          <div class="head-links links-skel"><UiSkeleton h="16px" w="96px" r="4px" /><UiSkeleton h="16px" w="110px" r="4px" /></div>
+        </div>
+        <div class="grid" aria-hidden="true">
+          <div class="side">
+            <UiSkeleton class="h2-skel" h="30px" w="58%" />
+            <div class="stats">
+              <div><UiSkeleton h="14px" w="60%" r="4px" /><UiSkeleton h="22px" w="44%" r="4px" /></div>
+              <div><UiSkeleton h="14px" w="52%" r="4px" /><UiSkeleton h="22px" w="70%" r="4px" /></div>
+            </div>
+            <UiSkeleton h="18px" w="46%" r="4px" />
+            <UiSkeleton h="22px" w="54%" r="4px" />
+            <span class="lede-skel"><UiSkeleton h="16px" w="92%" r="4px" /><UiSkeleton h="16px" w="64%" r="4px" /></span>
+            <UiSkeleton v-for="i in 3" :key="i" h="48px" r="12px" />
+          </div>
+          <div class="main">
+            <UiSkeleton class="player" h="" r="14px" />
+            <UiSkeleton h="16px" w="90px" r="4px" />
+            <div class="take-list"><UiSkeleton v-for="i in 3" :key="i" h="51px" r="8px" /></div>
+          </div>
+        </div>
+      </SkeletonRegion>
 
       <UiEmptyState v-else-if="status !== 'ready' || !take" icon="video" :title="status === 'error' ? t('recordings.loadFailed') : t('recordings.missingTitle')" :text="status === 'error' ? '' : t('recordings.missingText')">
         <UiButton to="/app/recordings">{{ t('recordings.all') }}</UiButton>
@@ -156,7 +183,10 @@ const endedNote = computed(() => {
             <h1 dir="auto">{{ take.scriptTitle }}</h1>
             <p class="sub">{{ subtitle }}<span v-if="take.starred" class="star">{{ t('recordings.best') }}</span></p>
           </div>
-          <NuxtLink to="/app/recordings" class="link">{{ t('recordings.all') }}</NuxtLink>
+          <div class="head-links">
+            <NuxtLink v-if="take.scriptId !== 'none'" :to="`/app/scripts/${take.scriptId}`" class="link" data-testid="take-open-script">{{ t('recordings.openScript') }}</NuxtLink>
+            <NuxtLink to="/app/recordings" class="link">{{ t('recordings.all') }}</NuxtLink>
+          </div>
         </div>
 
         <div class="grid">
@@ -225,6 +255,12 @@ const endedNote = computed(() => {
 </template>
 
 <style scoped>
+.head-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+}
 .review {
   min-block-size: 100dvh;
   background: var(--tilw-surface-paper);
@@ -419,6 +455,24 @@ const endedNote = computed(() => {
   border-block-start: 1px solid var(--tilw-border-subtle);
 }
 
+/* Loading shapes */
+.head-skel {
+  display: grid;
+  gap: 14px;
+  padding-block: 5px 2px;
+}
+.h2-skel {
+  margin-block-end: 12px;
+}
+.stats div :deep(.ui-skel) {
+  --skel-base: var(--tilw-surface-white);
+}
+.lede-skel {
+  display: grid;
+  gap: 8px;
+  margin-block-end: 22px;
+}
+
 @media (max-width: 1000px) {
   .grid {
     grid-template-columns: minmax(0, 1fr);
@@ -443,7 +497,8 @@ const endedNote = computed(() => {
   .head h1 {
     font-size: 28px;
   }
-  .head .link {
+  .head .link,
+  .links-skel {
     display: none;
   }
   .player {

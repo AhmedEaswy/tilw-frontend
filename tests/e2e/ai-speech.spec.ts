@@ -91,3 +91,27 @@ test('makes a new script from an audio file, and refuses a file that is not audi
   await expect(page.getByLabel('عنوان النص')).toHaveValue('مقابلة')
   await expect(page.getByLabel('نص الحلقة')).toHaveValue(/كل حكاية تبدأ بسؤال صغير\./)
 })
+
+test('new from audio: a file from Google Drive (Picker) goes through the same checks; without Drive it asks to link it', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'The phone library has no header actions (6:20); the empty library card offers them.')
+  await signIn(page)
+  await page.getByTestId('new-from-audio').click()
+  let dialog = page.getByTestId('audio-import')
+  await expect(dialog.getByTestId('audio-drop')).toContainText('أو أفلِت ملفاً صوتياً هنا')
+  // Drive not linked yet: no Drive button, a link to Storage instead.
+  await expect(dialog.getByTestId('audio-from-drive')).toHaveCount(0)
+  await expect(dialog.getByRole('link', { name: 'ربط Google Drive' })).toBeVisible()
+  await page.keyboard.press('Escape')
+
+  await page.goto('/app/settings/storage')
+  await page.getByRole('button', { name: 'ربط Google Drive' }).click()
+  await expect(page.getByText('رُبط Google Drive بحساب layan@gmail.com.')).toBeVisible()
+
+  await page.goto('/app/scripts')
+  await page.getByTestId('new-from-audio').click()
+  dialog = page.getByTestId('audio-import')
+  await dialog.getByTestId('audio-from-drive').click()
+  // The mock Picker returns a 3-second recording; it is checked and priced like a local file.
+  await expect(dialog.getByTestId('transcribe-cost')).toHaveText('1 رصيد')
+  await expect(dialog.getByText('Drive interview.wav')).toBeVisible()
+})

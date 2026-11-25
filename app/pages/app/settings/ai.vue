@@ -37,7 +37,19 @@ const negative = computed(() => (ai.credits ? copyFor('negative', { balance: ai.
       {{ errorText(error) }}
       <template #action><UiButton size="sm" tone="secondary" @click="load">{{ t('common.retry') }}</UiButton></template>
     </UiBanner>
-    <div v-else-if="!ai.credits" class="grid" aria-busy="true"><UiSkeleton h="240px" r="12px" /><UiSkeleton h="240px" r="12px" /></div>
+    <!-- Loading: balance card beside the own-key card, then this month's entries. -->
+    <SkeletonRegion v-else-if="!ai.credits" class="wait" data-testid="credits-skeleton">
+      <div class="grid" aria-hidden="true">
+        <SkeletonCard kicker title="53px" title-w="34%" :lines="0" :pairs="3" padding="24px 28px" gap="12px">
+          <UiSkeleton h="12px" w="80%" r="4px" />
+        </SkeletonCard>
+        <SkeletonCard title="28px" title-w="50%" :lines="2" line-h="14px" :actions="1" actions-layout="stack" padding="24px 28px" gap="12px">
+          <UiSkeleton h="48px" r="10px" />
+        </SkeletonCard>
+      </div>
+      <UiSkeleton class="h2-skel" h="30px" w="180px" />
+      <SkeletonRows variant="divided" :count="3" height="68px" title-h="17px" trail="amount" />
+    </SkeletonRegion>
 
     <template v-else>
       <AiMessage v-if="ai.credits.balance < 0 && negative" :title="negative.title" :text="negative.text" data-testid="credits-negative" />
@@ -74,6 +86,14 @@ h1 {
 h2 {
   margin: 16px 0 0;
   font: 500 22px/1.36 var(--tilw-font-ar);
+}
+/* The skeleton keeps the page's 20px rhythm between its blocks. */
+.wait {
+  display: grid;
+  gap: 20px;
+}
+.h2-skel {
+  margin-block-start: 16px;
 }
 .grid {
   display: grid;

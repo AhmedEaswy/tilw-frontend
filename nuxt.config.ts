@@ -34,6 +34,13 @@ export default defineNuxtConfig({
       /** Feature 006: named in the "account suspended" message when set (NUXT_PUBLIC_SUPPORT_EMAIL). */
       supportEmail: '',
       /**
+       * "New from audio" → From Google Drive (Google Picker). Both come from the Google Cloud project that owns the
+       * OAuth client: a browser API key with the Picker API allowed (NUXT_PUBLIC_GOOGLE_PICKER_API_KEY) and the
+       * project number (NUXT_PUBLIC_GOOGLE_APP_ID). Empty in http mode: the Drive option stays hidden.
+       */
+      googlePickerApiKey: '',
+      googleAppId: '',
+      /**
        * Release 2: plans shown on the prerendered landing when GET /api/plans can't be reached. The real prices and
        * limits always come from the service (FR-001); these are only the starting values, in US cents.
        */

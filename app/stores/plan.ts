@@ -88,10 +88,25 @@ export const usePlanStore = defineStore('plan', () => {
     return inflight
   }
 
+  /** The public catalogue was read at least once (it lists active plans only). */
+  const publicLoaded = ref(false)
+  let publicInflight: Promise<unknown> | null = null
   async function loadPublic() {
     plans.value = await useServices().plans.listPlans()
+    publicLoaded.value = true
     return plans.value
   }
+  /** Read the catalogue once in the background; a failure leaves `paidAvailable` at its optimistic default. */
+  function ensurePublic() {
+    if (publicLoaded.value) return Promise.resolve(plans.value)
+    publicInflight ??= loadPublic().catch(() => plans.value).finally(() => (publicInflight = null))
+    return publicInflight
+  }
+  /**
+   * An active paid plan exists to upgrade (or renew) to. The admin can disable Pro, which drops it from the public
+   * catalogue; every upgrade entry point hides then. Until the catalogue is read this stays true, as before.
+   */
+  const paidAvailable = computed(() => !publicLoaded.value || plans.value.some(p => p.key !== 'free'))
 
   /** Refetch when the tab gets focus again, at most once a minute. */
   function refreshIfStale() {
@@ -123,5 +138,5 @@ export const usePlanStore = defineStore('plan', () => {
     loadedAt = 0
   }
 
-  return { plans, my, loading, error, notice, isPro, daysLeft, limit, knownLimit, settled, usage, load, loadPublic, refreshIfStale, requestUpgrade, cancelRequest, consumeNotice, reset }
+  return { plans, my, loading, error, notice, isPro, daysLeft, limit, knownLimit, settled, usage, load, loadPublic, ensurePublic, publicLoaded, paidAvailable, refreshIfStale, requestUpgrade, cancelRequest, consumeNotice, reset }
 })

@@ -10,6 +10,8 @@ const emit = defineEmits<{ upgrade: [] }>()
 const { t, locale } = useI18n()
 
 const pro = computed(() => props.my.plan.key !== 'free')
+// Hidden while no paid plan is on sale (the admin disabled Pro).
+const upgrade = useUpgrade()
 const periodText = computed(() => {
   const { period, endsAt, renewsAfter } = props.my
   if (!pro.value) return t('plan.freeForever')
@@ -25,7 +27,7 @@ const periodText = computed(() => {
     <p class="kicker">{{ t('plan.yourPlan') }}</p>
     <p class="name">{{ pro ? t('plan.proName') : t('plan.freeName') }}</p>
     <p class="period">{{ periodText }}</p>
-    <UiButton tone="cue" class="go" @click="emit('upgrade')">{{ pro ? t('upgrade.renew') : t('upgrade.cta') }}</UiButton>
+    <UiButton v-if="upgrade.available.value" tone="cue" class="go" @click="emit('upgrade')">{{ pro ? t('upgrade.renew') : t('upgrade.cta') }}</UiButton>
   </section>
 </template>
 

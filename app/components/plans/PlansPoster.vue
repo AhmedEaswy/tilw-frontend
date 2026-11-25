@@ -3,6 +3,7 @@
  * The home-page plans poster (landing #plans), extracted so the landing (R2-13 `259:692`) and the in-app upgrade
  * sheet (R2-4 `264:1321`) render the same design. Release-2 changes only: "Plus" → "Pro", a price row with a
  * monthly / yearly switch, and feature lines built from the plans' limits (never hard-coded values).
+ * When the catalogue has no Pro (the admin disabled it) only the Free half shows.
  *
  * landing: Free → "ابدأ مجاناً" (waitlist), Pro → "احصل على Tilw Pro" (emits `cta`). The AI demo stays.
  * upgrade: Free → "خطتك الحالية" (disabled) when on Free, Pro → "متابعة على واتساب" / "تجديد عبر واتساب".
@@ -72,7 +73,7 @@ const proCta = computed(() => {
 </script>
 
 <template>
-  <div class="pl-poster" :class="{ 'pl-compact': mode === 'upgrade' }" :dir="lang === 'ar' ? 'rtl' : 'ltr'" :lang="lang">
+  <div class="pl-poster" :class="{ 'pl-compact': mode === 'upgrade', 'pl-solo': !pro }" :dir="lang === 'ar' ? 'rtl' : 'ltr'" :lang="lang">
     <div class="pl-half pl-free">
       <span class="pl-kick">{{ t('plansPoster.freeKick') }}</span>
       <span class="pl-big">{{ t('plansPoster.freeName') }}</span>
@@ -83,7 +84,7 @@ const proCta = computed(() => {
       <button v-else type="button" class="pl-btn pl-btn-light" :disabled="current === 'free'">{{ current === 'free' ? t('upgrade.currentPlan') : t('plansPoster.freeName') }}</button>
     </div>
 
-    <div class="pl-half pl-plus">
+    <div v-if="pro" class="pl-half pl-plus">
       <div v-if="mode === 'landing'" id="pl-dots" class="pl-dots" />
       <span class="pl-kick">{{ onPro ? t('upgrade.currentPlan') : t('plansPoster.proKick') }}</span>
       <span class="pl-big pl-lat">Tilw Pro</span>

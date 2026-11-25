@@ -60,3 +60,46 @@ test('reviews, downloads, stars and deletes a take', async ({ page }) => {
   await expect(page.getByText('حُذفت المحاولة ٢.')).toBeVisible()
   await expect(page.getByText('المحاولة ١')).toBeVisible()
 })
+
+test('a script’s tabs switch between the script and only its recordings', async ({ page }) => {
+  await signIn(page)
+  await recordTake(page, 's_opening')
+
+  await page.goto('/app/scripts/s_opening')
+  const tabs = page.getByRole('navigation', { name: 'عرض النص' })
+  await expect(tabs.getByRole('link', { name: 'النص' })).toHaveAttribute('aria-current', 'page')
+  await tabs.getByRole('link', { name: 'التسجيلات' }).click()
+  await expect(page).toHaveURL(/\/app\/scripts\/s_opening\/recordings$/)
+  await expect(tabs.getByRole('link', { name: 'التسجيلات' })).toHaveAttribute('aria-current', 'page')
+  await expect(page.getByRole('heading', { level: 1, name: 'افتتاحية الحلقة' })).toBeVisible()
+  await expect(page.locator('a[href^="/app/recordings/"]').first()).toBeVisible()
+
+  // Another script with no takes shows its own empty state, offering to record it.
+  await page.goto('/app/scripts/s_backstage/recordings')
+  await expect(page.getByRole('heading', { name: 'لا تسجيلات لهذا النص بعد' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'سجّل هذا النص' })).toHaveAttribute('href', '/app/scripts/s_backstage/record')
+  await tabs.getByRole('link', { name: 'النص' }).click()
+  await expect(page).toHaveURL(/\/app\/scripts\/s_backstage$/)
+})
+
+test('the library counts each script’s recordings, and recordings link back to their script', async ({ page, isMobile }) => {
+  await signIn(page)
+  await recordTake(page, 's_opening')
+
+  // Recordings list: open the take's script (desktop group, phone feature card).
+  await page.getByRole('link', { name: 'فتح النص' }).first().click()
+  await expect(page).toHaveURL(/\/app\/scripts\/s_opening$/)
+
+  // Take details: open its script from the header.
+  await page.goto('/app/recordings')
+  await page.getByRole('link', { name: /مراجعة/ }).first().click()
+  // Phone hides the header links and keeps "back to script" at the foot of the page.
+  if (isMobile) await page.getByRole('link', { name: 'العودة إلى النص' }).click()
+  else await page.getByTestId('take-open-script').click()
+  await expect(page).toHaveURL(/\/app\/scripts\/s_opening$/)
+
+  // The library row shows how many recordings the script has.
+  await page.goto('/app/scripts')
+  const row = page.getByRole('listitem').filter({ has: page.getByRole('link', { name: /افتتاحية الحلقة/ }) })
+  await expect(row.getByTestId('script-takes')).toHaveText('1 تسجيل')
+})

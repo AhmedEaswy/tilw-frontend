@@ -488,7 +488,7 @@ const firstLine = computed(() => reader.paragraphs[0] ?? '')
         <div class="preview">
           <Viewfinder class="vf" :kind="kind" :stream="media.stream.value" :level="level" :history="history" />
           <div class="script">
-            <span class="sname"><UiGlyph name="file" :size="20" /><span dir="auto">{{ reader.script?.title }}</span></span>
+            <span class="sname"><UiGlyph name="file" :size="20" /><UiSkeleton v-if="!reader.script && (reader.status === 'idle' || reader.status === 'loading')" h="18px" w="180px" r="4px" inline /><span v-else dir="auto">{{ reader.script?.title }}</span></span>
             <NuxtLink to="/app/scripts" class="link sm">{{ t('studio.changeScript') }}</NuxtLink>
           </div>
         </div>

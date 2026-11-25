@@ -15,9 +15,14 @@ export type UpgradeOutcome =
  */
 export function useUpgrade() {
   const isOpen = useState('upgrade-open', () => false)
+  const plan = usePlanStore()
+  // Whether a paid plan is on sale: entry points show "Upgrade" / "Renew" only while one is (the admin can disable Pro).
+  if (import.meta.client) void plan.ensurePublic()
+  const available = computed(() => plan.paidAvailable)
 
   function open() {
     useLimitError().close()
+    if (!available.value) return
     isOpen.value = true
   }
   function close() {
@@ -49,5 +54,5 @@ export function useUpgrade() {
     return !!win
   }
 
-  return { isOpen, open, close, start, reopen }
+  return { isOpen, available, open, close, start, reopen }
 }

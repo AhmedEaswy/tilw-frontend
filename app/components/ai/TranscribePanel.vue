@@ -139,7 +139,7 @@ const langOptions = computed(() => (['auto', 'ar', 'en'] as const).map(v => ({ v
       <p class="note">{{ t('ai.common.privacy') }}</p>
       <AiMessage v-if="short" :title="short.title" :text="short.text" data-testid="transcribe-short">
         <template #actions>
-          <UiButton v-if="!plan.isPro" size="sm" @click="upgrade.open()">{{ t('ai.common.upgrade') }}</UiButton>
+          <UiButton v-if="!plan.isPro && upgrade.available.value" size="sm" @click="upgrade.open()">{{ t('ai.common.upgrade') }}</UiButton>
         </template>
       </AiMessage>
       <div class="acts">

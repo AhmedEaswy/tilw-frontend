@@ -35,7 +35,7 @@ function dismiss() {
     <span>{{ t('plan.endingLede') }}</span>
     <template #action>
       <span class="acts">
-        <UiButton size="sm" @click="upgrade.open()">{{ t('upgrade.renew') }}</UiButton>
+        <UiButton v-if="upgrade.available.value" size="sm" @click="upgrade.open()">{{ t('upgrade.renew') }}</UiButton>
         <button type="button" class="x" :aria-label="t('plan.dismiss')" @click="dismiss"><UiGlyph name="close" :size="18" /></button>
       </span>
     </template>

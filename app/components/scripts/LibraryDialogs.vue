@@ -1,13 +1,14 @@
 <script setup lang="ts">
 /**
  * All library dialogs in one place, driven by `mode`:
- *  new (6:23) · import (6:24) · sort (6:25) · actions (6:108) · rename (6:109) · download (6:110)
+ *  new (6:23) · import (6:24) · sort (6:25) · rename (6:109) · download (6:110)
+ * A script's options (6:108) are a dropdown menu on its row (ScriptRow); rename and download open from there.
  * The parent sets `mode` (and `target` for per-script dialogs); this component does the work.
  */
 import type { ScriptSummary } from '~/services/types'
 import type { ScriptSort } from '~/stores/scripts'
 
-export type LibraryDialog = 'new' | 'import' | 'sort' | 'actions' | 'rename' | 'download' | null
+export type LibraryDialog = 'new' | 'import' | 'sort' | 'rename' | 'download' | null
 
 const mode = defineModel<LibraryDialog>('mode', { required: true })
 const props = defineProps<{ target: ScriptSummary | null }>()
@@ -55,7 +56,6 @@ const dialogTitle = computed(() => {
     case 'sort': return t('library.sortTitle')
     case 'rename': return t('library.rename')
     case 'download': return t('library.downloadTitle')
-    case 'actions': return props.target?.title ?? ''
     default: return ''
   }
 })
@@ -137,29 +137,6 @@ async function downloadScript() {
     busy.value = false
   }
 }
-
-async function run(action: 'duplicate' | 'pin' | 'archive') {
-  const s = props.target
-  if (!s || busy.value) return
-  busy.value = true
-  try {
-    if (action === 'duplicate') {
-      const copy = await store.duplicate(s.id)
-      show(t('library.duplicated', { title: copy.title }))
-    } else if (action === 'pin') {
-      await store.setPinned(s.id, !s.pinned)
-      show(s.pinned ? t('library.unpinnedToast') : t('library.pinnedToast'))
-    } else {
-      await store.setArchived(s.id, !s.archivedAt)
-      show(s.archivedAt ? t('library.restoredToast') : t('library.archivedToast'))
-    }
-    mode.value = null
-  } catch (e) {
-    failed(e)
-  } finally {
-    busy.value = false
-  }
-}
 </script>
 
 <template>
@@ -186,17 +163,6 @@ async function run(action: 'duplicate' | 'pin' | 'archive') {
         {{ t(`library.sort.${o}`) }}
       </label>
     </div>
-
-    <!-- 6:108 script actions -->
-    <ul v-else-if="mode === 'actions' && target" class="acts">
-      <template v-if="!target.archivedAt">
-        <li><button type="button" @click="mode = 'rename'"><UiGlyph name="edit" :size="20" />{{ t('library.rename') }}<UiGlyph class="go" name="arr" :size="16" /></button></li>
-        <li><button type="button" :disabled="busy" @click="run('duplicate')"><UiGlyph name="copy" :size="20" />{{ t('library.duplicate') }}<UiGlyph class="go" name="arr" :size="16" /></button></li>
-        <li><button type="button" @click="mode = 'download'"><UiGlyph name="download" :size="20" /><span>{{ t('library.downloadTxt') }}</span><UiGlyph class="go" name="arr" :size="16" /></button></li>
-        <li><button type="button" :disabled="busy" @click="run('pin')"><UiGlyph name="pin" :size="20" />{{ target.pinned ? t('library.unpin') : t('library.pin') }}<UiGlyph class="go" name="arr" :size="16" /></button></li>
-      </template>
-      <li><button type="button" :disabled="busy" @click="run('archive')"><UiGlyph name="archive" :size="20" />{{ target.archivedAt ? t('library.restore') : t('library.archive') }}<UiGlyph class="go" name="arr" :size="16" /></button></li>
-    </ul>
 
     <!-- 6:109 تغيير العنوان -->
     <form v-else-if="mode === 'rename'" id="lib-rename" class="form" novalidate @submit.prevent="renameScript">
@@ -225,16 +191,13 @@ async function run(action: 'duplicate' | 'pin' | 'archive') {
         <UiButton @click="applySort">{{ t('library.done') }}</UiButton>
         <UiButton tone="secondary" @click="mode = null">{{ t('library.back') }}</UiButton>
       </template>
-      <template v-else-if="mode === 'actions'">
-        <UiButton tone="secondary" block @click="mode = null">{{ t('common.close') }}</UiButton>
-      </template>
       <template v-else-if="mode === 'rename'">
         <UiButton type="submit" form="lib-rename" :loading="busy">{{ t('common.save') }}</UiButton>
-        <UiButton tone="secondary" @click="mode = 'actions'">{{ t('library.back') }}</UiButton>
+        <UiButton tone="secondary" @click="mode = null">{{ t('library.back') }}</UiButton>
       </template>
       <template v-else-if="mode === 'download'">
         <UiButton :loading="busy" icon="download" @click="downloadScript">{{ t('library.downloadTxtFile') }}</UiButton>
-        <UiButton tone="secondary" @click="mode = 'actions'">{{ t('library.back') }}</UiButton>
+        <UiButton tone="secondary" @click="mode = null">{{ t('library.back') }}</UiButton>
       </template>
     </template>
   </UiDialog>
@@ -301,39 +264,7 @@ async function run(action: 'duplicate' | 'pin' | 'archive') {
   block-size: 10px;
   border-radius: 50%;
   background: var(--tilw-action-primary);
-}
-.acts {
-  display: grid;
-  gap: 15px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.acts button {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  inline-size: 100%;
-  min-block-size: 51px;
-  padding-inline: 20px 14px;
-  border: 0;
-  border-radius: 9px;
-  background: var(--tilw-surface-white);
-  color: var(--tilw-text-ink);
-  font: 500 17px/1.36 var(--tilw-font-ar);
-  text-align: start;
-}
-.acts button:hover {
-  background: var(--tilw-surface-quiet);
-}
-.acts button:disabled {
-  opacity: 0.6;
-}
-.acts .go {
-  margin-inline-start: auto;
-  color: var(--tilw-action-primary);
-}
-.file {
+}.file {
   display: flex;
   align-items: center;
   gap: 12px;

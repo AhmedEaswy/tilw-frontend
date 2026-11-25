@@ -74,10 +74,16 @@ async function setMode(m: SyncMode) {
     <UiBanner v-if="back === 'denied'" tone="warning" class="msg">{{ t('storage.denied') }}</UiBanner>
     <UiBanner v-else-if="back === 'failed'" tone="error" class="msg">{{ t('storage.linkFailed') }}</UiBanner>
 
-    <div v-if="!storage.status && !storage.error" class="grid" aria-busy="true">
-      <UiSkeleton h="260px" r="12px" />
-      <UiSkeleton h="260px" r="12px" />
-    </div>
+    <!-- Loading: the Drive card (logo, name, facts, button) beside the sync choices. -->
+    <SkeletonRegion v-if="!storage.status && (storage.loading || !storage.error)" class="grid" data-testid="storage-skeleton">
+      <SkeletonCard icon="56px" title="26px" title-w="40%" :lines="3" line-h="15px" :actions="1" padding="24px 27px" gap="18px" />
+      <div class="side" aria-hidden="true">
+        <section class="sync-skel">
+          <UiSkeleton h="28px" w="45%" />
+          <SkeletonRows :count="3" height="72px" lead="circle" lead-size="20px" title-h="17px" />
+        </section>
+      </div>
+    </SkeletonRegion>
     <UiBanner v-else-if="!storage.status" tone="error" class="msg">
       {{ errorText(storage.error) }}
       <template #action><UiButton size="sm" tone="secondary" @click="storage.load().catch(() => {})">{{ t('common.retry') }}</UiButton></template>
@@ -129,6 +135,10 @@ h1 {
 .side {
   display: grid;
   gap: 28px;
+}
+.sync-skel {
+  display: grid;
+  gap: 14px;
 }
 @media (max-width: 860px) {
   .stor {

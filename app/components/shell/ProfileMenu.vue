@@ -117,7 +117,7 @@ async function onSignOut() {
       <NuxtLink to="/app/settings" class="item" role="menuitem" tabindex="-1">
         <UiGlyph name="settings" :size="18" />{{ t('nav.settings') }}
       </NuxtLink>
-      <button v-if="plan.my && !plan.isPro" type="button" class="item" role="menuitem" tabindex="-1" @click="openUpgrade">
+      <button v-if="plan.my && !plan.isPro && upgrade.available.value" type="button" class="item" role="menuitem" tabindex="-1" @click="openUpgrade">
         <UiGlyph name="up" :size="18" />{{ t('upgrade.cta') }}
       </button>
       <hr>

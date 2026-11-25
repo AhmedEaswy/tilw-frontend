@@ -173,13 +173,20 @@ const formatHint = computed(() => {
 <template>
   <div class="ed">
     <!-- loading / missing / error -->
-    <div v-if="editor.status === 'idle' || editor.status === 'loading'" class="loading" aria-busy="true">
-      <UiSkeleton h="24px" w="180px" />
-      <div class="grid">
-        <UiSkeleton h="635px" r="12px" />
-        <UiSkeleton class="side-skel" h="635px" r="12px" />
+    <!-- Loading: the real top row (back, tabs) with the status chip's shape, then the canvas and tools' shape. -->
+    <SkeletonRegion v-if="editor.status === 'idle' || editor.status === 'loading'" class="loading" data-testid="editor-skeleton">
+      <div class="bar">
+        <NuxtLink to="/app/scripts" class="back">
+          <UiGlyph class="back-ic" name="back" :size="22" />
+          <span class="lbl">{{ t('library.backToScripts') }}</span>
+        </NuxtLink>
+        <div class="bar-end">
+          <UiSkeleton h="29px" w="88px" r="14px" />
+          <ScriptTabs :script-id="id" current="script" />
+        </div>
       </div>
-    </div>
+      <EditorSkeleton />
+    </SkeletonRegion>
     <UiEmptyState v-else-if="editor.status === 'missing'" icon="file" :title="t('editor.missingTitle')" :text="t('editor.missingText')">
       <UiButton to="/app/scripts">{{ t('library.backToScripts') }}</UiButton>
     </UiEmptyState>
@@ -206,13 +213,16 @@ const formatHint = computed(() => {
           <UiGlyph class="back-ic" name="back" :size="22" />
           <span class="lbl">{{ t('library.backToScripts') }}</span>
         </NuxtLink>
-        <button
-          v-if="editor.saveState === 'conflict'"
-          type="button"
-          class="chip warn"
-          @click="editor.reviewing = false"
-        >{{ statusLabel }}</button>
-        <span v-else class="chip" :class="editor.readOnly ? 'readonly' : editor.saveState" role="status">{{ statusLabel }}</span>
+        <div class="bar-end">
+          <button
+            v-if="editor.saveState === 'conflict'"
+            type="button"
+            class="chip warn"
+            @click="editor.reviewing = false"
+          >{{ statusLabel }}</button>
+          <span v-else class="chip" :class="editor.readOnly ? 'readonly' : editor.saveState" role="status">{{ statusLabel }}</span>
+          <ScriptTabs :script-id="id" current="script" />
+        </div>
       </div>
 
       <UiBanner v-if="editor.readOnly" tone="warning" class="ro">
@@ -220,7 +230,7 @@ const formatHint = computed(() => {
         <span>{{ readOnlyText }}</span>
         <template #action>
           <span class="ro-acts">
-            <UiButton v-if="!plan.isPro" size="sm" @click="upgrade.open()">{{ t('upgrade.cta') }}</UiButton>
+            <UiButton v-if="!plan.isPro && upgrade.available.value" size="sm" @click="upgrade.open()">{{ t('upgrade.cta') }}</UiButton>
             <UiButton size="sm" tone="secondary" to="/app/scripts">{{ t('limits.dialog.archive') }}</UiButton>
           </span>
         </template>
@@ -306,6 +316,13 @@ const formatHint = computed(() => {
   gap: 16px;
   margin-block-end: 26px;
 }
+.bar-end {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
 .back {
   display: inline-flex;
   align-items: center;
@@ -370,10 +387,6 @@ const formatHint = computed(() => {
   gap: 33px;
   align-items: start;
 }
-.loading {
-  display: grid;
-  gap: 26px;
-}
 .err {
   margin-block-start: 32px;
 }
@@ -384,9 +397,6 @@ const formatHint = computed(() => {
 @media (max-width: 1000px) {
   .grid {
     grid-template-columns: minmax(0, 1fr);
-  }
-  .side-skel {
-    display: none;
   }
 }
 /* Phone (6:21): back arrow only, no side panel chrome, actions pinned to the bottom. */

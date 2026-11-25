@@ -217,7 +217,7 @@ const goLabel = computed(() => (estimate.value?.paidWith === 'own_key' ? t('ai.f
         <AiMessage v-else-if="empty" :title="t('ai.format.empty')" tone="info" />
         <AiMessage v-else-if="shortCopy" :title="shortCopy.title" :text="shortCopy.text" data-testid="format-short">
           <template #actions>
-            <UiButton v-if="!plan.isPro" @click="upgrade.open()">{{ t('ai.common.upgrade') }}</UiButton>
+            <UiButton v-if="!plan.isPro && upgrade.available.value" @click="upgrade.open()">{{ t('ai.common.upgrade') }}</UiButton>
             <UiButton tone="secondary" to="/app/settings/ai">{{ t('ai.common.creditsLink') }}</UiButton>
           </template>
         </AiMessage>
@@ -267,7 +267,7 @@ const goLabel = computed(() => (estimate.value?.paidWith === 'own_key' ? t('ai.f
               <UiButton tone="secondary" @click="discard">{{ t('ai.format.discard') }}</UiButton>
             </template>
             <template v-else-if="error.kind === 'credits' || error.kind === 'negative'">
-              <UiButton v-if="!plan.isPro" @click="upgrade.open()">{{ t('ai.common.upgrade') }}</UiButton>
+              <UiButton v-if="!plan.isPro && upgrade.available.value" @click="upgrade.open()">{{ t('ai.common.upgrade') }}</UiButton>
               <UiButton tone="secondary" to="/app/settings/ai">{{ t('ai.common.creditsLink') }}</UiButton>
             </template>
             <template v-else-if="error.kind === 'save_failed'">

@@ -36,17 +36,17 @@ test('sort by title, pin, and archive / restore', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'حسب العنوان' })).toBeVisible()
 
   await page.getByRole('button', { name: 'خيارات وراء الكواليس' }).click()
-  await page.getByRole('button', { name: 'تثبيت' }).click()
+  await page.getByRole('menuitem', { name: 'تثبيت' }).click()
   await page.getByRole('tab', { name: 'المثبتة' }).click()
   await expect(page.getByRole('link', { name: /وراء الكواليس/ })).toBeVisible()
 
   await page.getByRole('tab', { name: 'الكل' }).click()
   await page.getByRole('button', { name: 'خيارات رسالة إلى المستمع' }).click()
-  await page.getByRole('button', { name: 'نقل إلى الأرشيف' }).click()
+  await page.getByRole('menuitem', { name: 'نقل إلى الأرشيف' }).click()
   await expect(page.getByRole('link', { name: /رسالة إلى المستمع/ })).toHaveCount(0)
   await page.getByRole('tab', { name: 'المؤرشفة' }).click()
   await page.getByRole('button', { name: 'خيارات رسالة إلى المستمع' }).click()
-  await page.getByRole('button', { name: 'إعادة من الأرشيف' }).click()
+  await page.getByRole('menuitem', { name: 'إعادة من الأرشيف' }).click()
   await expect(page.getByText('لا نصوص في الأرشيف.')).toBeVisible()
 })
 
@@ -67,11 +67,33 @@ test('new script opens the editor; import rejects non-text files', async ({ page
   await expect(page.getByRole('alert')).toContainText('هذا ليس ملف TXT')
 })
 
-test('renames from the actions sheet', async ({ page }) => {
+test('renames from the options menu', async ({ page }) => {
   await signIn(page)
   await page.getByRole('button', { name: 'خيارات وراء الكواليس' }).click()
-  await page.getByRole('button', { name: 'تغيير العنوان' }).click()
+  await page.getByRole('menuitem', { name: 'تغيير العنوان' }).click()
   await page.getByLabel('عنوان النص').fill('كواليس الحلقة')
   await page.getByRole('button', { name: 'حفظ' }).click()
   await expect(page.getByRole('link', { name: /كواليس الحلقة/ })).toBeVisible()
+})
+
+test('script options open as a dropdown menu, not a dialog', async ({ page }) => {
+  await signIn(page)
+  const more = page.getByRole('button', { name: 'خيارات وراء الكواليس' })
+  await more.click()
+  const menu = page.getByRole('menu')
+  await expect(menu).toBeVisible()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(more).toHaveAttribute('aria-expanded', 'true')
+  // Focus starts on the first item; arrows move, Esc closes and returns focus to the button.
+  await expect(menu.getByRole('menuitem', { name: 'تغيير العنوان' })).toBeFocused()
+  await page.keyboard.press('ArrowDown')
+  await expect(menu.getByRole('menuitem').nth(1)).toBeFocused()
+  await page.keyboard.press('Escape')
+  await expect(menu).toBeHidden()
+  await expect(more).toBeFocused()
+  // A click outside closes it too.
+  await more.click()
+  await expect(page.getByRole('menu')).toBeVisible()
+  await page.getByRole('heading', { level: 1 }).first().click()
+  await expect(page.getByRole('menu')).toBeHidden()
 })

@@ -3,6 +3,8 @@
  * Feature 005, US3 (A4 `295:428`: pick, cost, result, refused): a new script from an audio file. The file's type, size
  * and length are checked on the device before any call (US3 #4). The text is shown for review and reaches Tilw only
  * when the person saves it as a new script (spec clarification 3).
+ * The file comes from this device (choose or drop it) or from Google Drive (Google's Picker, useDrivePicker): a Drive
+ * file is downloaded into this browser and goes through the same checks.
  */
 import type { TranscribeRun } from '~/services/ai/transcribe'
 import { checkAudio, type AudioProblem } from '~/services/ai/audio'
@@ -27,6 +29,14 @@ const text = ref('')
 const busy = ref(false)
 const saving = ref(false)
 const input = ref<HTMLInputElement>()
+const drive = useDrivePicker()
+const storage = useStorageStore()
+onMounted(() => {
+  if (!storage.status) void storage.load().catch(() => {})
+})
+/** Where the file being read comes from (for the "reading…" line). */
+const source = ref<'device' | 'drive'>('device')
+const dragging = ref(false)
 
 watch(open, (v) => {
   if (v) reset()
@@ -42,6 +52,41 @@ async function onPick(e: Event) {
   const f = (e.target as HTMLInputElement).files?.[0]
   ;(e.target as HTMLInputElement).value = ''
   if (!f) return
+  source.value = 'device'
+  await accept(f)
+}
+function onDrop(e: DragEvent) {
+  dragging.value = false
+  const f = e.dataTransfer?.files?.[0]
+  if (!f || phase.value === 'reading') return
+  source.value = 'device'
+  void accept(f)
+}
+async function fromDrive() {
+  if (phase.value === 'reading') return
+  source.value = 'drive'
+  phase.value = 'reading'
+  try {
+    const doc = await drive.pick()
+    if (!doc) {
+      phase.value = 'pick'
+      return
+    }
+    // Type and size from Drive first: a file that would be refused is never downloaded.
+    if (doc.sizeBytes !== null) {
+      const early = checkAudio({ type: doc.mimeType, size: doc.sizeBytes }, 1, maxMinutes())
+      if (early) {
+        file.value = null
+        return refuse(early)
+      }
+    }
+    await accept(await drive.download(doc))
+  } catch {
+    phase.value = 'pick'
+    show(t('ai.speech.driveFailed'), 'error')
+  }
+}
+async function accept(f: File) {
   file.value = f
   // Type and size first: a non-audio file is never read.
   const early = checkAudio({ type: f.type, size: f.size }, 1, maxMinutes())
@@ -92,11 +137,37 @@ async function save() {
       <!-- Kept mounted in every phase: "Choose another file" reopens it after a refusal. -->
       <input ref="input" class="visually-hidden" type="file" accept="audio/*" :aria-label="t('ai.speech.pick')" tabindex="-1" data-testid="audio-file" @change="onPick">
       <template v-if="phase === 'pick' || phase === 'reading'">
-        <button type="button" class="drop" :aria-busy="phase === 'reading' || undefined" @click="input?.click()">
+        <button
+          type="button"
+          class="drop"
+          :class="{ over: dragging }"
+          :aria-busy="phase === 'reading' || undefined"
+          :disabled="phase === 'reading'"
+          data-testid="audio-drop"
+          @click="input?.click()"
+          @dragover.prevent="dragging = true"
+          @dragleave="dragging = false"
+          @drop.prevent="onDrop"
+        >
           <UiGlyph name="file" :size="28" />
-          <b>{{ phase === 'reading' ? t('ai.speech.reading') : t('ai.speech.pick') }}</b>
+          <b>{{ phase === 'reading' ? (source === 'drive' ? t('ai.speech.readingDrive') : t('ai.speech.reading')) : t('ai.speech.pick') }}</b>
           <small>{{ t('ai.speech.pickHint', { minutes: maxMinutes() }) }}</small>
+          <small v-if="phase === 'pick'">{{ t('ai.speech.dropHint') }}</small>
         </button>
+        <button
+          v-if="drive.available.value"
+          type="button"
+          class="drive"
+          :disabled="phase === 'reading'"
+          data-testid="audio-from-drive"
+          @click="fromDrive"
+        >
+          <ProviderMark provider="google-drive" :size="20" />
+          <span>{{ t('ai.speech.fromDrive') }}</span>
+        </button>
+        <p v-else-if="drive.configured && storage.status && !storage.linked" class="muted">
+          {{ t('ai.speech.driveNotLinked') }} <NuxtLink to="/app/settings/storage">{{ t('ai.speech.linkDrive') }}</NuxtLink>
+        </p>
       </template>
 
       <template v-else-if="phase === 'refused'">
@@ -154,6 +225,35 @@ async function save() {
   color: var(--tilw-text-ink);
   cursor: pointer;
 }
+.drop.over {
+  border-color: var(--tilw-action-primary);
+  background: var(--tilw-surface-selected);
+}
+.drop:disabled {
+  cursor: progress;
+}
+.drive {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-block-size: var(--tilw-hit);
+  padding-inline: 16px;
+  border: 1px solid var(--tilw-border-subtle);
+  border-radius: 12px;
+  background: var(--tilw-surface-white);
+  color: var(--tilw-text-ink);
+  font: 500 15px/1.36 var(--tilw-font-ar);
+  cursor: pointer;
+}
+.drive:hover {
+  background: var(--tilw-surface-quiet);
+}
+.drive:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+.drive:focus-visible,
 .drop:focus-visible {
   outline: 2px solid var(--tilw-focus-ring);
   outline-offset: 2px;

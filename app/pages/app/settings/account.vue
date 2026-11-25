@@ -45,11 +45,14 @@ const newEmail = ref('')
 const emailPw = ref('')
 const em = reactive<{ email?: string; password?: string; form?: string }>({})
 const savingEmail = ref(false)
+const pendingChecked = ref(false)
 onMounted(async () => {
+  void loadDevices()
   try {
     pending.value = await useServices().account.pendingEmailChange()
-  } catch { /* the row just doesn't show */ }
-  void loadDevices()
+  } catch { /* the row just doesn't show */ } finally {
+    pendingChecked.value = true
+  }
 })
 async function requestEmail() {
   em.email = isEmail(normalizeEmail(newEmail.value)) ? undefined : t('auth.emailInvalid')
@@ -156,7 +159,9 @@ async function changePassword() {
         <h2>{{ t('settings.identity') }}</h2>
         <UiField v-model="name" :label="t('auth.invite.name')" autocomplete="name" :maxlength="80" :error="nameError" />
         <UiField :model-value="auth.user?.email ?? ''" type="email" :label="t('auth.email')" readonly :hint="pending ? undefined : t('email.hint')" />
-        <div v-if="pending" class="pending" role="status">
+        <!-- Until we know whether an email change is waiting: the link's place, not a "Change email" that may be wrong. -->
+        <UiSkeleton v-if="!pendingChecked" class="start" h="22px" w="130px" r="4px" />
+        <div v-else-if="pending" class="pending" role="status">
           <p>{{ t('email.pending') }} <b dir="ltr">{{ pending.email }}</b></p>
           <small>{{ t('email.pendingHint', { date: formatDay(pending.expiresAt, locale) }) }}</small>
           <span class="p-acts">
@@ -194,7 +199,9 @@ async function changePassword() {
       <h2 id="dev-h">{{ t('devices.title') }}</h2>
       <p class="note">{{ t('devices.lede') }}</p>
       <UiBanner v-if="devicesError" tone="error">{{ devicesError }}</UiBanner>
-      <div v-else-if="!devices" aria-busy="true"><UiSkeleton h="72px" r="8px" /></div>
+      <SkeletonRegion v-else-if="!devices" data-testid="devices-skeleton">
+        <SkeletonRows :count="2" height="72px" lead="icon" title-h="17px" meta-h="14px" trail="text" />
+      </SkeletonRegion>
       <ul v-else class="dev-list">
         <li v-for="d in devices" :key="d.id" class="dev">
           <UiGlyph :name="d.platform === 'web' ? 'file' : 'mic'" :size="22" class="d-ic" />

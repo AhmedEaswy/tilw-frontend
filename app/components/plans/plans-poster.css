@@ -43,6 +43,8 @@
 .pl-btn:focus-visible,.pl-apply:focus-visible{outline:2px solid #f2b28b;outline-offset:3px}
 @media (max-width:900px){.pl-poster{grid-template-columns:1fr}.pl-poster{background:linear-gradient(180deg,#944d33 0 50%,#293d49 50%)}.pl-half{padding:36px 22px}}
 @media (prefers-reduced-motion:reduce){.pl-poster *{animation:none!important;transition:none!important}}
+/* Only Free on sale (Pro disabled by the admin): one full-width half on the Free colour. */
+.pl-poster.pl-solo{grid-template-columns:1fr;background:#293d49;max-width:560px;margin-inline:auto}
 
 /* ---------- release 2: price row, monthly / yearly switch, disabled CTA ---------- */
 .pl-poster{font-family:"IBM Plex Sans Arabic","Segoe UI",Tahoma,sans-serif;text-align:start}

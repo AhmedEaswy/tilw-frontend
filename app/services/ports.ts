@@ -4,7 +4,7 @@
  */
 import type {
   Device, Invitation, LegacyScript, MyPlan, PendingEmail, Plan, ReadingPosition, ReadingSettings, RemoteTake, RemoteTakeInput,
-  Script, ScriptPatch, ScriptSummary, ScriptVersion, ScriptVersionSummary, StorageStatus, SyncMode, UpgradePeriod, UpgradeRequest,
+  Script, ScriptListQuery, ScriptPage, ScriptPatch, ScriptSummary, ScriptVersion, ScriptVersionSummary, StorageStatus, SyncMode, UpgradePeriod, UpgradeRequest,
   UploadToken, User, WaitlistEntry,
   ConnectionState, LinkAck, LinkAuth, LinkCommand, LinkEvent, LinkParty, Pairing, PairingCode, PhoneLink, PhoneLinkWithCode,
   PresenceMember, RealtimeSettings, StudioState,
@@ -48,6 +48,8 @@ export interface WaitlistPort {
 
 export interface ScriptsPort {
   list(): Promise<ScriptSummary[]>
+  /** One page of the library (load more): filtered, sorted and searched on the service. */
+  page(query: ScriptListQuery): Promise<ScriptPage>
   /** Ids of scripts whose title or body contains the query (case- and diacritic-insensitive). */
   search(query: string): Promise<string[]>
   get(id: string): Promise<Script>

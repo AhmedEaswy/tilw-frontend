@@ -21,6 +21,7 @@ const services = useServices();
 
 // Release 2 (US4, R2-13): the plans poster reads prices and limits from the service, with build-time fallback.
 const { plans } = usePublicPlans();
+const proOnSale = computed(() => plans.value.some(p => p.key === "pro"));
 const period = ref<"monthly" | "yearly">("yearly");
 // Signed out, the route guard sends this through sign-in and back to the upgrade sheet.
 const getPro = () => navigateTo("/app/settings/plan?upgrade=1");
@@ -222,7 +223,7 @@ onMounted(() => {
 </section>
 
 <section class="pl-sec" id="plans"><div class="wrap">
-  <div class="pl-head"><h2>الأساس معك مجاناً.</h2><p>الكتابة، التدريب، التسجيل، وجهاز التحكم. تضيف Pro مدة تسجيل أطول، ونسخاً تلقائياً إلى Google Drive، وسجلاً أطول لنصوصك.</p></div>
+  <div class="pl-head"><h2>الأساس معك مجاناً.</h2><p>الكتابة، التدريب، التسجيل، وجهاز التحكم.<template v-if="proOnSale"> تضيف Pro مدة تسجيل أطول، ونسخاً تلقائياً إلى Google Drive، وسجلاً أطول لنصوصك.</template></p></div>
   <PlansPoster v-model:period="period" :plans="plans" mode="landing" @cta="getPro" />
 </div></section>
 

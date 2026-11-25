@@ -55,7 +55,9 @@ function detail(l: PhoneLink) {
     <h2 id="links-h">{{ links && !links.length ? t('link.history.emptyTitle') : t('link.history.title') }}</h2>
     <p class="note">{{ links && !links.length ? t('link.history.emptyHint') : t('link.history.lede') }}</p>
     <UiBanner v-if="error" tone="error">{{ error }}</UiBanner>
-    <div v-if="!links && !error" aria-busy="true"><UiSkeleton h="72px" r="8px" /></div>
+    <SkeletonRegion v-if="!links && !error" data-testid="links-skeleton">
+      <SkeletonRows :count="3" height="72px" title-h="17px" meta-h="14px" trail="text" />
+    </SkeletonRegion>
     <ul v-else-if="links?.length" class="list">
       <li v-for="l in links" :key="l.id" class="row" :class="{ ended: l.state === 'ended' }">
         <span class="txt">
