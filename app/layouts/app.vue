@@ -61,6 +61,7 @@ useEventListener(window, 'focus', () => auth.user && plan.refreshIfStale())
             :aria-current="isCurrent(s.to) ? 'page' : undefined"
           >{{ t(s.key) }}</NuxtLink>
         </nav>
+        <ClientOnly><PlayerPicker /></ClientOnly>
         <ProfileMenu />
       </div>
     </header>
@@ -112,6 +113,10 @@ useEventListener(window, 'focus', () => auth.user && plan.refreshIfStale())
 }
 .brand {
   display: flex;
+}
+/* The recordings menu takes the auto margin; the profile button sits right after it. */
+.pp + .pm {
+  margin-inline-start: -16px;
 }
 .top-nav {
   display: flex;

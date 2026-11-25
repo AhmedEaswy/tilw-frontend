@@ -14,4 +14,6 @@ useHead(() => ({ htmlAttrs: { lang: localeHead.value.htmlAttrs?.lang, dir: local
   </NuxtLayout>
   <UiToast />
   <ClientOnly><OfflineBanner /></ClientOnly>
+  <!-- Floating mini player: stays on screen across pages, like YouTube's. -->
+  <ClientOnly><MiniPlayer /></ClientOnly>
 </template>
