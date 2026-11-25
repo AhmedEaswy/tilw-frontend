@@ -52,6 +52,9 @@ async function submit() {
     busy.value = false
   }
 }
+const endsModel = computed<string | null>({ get: () => ends.value || null, set: v => (ends.value = v ?? '') })
+const today = toIsoDate(new Date())
+const uid = useId()
 </script>
 
 <template>
@@ -66,10 +69,10 @@ async function submit() {
         <input v-model="amount" class="adm-input adm-ltr" type="number" :min="kind === 'grant' ? 1 : -100000" max="100000" step="1" required>
         <span class="adm-hint">{{ kind === 'grant' ? t('admin.credits.amountHintGrant') : t('admin.credits.amountHintCorrection') }}</span>
       </label>
-      <label v-if="kind === 'grant'" class="adm-label">
-        {{ t('admin.credits.endsAt') }}
-        <input v-model="ends" class="adm-input" type="date">
-      </label>
+      <div v-if="kind === 'grant'" class="adm-label">
+        <label :for="`${uid}-ends`">{{ t('admin.credits.endsAt') }}</label>
+        <UiDatePicker :id="`${uid}-ends`" v-model="endsModel" :min="today" />
+      </div>
       <label class="adm-label">
         {{ t('admin.credits.reason') }}
         <textarea v-model="reason" class="adm-input" dir="auto" maxlength="500" required />

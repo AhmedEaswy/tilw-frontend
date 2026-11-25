@@ -15,6 +15,8 @@ const data = ref<AiUsage | null>(null)
 const error = ref<unknown>(null)
 const loading = ref(false)
 const filters = useQueryFilters(['groupBy', 'from', 'to'] as const, { allowed: { groupBy: GROUPS }, onChange: () => void load() })
+const range = rangeModel(filters, 'from', 'to')
+const today = toIsoDate(new Date())
 const groupBy = computed<UsageGroupBy>(() => (filters.groupBy as UsageGroupBy) ?? 'provider')
 async function load() {
   loading.value = true
@@ -40,8 +42,7 @@ const keyLabel = (k: string) => (groupBy.value === 'capability' ? t(`admin.capab
         <p class="adm-sub">{{ t('admin.ai.usageSub') }}</p>
       </div>
       <div class="adm-actions">
-        <label class="adm-muted">{{ t('admin.range.from') }} <input v-model="filters.from" class="adm-input" type="date"></label>
-        <label class="adm-muted">{{ t('admin.range.to') }} <input v-model="filters.to" class="adm-input" type="date"></label>
+        <span class="adm-field"><label for="f-range">{{ t('admin.range.label') }}</label><UiDatePicker id="f-range" v-model="range" mode="range" size="sm" :max="today" /></span>
       </div>
     </div>
     <AdminListState :loading="loading" :loaded="!!data" :error="error" :empty="false" @retry="load" />

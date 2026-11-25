@@ -10,9 +10,7 @@ import type { GlyphName } from '~/components/ui/UiGlyph.vue'
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
-const auth = useAuthStore()
 const config = useRuntimeConfig()
-const { signOut, busy: signingOut } = useSignOut()
 const mockMode = config.public.servicesMode === 'mock'
 
 const groups: { key: string; items: { to: string; key: string; icon: GlyphName }[] }[] = [
@@ -53,8 +51,6 @@ function find() {
 
 const drawer = ref(false)
 watch(() => route.fullPath, () => (drawer.value = false))
-const menu = ref(false)
-const initials = computed(() => (auth.user?.name ?? '').trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('') || '?')
 useHead({ htmlAttrs: { class: 'adm-html' } })
 </script>
 
@@ -95,14 +91,7 @@ useHead({ htmlAttrs: { class: 'adm-html' } })
         </form>
         <span class="adm-chip env" :class="env.tone" data-testid="env-badge">{{ env.label }}</span>
         <NuxtLink to="/app/scripts" class="adm-btn ghost">{{ t('admin.backToStudio') }}</NuxtLink>
-        <div class="me">
-          <button type="button" class="av" :aria-label="t('admin.accountMenu')" :aria-expanded="menu" @click="menu = !menu">{{ initials }}</button>
-          <div v-if="menu" class="pop" role="menu" @keydown.esc="menu = false">
-            <p class="who"><b>{{ auth.user?.name }}</b><small class="adm-ltr">{{ auth.user?.email }}</small></p>
-            <NuxtLink to="/app/settings" role="menuitem" @click="menu = false">{{ t('nav.settings') }}</NuxtLink>
-            <button type="button" role="menuitem" :disabled="signingOut" @click="signOut">{{ t('auth.signOut') }}</button>
-          </div>
-        </div>
+        <AdminAccountMenu />
       </header>
       <main id="adm-main" tabindex="-1">
         <slot />
@@ -233,55 +222,6 @@ useHead({ htmlAttrs: { class: 'adm-html' } })
 .find:focus-within {
   outline: 2px solid var(--tilw-focus-ring);
   outline-offset: 2px;
-}
-.me {
-  position: relative;
-}
-.av {
-  inline-size: 32px;
-  block-size: 32px;
-  border: 0;
-  border-radius: 50%;
-  background: var(--tilw-surface-selected);
-  color: var(--tilw-action-primary);
-  font: 600 12px/1 var(--tilw-font-ar);
-  cursor: pointer;
-}
-.pop {
-  position: absolute;
-  inset-inline-end: 0;
-  inset-block-start: 40px;
-  display: grid;
-  min-inline-size: 220px;
-  padding: 8px;
-  border: 1px solid var(--tilw-border-subtle);
-  border-radius: 12px;
-  background: var(--tilw-surface-white);
-  box-shadow: var(--tilw-shadow-pop);
-}
-.pop .who {
-  display: grid;
-  padding: 6px 8px 10px;
-  font: 500 13px/1.4 var(--tilw-font-ar);
-}
-.pop .who small {
-  color: var(--tilw-text-muted);
-}
-.pop a,
-.pop button {
-  padding: 8px;
-  border: 0;
-  border-radius: 8px;
-  background: none;
-  color: var(--tilw-text-ink);
-  font: 500 14px/1.3 var(--tilw-font-ar);
-  text-align: start;
-  text-decoration: none;
-  cursor: pointer;
-}
-.pop a:hover,
-.pop button:hover {
-  background: var(--tilw-surface-quiet);
 }
 main:focus {
   outline: none;

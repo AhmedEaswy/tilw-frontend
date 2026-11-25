@@ -276,6 +276,27 @@ textarea.adm-input {
   color: var(--tilw-text-ink);
 }
 .adm-person small,
+/* A filter in a toolbar: a muted label before a UI-kit control (UiSelect / UiDatePicker / UiAutocomplete). */
+.adm-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.adm-field > label {
+  color: var(--tilw-text-muted);
+  font: 500 12px/1.4 var(--tilw-font-ar);
+  white-space: nowrap;
+}
+.adm-field > .ui-select,
+.adm-field > .ui-autocomplete {
+  min-inline-size: 160px;
+}
+.adm-field > .ui-date {
+  min-inline-size: 220px;
+}
+.adm-toolbar > .ui-search {
+  inline-size: min(280px, 100%);
+}
 .adm-muted {
   color: var(--tilw-text-muted);
   font: 500 12px/1.4 var(--tilw-font-ar);
