@@ -103,10 +103,11 @@ test('no speech recognition: Dictate shows disabled and its tooltip says why', a
   await expect(button).toHaveAttribute('aria-disabled', 'true')
   const tip = page.getByRole('tooltip')
   const text = 'الإملاء غير متاح في هذا المتصفح. استخدم ميكروفون لوحة المفاتيح، أو افتح Tilw في Chrome أو Safari.'
+  // aria-disabled: Playwright treats it as not enabled, so force the pointer (people can still tap and hover it).
   if (isMobile) {
-    await button.tap()
+    await button.tap({ force: true })
   } else {
-    await button.hover()
+    await button.hover({ force: true })
   }
   await expect(tip).toBeVisible()
   await expect(tip).toHaveText(text)

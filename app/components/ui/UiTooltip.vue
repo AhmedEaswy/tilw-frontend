@@ -7,7 +7,7 @@
  * Put it around a focusable trigger. For a "disabled" control that should still explain itself, use
  * `aria-disabled="true"` instead of `disabled`: a disabled button can't take focus or taps.
  */
-import { ref, useId } from 'vue'
+import { onBeforeUnmount, ref, useId, watch } from 'vue'
 import { useAnchoredPopover } from '~/composables/useAnchoredPopover'
 
 defineProps<{ text: string }>()
@@ -16,12 +16,19 @@ const root = ref<HTMLElement | null>(null)
 const pop = ref<HTMLElement | null>(null)
 const { open, show, hide } = useAnchoredPopover(root, root, pop, { matchWidth: false, gap: 6 })
 
+// Esc hides it wherever focus is (shown by hover, focus may be elsewhere).
 function onKey(e: KeyboardEvent) {
   if (e.key === 'Escape' && open.value) {
     e.stopPropagation()
     hide()
   }
 }
+watch(open, (on) => {
+  if (typeof document === 'undefined') return
+  if (on) document.addEventListener('keydown', onKey, true)
+  else document.removeEventListener('keydown', onKey, true)
+})
+onBeforeUnmount(() => typeof document !== 'undefined' && document.removeEventListener('keydown', onKey, true))
 function toggle() {
   if (open.value) hide()
   else void show()
@@ -36,7 +43,6 @@ function toggle() {
     @mouseleave="hide"
     @focusin="show"
     @focusout="hide"
-    @keydown="onKey"
     @click="toggle"
   >
     <slot :describedby="id" />
