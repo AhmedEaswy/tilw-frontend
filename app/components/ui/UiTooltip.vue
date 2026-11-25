@@ -35,8 +35,8 @@ onBeforeUnmount(() => typeof document !== 'undefined' && document.removeEventLis
   <span
     ref="root"
     class="ui-tooltip"
-    @mouseenter="show"
-    @mouseleave="hide"
+    @pointerenter="e => e.pointerType === 'mouse' && show()"
+    @pointerleave="e => e.pointerType === 'mouse' && hide()"
     @focusin="show"
     @focusout="hide"
     @click="show"
