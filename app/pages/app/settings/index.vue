@@ -89,7 +89,7 @@ onBeforeUnmount(() => reader.flushSettings())
         <span class="go">{{ t('settings.open') }}</span>
       </NuxtLink>
       <NuxtLink to="/app/settings/ai" class="row" data-testid="settings-ai">
-        <span class="lead"><ProviderStack :providers="['openai', 'anthropic']" :size="28" /></span>
+        <span class="lead"><ProviderStack :providers="['openai', 'anthropic', 'minimax', 'deepseek']" :size="28" /></span>
         <span class="txt"><b>{{ t('settings.aiPlatforms') }}</b><small>{{ aiHint }}</small></span>
         <span class="go">{{ t('settings.open') }}</span>
       </NuxtLink>

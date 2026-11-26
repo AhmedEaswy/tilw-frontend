@@ -53,6 +53,7 @@ export const LIMIT_DEFINITIONS: MockLimitDefinition[] = [
   { key: 'history.versions', type: 'int', default: null, counted: false, label: { ar: 'عدد نسخ السجل', en: 'History versions' } },
   { key: 'history.days', type: 'int', default: null, counted: false, label: { ar: 'أيام السجل', en: 'History days' } },
   { key: 'ai.audio_max_minutes', type: 'int', default: 60, counted: false, label: { ar: 'أطول صوت للتحويل (دقائق)', en: 'Longest audio to transcribe (minutes)' } },
+  { key: 'ai.cloud_speech', type: 'bool', default: false, counted: false, label: { ar: 'تحويل الصوت إلى نص (Deepgram)', en: 'Speech to text (Deepgram)' } },
   { key: 'byok.allowed', type: 'bool', default: false, counted: false, label: { ar: 'مفاتيحك الخاصة للذكاء الاصطناعي', en: 'Your own AI keys' } },
   { key: 'phone_link.allowed', type: 'bool', default: false, counted: false, label: { ar: 'التحكم من الهاتف', en: 'Phone link' } },
 ]
@@ -111,6 +112,8 @@ export interface LimitContext {
 
 /** The effective value of one limit. */
 export function limitValue(ctx: LimitContext, key: string): RawLimit {
+  // As the backend: without a platform key the kind is left out of `definitions` and is off for everyone.
+  if (key === 'ai.cloud_speech' && !ctx.definitions.some(d => d.key === key)) return false
   if (key in ctx.overrides) return ctx.overrides[key] ?? null
   const plan = ctx.plans.find(p => p.key === ctx.planKey)
   if (plan && key in plan.limits) return plan.limits[key] ?? null

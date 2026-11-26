@@ -68,10 +68,11 @@ export function createHttpServices(opts: HttpClientOptions & { realtime?: Realti
 
     scripts: {
       list: () => api.get<ScriptSummary[]>('/api/scripts'),
-      page: ({ limit, filter, sort, q, cursor }) => {
+      page: ({ limit, filter, sort, dir, q, cursor }) => {
         const qs = new URLSearchParams({ limit: String(limit) })
         if (filter) qs.set('filter', filter)
         if (sort) qs.set('sort', sort)
+        if (dir) qs.set('dir', dir)
         if (q?.trim()) qs.set('q', q.trim())
         if (cursor) qs.set('cursor', cursor)
         return api.get<ScriptPage>(`/api/scripts?${qs}`)
@@ -116,7 +117,7 @@ export function createHttpServices(opts: HttpClientOptions & { realtime?: Realti
     plans: {
       listPlans: () => api.get<Plan[]>('/api/plans'),
       myPlan: () => api.get<MyPlan>('/api/user/plan'),
-      requestUpgrade: input => api.post<{ request: UpgradeRequest; whatsappUrl: string | null }>('/api/user/subscription-requests', input),
+      requestUpgrade: input => api.post<{ request: UpgradeRequest }>('/api/user/subscription-requests', input),
       cancelRequest: () => api.del<void>('/api/user/subscription-requests/current'),
     },
 

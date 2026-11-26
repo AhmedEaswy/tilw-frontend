@@ -120,7 +120,7 @@ useHead({ htmlAttrs: { class: 'adm-html' } })
         <button type="button" class="burger" :aria-label="t('admin.menu')" :aria-expanded="drawer" @click="drawer = !drawer"><UiGlyph name="menu" :size="22" /></button>
         <form role="search" class="find" @submit.prevent="find">
           <UiGlyph name="search" :size="16" />
-          <input v-model="search" type="search" dir="auto" :placeholder="t('admin.topSearch')" :aria-label="t('admin.topSearch')">
+          <input v-model="search" type="search" :dir="search ? 'auto' : undefined" :placeholder="t('admin.topSearch')" :aria-label="t('admin.topSearch')">
         </form>
         <span class="adm-chip env" :class="env.tone" data-testid="env-badge">{{ env.label }}</span>
         <NuxtLink to="/app/scripts" class="adm-btn ghost">{{ t('admin.backToStudio') }}</NuxtLink>

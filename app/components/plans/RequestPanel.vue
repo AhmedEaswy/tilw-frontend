@@ -1,7 +1,8 @@
 <script setup lang="ts">
 /**
- * Pending upgrade request (R2-5 `252:297`): reference with a copy control, period, price, sent date, "Open WhatsApp
- * again" and "Cancel request" (with confirm). Also the fallback when WhatsApp did not open.
+ * Pending upgrade request (R2-5 `252:297`): reference with a copy control, period, price, sent date, the WhatsApp
+ * number we'll write to with "Change number", and "Cancel request" (with confirm). A request made before the number
+ * was asked for has none, and offers to add it.
  */
 import type { UpgradeRequest } from '~/services/types'
 
@@ -14,7 +15,6 @@ const upgrade = useUpgrade()
 
 const confirming = ref(false)
 const busy = ref(false)
-const fallbackUrl = ref<string | null>(null)
 
 async function copy() {
   try {
@@ -22,18 +22,6 @@ async function copy() {
     show(t('upgrade.copied'))
   } catch {
     show(t('upgrade.copyFailed'), 'error')
-  }
-}
-
-async function reopen() {
-  busy.value = true
-  try {
-    const r = await upgrade.start(props.request.period)
-    fallbackUrl.value = r.kind === 'fallback' ? r.url : null
-  } catch (e) {
-    show(errorText(e), 'error')
-  } finally {
-    busy.value = false
   }
 }
 
@@ -54,7 +42,7 @@ async function cancel() {
 <template>
   <section class="req" aria-labelledby="req-h">
     <h2 id="req-h">{{ t('upgrade.pendingTitle') }}</h2>
-    <p class="lede">{{ t('upgrade.pendingLede') }}</p>
+    <p class="lede">{{ request.phone ? t('upgrade.pendingLede') : t('upgrade.pendingNoPhone') }}</p>
     <div class="ref">
       <span class="lbl">{{ t('upgrade.reference') }}</span>
       <code dir="ltr">{{ request.reference }}</code>
@@ -64,12 +52,10 @@ async function cancel() {
       <div><dt>{{ t('upgrade.periodLabel') }}</dt><dd>{{ t(`plan.period.${request.period}`) }}</dd></div>
       <div><dt>{{ t('upgrade.price') }}</dt><dd dir="ltr">{{ formatPrice(request.priceCents) }}</dd></div>
       <div><dt>{{ t('upgrade.sentOn') }}</dt><dd>{{ formatDay(request.createdAt, locale) }}</dd></div>
+      <div v-if="request.phone"><dt>{{ t('upgrade.phoneLabel') }}</dt><dd><bdi dir="ltr">{{ request.phone }}</bdi></dd></div>
     </dl>
-    <p v-if="fallbackUrl !== null" class="fallback">
-      {{ t('upgrade.blocked') }} <a :href="fallbackUrl" target="_blank" rel="noopener">{{ t('upgrade.openLink') }}</a>
-    </p>
     <div class="acts">
-      <UiButton :loading="busy && !confirming" @click="reopen">{{ t('upgrade.reopen') }}</UiButton>
+      <UiButton :tone="request.phone ? 'secondary' : 'primary'" @click="upgrade.askPhone(request.period)">{{ request.phone ? t('upgrade.changePhone') : t('upgrade.addPhone') }}</UiButton>
       <button type="button" class="cancel" @click="confirming = true">{{ t('upgrade.cancel') }}</button>
     </div>
 
@@ -138,7 +124,7 @@ code {
 }
 dl {
   display: grid;
-  grid-template-columns: repeat(3, auto);
+  grid-template-columns: repeat(2, auto);
   justify-content: start;
   gap: 8px 32px;
   margin: 0;
@@ -150,13 +136,6 @@ dt {
 dd {
   margin: 2px 0 0;
   font: 500 17px/1.36 var(--tilw-font-ar);
-}
-.fallback {
-  margin: 0;
-  font: 400 15px/1.5 var(--tilw-font-ar);
-}
-.fallback a {
-  color: var(--tilw-action-primary);
 }
 .acts {
   display: flex;
@@ -176,6 +155,7 @@ dd {
   }
   dl {
     grid-template-columns: 1fr 1fr;
+    gap: 8px 16px;
   }
 }
 </style>

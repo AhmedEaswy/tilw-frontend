@@ -15,6 +15,10 @@ export type GlyphName =
   | 'field-mail' | 'field-lock' | 'arrow-action'
   // auth state icons (6:64, 6:101, 6:102)
   | 'mail-check' | 'play-small' | 'arrow-back'
+  // door with an arrow leaving it
+  | 'sign-out'
+  // the library's sort direction
+  | 'sort-asc' | 'sort-desc'
 
 const props = withDefaults(defineProps<{ name: GlyphName; size?: number; label?: string }>(), { size: 24 })
 
@@ -43,8 +47,8 @@ const file = computed(() => {
   return props.name
 })
 // The directional glyphs are drawn for Arabic: `arr`/`arrow-action` point left (forward in RTL),
-// `back`/`arrow-back` point right (back in RTL). They mirror in English.
-const RTL_NATIVE = new Set<GlyphName>(['arr', 'back', 'arrow-action', 'arrow-back', 'play-small'])
+// `back`/`arrow-back` point right (back in RTL), `sign-out` leaves its door leftwards. They mirror in English.
+const RTL_NATIVE = new Set<GlyphName>(['arr', 'back', 'arrow-action', 'arrow-back', 'play-small', 'sign-out'])
 const mirror = computed(() => !rtl.value && RTL_NATIVE.has(props.name))
 </script>
 

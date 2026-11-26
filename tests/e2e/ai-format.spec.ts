@@ -105,6 +105,7 @@ test('disables Format when the balance is short, and for an empty script', async
   await aiKnobs(page, {}, 20)
   await page.goto('/app/scripts')
   await page.getByRole('button', { name: 'نص جديد' }).first().click()
+  await page.getByRole('menuitem', { name: 'إنشاء نص' }).click()
   await page.getByLabel('عنوان النص').fill('نص فارغ')
   await page.getByRole('button', { name: 'فتح المحرر' }).click()
   await expect(page).toHaveURL(/\/app\/scripts\/s_/)

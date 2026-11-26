@@ -21,7 +21,7 @@ export interface LimitCopy {
 export const KNOWN_LIMITS = [
   'scripts.max_active', 'scripts.max_words', 'takes.max_minutes', 'storage.auto_sync', 'history.versions', 'history.days', 'phone_link.allowed',
   // Feature 005 (backend 004): AI credits, own keys, longest audio.
-  'ai.credits_monthly', 'byok.allowed', 'ai.audio_max_minutes',
+  'ai.credits_monthly', 'byok.allowed', 'ai.audio_max_minutes', 'ai.cloud_speech',
 ] as const
 
 const num = (v: unknown) => (typeof v === 'number' ? v : 0)
@@ -46,6 +46,8 @@ export function describeLimit(limit: LimitInfo | undefined | null): LimitCopy {
       return { title: 'limits.dialog.creditsTitle', text: 'limits.dialog.creditsText', params: { value }, action: 'none', upgrade: true }
     case 'byok.allowed':
       return { title: 'limits.dialog.byokTitle', text: 'limits.dialog.byokText', params: {}, action: 'none', upgrade: true }
+    case 'ai.cloud_speech':
+      return { title: 'limits.dialog.cloudSpeechTitle', text: 'limits.dialog.cloudSpeechText', params: {}, action: 'none', upgrade: true }
     case 'ai.audio_max_minutes':
       return { title: 'limits.dialog.audioTitle', text: 'limits.dialog.audioText', params: { value }, action: 'none', upgrade: true }
     default:

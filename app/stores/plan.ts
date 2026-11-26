@@ -56,6 +56,8 @@ export const usePlanStore = defineStore('plan', () => {
   }
   /** The plan was read, or the last read failed (then `knownLimit()` is the best guess). */
   const settled = computed(() => !!my.value || (!!error.value && !loading.value))
+  /** Speech to text by the provider: false until the plan is read, without a platform key, or when the plan lacks it. */
+  const cloudSpeech = computed(() => limit('ai.cloud_speech') === true)
   function usage(key: string): number | null | undefined {
     return my.value?.limits.find(x => x.key === key)?.usage
   }
@@ -114,8 +116,8 @@ export const usePlanStore = defineStore('plan', () => {
     return load()
   }
 
-  async function requestUpgrade(period: UpgradePeriod, plan = 'pro') {
-    const res = await useServices().plans.requestUpgrade({ plan, period })
+  async function requestUpgrade(period: UpgradePeriod, phone: string, plan = 'pro') {
+    const res = await useServices().plans.requestUpgrade({ plan, period, phone })
     if (my.value) my.value = { ...my.value, pendingRequest: res.request }
     return res
   }
@@ -138,5 +140,5 @@ export const usePlanStore = defineStore('plan', () => {
     loadedAt = 0
   }
 
-  return { plans, my, loading, error, notice, isPro, daysLeft, limit, knownLimit, settled, usage, load, loadPublic, ensurePublic, publicLoaded, paidAvailable, refreshIfStale, requestUpgrade, cancelRequest, consumeNotice, reset }
+  return { plans, my, loading, error, notice, isPro, daysLeft, limit, knownLimit, cloudSpeech, settled, usage, load, loadPublic, ensurePublic, publicLoaded, paidAvailable, refreshIfStale, requestUpgrade, cancelRequest, consumeNotice, reset }
 })

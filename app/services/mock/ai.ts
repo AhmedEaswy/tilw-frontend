@@ -28,7 +28,7 @@ import {
 import { AI_RULES } from '../types'
 import { countWords } from '../../utils/text'
 import { creditsForSeconds, creditsForWords, isAllowedAudioType } from '../ai/audio'
-import { fakeSpeech, type FakeSpeechMode } from '../ai/speech'
+import { fakeLive, fakeSpeech, type FakeSpeechMode } from '../ai/speech'
 import type { KV } from './db'
 import type { RawLimit } from './plans'
 
@@ -42,8 +42,10 @@ export interface MockAiKnobs {
   /** The provider refuses own keys (on save, check and use). */
   keyRefused: boolean
   speech: FakeSpeechMode
+  /** Stands for "a Deepgram key is added and Speech to text is on for the plans". */
+  cloudSpeech: boolean
 }
-export const DEFAULT_AI_KNOBS: MockAiKnobs = { format: 'ok', keyRefused: false, speech: 'ok' }
+export const DEFAULT_AI_KNOBS: MockAiKnobs = { format: 'ok', keyRefused: false, speech: 'ok', cloudSpeech: false }
 
 interface MockEntry extends CreditEntry {
   userId: string
@@ -340,6 +342,7 @@ export function createMockAi(d: MockAiDeps) {
     // As the backend: video only for captions.
     if (!isAllowedAudioType(input.mimeType || '', input.purpose ?? 'text')) fields.mimeType = 'audio'
     if (Object.keys(fields).length) throw new PortError('validation', fields)
+    if (d.limit(userId, 'ai.cloud_speech') !== true) throw new PortError('limit_reached', undefined, undefined, { key: 'ai.cloud_speech', value: false, usage: null })
     const max = intLimit(userId, 'ai.audio_max_minutes', AI_RULES.audioMaxMinutes)
     if (input.seconds > max * 60) throw new PortError('limit_reached', undefined, undefined, { key: 'ai.audio_max_minutes', value: max, usage: null })
   }
@@ -466,7 +469,7 @@ export function createMockAi(d: MockAiDeps) {
       const userId = me()
       if (!byokAllowed(userId)) throw new PortError('limit_reached', undefined, undefined, { key: 'byok.allowed', value: false, usage: null })
       const fields: Record<string, string> = {}
-      if (provider !== 'anthropic' && provider !== 'openai') fields.provider = 'in'
+      if (provider !== 'anthropic' && provider !== 'openai' && provider !== 'minimax' && provider !== 'deepseek') fields.provider = 'in'
       const k = (key ?? '').trim()
       if (k.length < AI_RULES.ownKeyMin) fields.key = 'min'
       else if (k.length > AI_RULES.ownKeyMax) fields.key = 'max'
@@ -587,6 +590,7 @@ export function createMockAi(d: MockAiDeps) {
 
   /** The browser → provider upload, faked; the knob picks the provider's answer. */
   const speech: SpeechPort = {
+    live: (_upload, o) => fakeLive(o),
     async send(upload, _audio, o) {
       await d.sleep(400)
       if (upload.provider !== 'fake') throw new PortError('ai_unavailable', undefined, undefined, undefined, { reason: 'provider_failed' })

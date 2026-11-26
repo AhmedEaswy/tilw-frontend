@@ -16,7 +16,7 @@ import {
   type AnalyticsAiRow, type DashboardHeadlines, type DurationBucket, type PracticeSession, type PracticeVia, type RemoteTake, type Script,
   type AddCreditsInput, type AdminAiCall, type AdminDashboard, type AdminPeriodQuery, type AdminLimitValue, type AdminOverride, type AdminPlan, type AdminSettings,
   type AdminStatus, type AdminSubscription, type AdminSubscriptionRow, type AdminUpgradeRequest, type AdminUserDetail, type AdminUserRow,
-  type AiCapability, type AiKeyState, type AiUsage, type AuditAction, type AuditEntry, type CreditEntry, type CreditKind, type FeatureFlag,
+  type AiCapability, type AiKeyState, type FormatProvider, type AiUsage, type AuditAction, type AuditEntry, type CreditEntry, type CreditKind, type FeatureFlag,
   type Invitation, type LedgerEntry, type Page, type PaymentsPage, type PendingRequestRef, type PersonRef, type SignupMode, type UsageFigures,
   type UsageGroup, type User, type WaitlistEntry, FLAG_KEY,
 } from '../types'
@@ -44,6 +44,7 @@ export const AUDIT_ACTIONS: AuditAction[] = [
   ['plan.create', 'Plan'], ['plan.update', 'Plan'], ['limit.set', 'Plan'], ['limit.unset', 'Plan'], ['limit.define', 'LimitDefinition'],
   ['waitlist.remove', 'WaitlistEntry'], ['invitation.create', 'Invitation'], ['invitation.resend', 'Invitation'], ['invitation.withdraw', 'Invitation'],
   ['settings.signup_mode', 'Setting'], ['settings.ai_key_set', 'Setting'], ['settings.ai_key_remove', 'Setting'],
+  ['settings.format_provider', 'Setting'],
   ['flag.set', 'FeatureFlag'], ['flag.remove', 'FeatureFlag'],
 ].map(([action, targetType]) => ({ action: action!, targetType: targetType! }))
 
@@ -73,7 +74,7 @@ export const ADMIN_ACCESS: Record<keyof AdminPort, Access> = {
   limitDefinitions: R('plans'), defineLimit: W('plans'),
   subscriptions: R('money'), updateSubscription: W('money'), requests: R('money'), fulfilRequest: W('money'), rejectRequest: W('money'), payments: R('money'),
   aiUsage: R('ai'), aiCalls: R('ai'), ledger: R('ai'),
-  settings: R('settings'), setSignupMode: W('settings'), setAiKey: W('settings'), removeAiKey: W('settings'), setFlag: W('settings'), removeFlag: W('settings'),
+  settings: R('settings'), setSignupMode: W('settings'), setFormatProvider: W('settings'), setAiKey: W('settings'), removeAiKey: W('settings'), setFlag: W('settings'), removeFlag: W('settings'),
   auditLog: R('audit'), auditActions: R('audit'),
   analytics: R('users'), userTakes: R('users'), userScripts: R('users'), userLinks: R('users'), userConnections: R('users'), userPreferences: R('users'),
   // Every /admin/admins route needs admins: edit, reads too.
@@ -94,8 +95,9 @@ interface InsightLink {
 
 interface AdminState {
   signupMode: SignupMode
+  formatProvider: FormatProvider
   flags: FeatureFlag[]
-  keys: Partial<Record<'anthropic' | 'deepgram', { last4: string; updatedAt: string; project: string | null }>>
+  keys: Partial<Record<AiKeyState['provider'], { last4: string; updatedAt: string; project: string | null }>>
   suspensions: Record<string, { at: number; reason: string; byId: string | null }>
   lastActive: Record<string, number>
   deletionBy: Record<string, string>
@@ -137,9 +139,11 @@ export interface MockAdminDeps {
     credits: (userId: string) => { balance: number; monthly: number; monthlyLeft: number; granted: number; month: string }
     allEntries: () => (CreditEntry & { userId: string; month: string })[]
     adminEntry: (userId: string, input: AddCreditsInput) => CreditEntry
-    ownKey: (userId: string) => { provider: 'anthropic' | 'openai'; last4: string; checkedAt: string } | null
+    ownKey: (userId: string) => { provider: AiProvider; last4: string; checkedAt: string } | null
     eraseKey: (userId: string) => void
   }
+  /** /__mock: speech to text counts as set up even without a key typed in the console. */
+  speechKnob: () => boolean
 }
 
 const uid = (p: string) => `${p}_${Math.random().toString(36).slice(2, 10)}`
@@ -174,6 +178,7 @@ export function createMockAdmin(d: MockAdminDeps) {
     }
     return {
       signupMode: s?.signupMode ?? 'invite_only',
+      formatProvider: s?.formatProvider ?? 'anthropic',
       flags: s?.flags ?? [],
       keys: s?.keys ?? {},
       suspensions: s?.suspensions ?? {},
@@ -231,13 +236,13 @@ export function createMockAdmin(d: MockAdminDeps) {
           const start = Math.max(created, t - (i + 2) * DAY)
           const reqId = `req_seed${i}`
           const priceCents = period === 'yearly' ? 7700 : 800
-          s.requests.push({ id: reqId, userId: id, reference: requestReference(r), plan: 'pro', period, priceCents, state: 'fulfilled', createdAt: iso(start - DAY), expiresAt: iso(start + 29 * DAY), handledBy: MOCK_ADMIN_ID, handledAt: iso(start), note: null, subscriptionId: `sub_seed${i}` })
+          s.requests.push({ id: reqId, userId: id, reference: requestReference(r), plan: 'pro', period, priceCents, phone: `+2010012340${String(i).padStart(2, '0')}`, state: 'fulfilled', createdAt: iso(start - DAY), expiresAt: iso(start + 29 * DAY), handledBy: MOCK_ADMIN_ID, handledAt: iso(start), note: null, subscriptionId: `sub_seed${i}` })
           s.subscriptions.push({ id: `sub_seed${i}`, userId: id, plan: 'pro', period, startsAt: start, endsAt: periodEnd(start, period), source: 'request', requestId: reqId, grantedBy: MOCK_ADMIN_ID, note: null, createdAt: start })
         }
         // Three people waiting for payment.
         if (i === 2 || i === 6 || i === 10) {
           const c = t - (i + 1) * 3_600_000
-          s.requests.push({ id: `req_pend${i}`, userId: id, reference: requestReference(r), plan: 'pro', period: i === 2 ? 'yearly' : 'monthly', priceCents: i === 2 ? 7700 : 800, state: 'pending', createdAt: iso(c), expiresAt: iso(c + 30 * DAY) })
+          s.requests.push({ id: `req_pend${i}`, userId: id, reference: requestReference(r), plan: 'pro', period: i === 2 ? 'yearly' : 'monthly', priceCents: i === 2 ? 7700 : 800, phone: `+2010012340${String(i).padStart(2, '0')}`, state: 'pending', createdAt: iso(c), expiresAt: iso(c + 30 * DAY) })
         }
         if (i % 3 === 0) {
           s.storage[id] = { state: 'linked', accountEmail: email.replace('@example.com', '@gmail.com'), syncMode: 'manual' }
@@ -580,7 +585,7 @@ export function createMockAdmin(d: MockAdminDeps) {
         const linked = empty ? 0 : Object.values(db.s.storage).filter(x => x.state === 'linked').length
         return { linked, byProvider: { google_drive: linked } }
       })(),
-      ownKeys: { users: keys.length, byProvider: { anthropic: keys.filter(k => k.provider === 'anthropic').length, openai: keys.filter(k => k.provider === 'openai').length } },
+      ownKeys: { users: keys.length, byProvider: { anthropic: keys.filter(k => k.provider === 'anthropic').length, openai: keys.filter(k => k.provider === 'openai').length, minimax: keys.filter(k => k.provider === 'minimax').length, deepseek: keys.filter(k => k.provider === 'deepseek').length } },
       aiUsage,
     }
   }
@@ -612,7 +617,7 @@ export function createMockAdmin(d: MockAdminDeps) {
     const r = db.s.requests.find(x => x.userId === userId && x.state === 'pending' && Date.parse(x.expiresAt) > d.now())
     if (!r) return null
     const { userId: _u, handledBy: _h, handledAt: _a, note: _n, subscriptionId: _s, ...rest } = r
-    return rest
+    return { ...rest, phone: rest.phone ?? null }
   }
   function row(u: User): AdminUserRow {
     const sub = inForce(u.id)
@@ -627,7 +632,7 @@ export function createMockAdmin(d: MockAdminDeps) {
   function ctx(userId: string): LimitContext {
     const scripts = db.s.scripts[userId] ?? []
     return {
-      definitions: db.s.limitDefinitions, plans: db.s.plans, planKey: planKeyOf(userId), overrides: db.s.overrides[userId] ?? {},
+      definitions: definitions(), plans: db.s.plans, planKey: planKeyOf(userId), overrides: db.s.overrides[userId] ?? {},
       usage: key => key === 'scripts.max_active' ? scripts.filter(x => !x.archivedAt).length : key === 'scripts.max_words' ? null : null,
     }
   }
@@ -649,6 +654,10 @@ export function createMockAdmin(d: MockAdminDeps) {
         }
       })
     return [...st.calls.map(c => ({ ...c, overrun: false })), ...fromLedger].sort((a, b) => b.createdAt - a.createdAt)
+  }
+  /** As the backend: Speech to text is listed only while a Deepgram key is set. */
+  function definitions() {
+    return read().keys.deepgram || d.speechKnob() ? db.s.limitDefinitions : db.s.limitDefinitions.filter(x => x.key !== 'ai.cloud_speech')
   }
   function detail(u: User): AdminUserDetail {
     st = read()
@@ -674,7 +683,7 @@ export function createMockAdmin(d: MockAdminDeps) {
         upcoming: db.s.subscriptions.filter(x => x.userId === u.id && subState(x) === 'scheduled').sort((a, b) => a.startsAt - b.startsAt).map(pubSub),
         pendingRequest: pendingRef(u.id),
       },
-      limits: db.s.limitDefinitions.map(def => ({
+      limits: definitions().map(def => ({
         key: def.key, type: def.type, labelAr: def.label.ar, labelEn: def.label.en, value: limitValue(c, def.key) as AdminLimitValue,
         usage: def.counted ? c.usage(def.key) : null, overridden: def.key in c.overrides,
       })),
@@ -735,13 +744,13 @@ export function createMockAdmin(d: MockAdminDeps) {
     const u = db.s.users.find(x => x.id === r.userId)
     const p = db.s.plans.find(x => x.key === r.plan)
     const { userId, handledBy, handledAt, note, subscriptionId: _s, ...rest } = r
-    return { ...rest, userId, email: u?.email ?? '', name: u?.name ?? '', currentPriceCents: p ? (r.period === 'yearly' ? p.priceYearlyCents : p.priceMonthlyCents) : r.priceCents, handledBy: handledBy ?? null, handledAt: handledAt ?? null, note: note ?? null }
+    return { ...rest, phone: rest.phone ?? null, userId, email: u?.email ?? '', name: u?.name ?? '', currentPriceCents: p ? (r.period === 'yearly' ? p.priceYearlyCents : p.priceMonthlyCents) : r.priceCents, handledBy: handledBy ?? null, handledAt: handledAt ?? null, note: note ?? null }
   }
   function adminPlan(p: (typeof db.s.plans)[number], i: number): AdminPlan {
     return {
       id: p.key, key: p.key, nameAr: p.name.ar, nameEn: p.name.en, priceMonthlyCents: p.priceMonthlyCents, priceYearlyCents: p.priceYearlyCents,
       currency: 'USD', active: p.active !== false, sort: p.sort ?? i,
-      limits: db.s.limitDefinitions.map(def => ({ key: def.key, type: def.type, value: (def.key in p.limits ? p.limits[def.key] : def.default) as AdminLimitValue, set: def.key in p.limits })),
+      limits: definitions().map(def => ({ key: def.key, type: def.type, value: (def.key in p.limits ? p.limits[def.key] : def.default) as AdminLimitValue, set: def.key in p.limits })),
     }
   }
   function planById(id: string) {
@@ -761,13 +770,13 @@ export function createMockAdmin(d: MockAdminDeps) {
       seconds: calls.filter(c => c.capability !== 'format').reduce((n, c) => n + c.units, 0), ownKeyCalls: calls.filter(c => c.paidWith === 'own_key').length,
     }
   }
-  const keyState = (provider: 'anthropic' | 'deepgram'): AiKeyState => {
+  const keyState = (provider: AiKeyState['provider']): AiKeyState => {
     const k = st.keys[provider]
     return k
       ? { provider, set: true, source: 'stored', last4: k.last4, updatedAt: k.updatedAt, ...(provider === 'deepgram' ? { project: k.project } : {}) }
       : { provider, set: false, source: 'none', last4: null, updatedAt: null, ...(provider === 'deepgram' ? { project: null } : {}) }
   }
-  const settingsOf = (): AdminSettings => ({ signupMode: st.signupMode, aiKeys: [keyState('anthropic'), keyState('deepgram')], flags: [...st.flags].sort((a, b) => a.key.localeCompare(b.key)) })
+  const settingsOf = (): AdminSettings => ({ signupMode: st.signupMode, formatProvider: st.formatProvider, aiKeys: [keyState('anthropic'), keyState('minimax'), keyState('deepseek'), keyState('deepgram')], flags: [...st.flags].sort((a, b) => a.key.localeCompare(b.key)) })
 
   // ---------- the port ----------
   const admin: AdminPort = {
@@ -1097,7 +1106,7 @@ export function createMockAdmin(d: MockAdminDeps) {
       db.write(() => delete p.limits[key])
       tx(s => audit(s, a.id, 'limit.unset', 'Plan', p.key, { key, value: before }, null))
     }),
-    limitDefinitions: () => adminRead(() => db.s.limitDefinitions.map(x => ({ key: x.key, type: x.type, default: x.default as AdminLimitValue, counted: x.counted, labelAr: x.label.ar, labelEn: x.label.en }))),
+    limitDefinitions: () => adminRead(() => definitions().map(x => ({ key: x.key, type: x.type, default: x.default as AdminLimitValue, counted: x.counted, labelAr: x.label.ar, labelEn: x.label.en }))),
     defineLimit: input => adminWrite((a) => {
       if (!/^[a-z0-9_]+(\.[a-z0-9_]+)+$/.test(input.key ?? '') || input.key.length > 64) throw new PortError('validation', { key: 'invalid' })
       if (db.s.limitDefinitions.some(x => x.key === input.key)) throw new PortError('validation', { key: 'taken' })
@@ -1234,8 +1243,19 @@ export function createMockAdmin(d: MockAdminDeps) {
         return settingsOf()
       })
     }),
+    setFormatProvider: provider => adminWrite((a) => {
+      st = read()
+      if (provider !== 'anthropic' && provider !== 'minimax' && provider !== 'deepseek') throw new PortError('validation', { formatProvider: 'invalid' })
+      if (provider !== 'anthropic' && !st.keys[provider]) throw new PortError('validation', { formatProvider: 'key_missing' })
+      return tx((s) => {
+        if (s.formatProvider !== provider) audit(s, a.id, 'settings.format_provider', 'Setting', 'ai.format_provider', { formatProvider: s.formatProvider }, { formatProvider: provider })
+        s.formatProvider = provider
+        st = s
+        return settingsOf()
+      })
+    }),
     setAiKey: (provider, input) => adminWrite((a) => {
-      if (provider !== 'anthropic' && provider !== 'deepgram') throw new PortError('not_found')
+      if (provider !== 'anthropic' && provider !== 'minimax' && provider !== 'deepseek' && provider !== 'deepgram') throw new PortError('not_found')
       const k = (input.key ?? '').trim()
       if (k.length < 8 || k.length > 500) throw new PortError('validation', { key: 'invalid' })
       st = read()
@@ -1251,6 +1271,7 @@ export function createMockAdmin(d: MockAdminDeps) {
     removeAiKey: provider => adminWrite((a) => {
       st = read()
       if (!st.keys[provider]) throw new PortError('not_found')
+      if (provider !== 'anthropic' && provider === st.formatProvider) throw new PortError('conflict')
       return tx((s) => {
         const last4 = s.keys[provider]!.last4
         delete s.keys[provider]
@@ -1447,6 +1468,7 @@ export function createMockAdmin(d: MockAdminDeps) {
     /** An admin scheduled this deletion: signing in does not cancel it. */
     deletionByAdmin: (userId: string) => !!read().deletionBy[userId],
     signupMode: () => read().signupMode,
+    hasDeepgramKey: () => !!read().keys.deepgram,
     /** Records signed-in use at most every 15 minutes. */
     touch(userId: string) {
       const s = read()

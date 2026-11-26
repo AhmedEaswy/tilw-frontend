@@ -7,8 +7,9 @@
  * going in the store if the drawer closes, and the waiting suggestion opens again later (research R7). Apply is a
  * versioned save: pending edits are saved first, and a newer copy elsewhere answers `conflict` (US1 #5, #6).
  */
-import { PortError, type FormatEstimate, type FormatSuggestion } from '~/services/types'
+import { PortError, type AiProvider, type FormatEstimate, type FormatSuggestion } from '~/services/types'
 import type { AiErrorKind } from '~/services/ai/errors'
+import { PROVIDER_NAMES } from '~/components/brand/ProviderMark.vue'
 
 const props = defineProps<{ scriptId: string; direction: 'rtl' | 'ltr' }>()
 const emit = defineEmits<{ close: [] }>()
@@ -97,8 +98,8 @@ const shortCopy = computed(() => {
 })
 const canFormat = computed(() => !!estimate.value?.enough && !empty.value && !editor.readOnly && !busy.value)
 
-function providerName(p: string) {
-  return p === 'openai' ? 'OpenAI' : 'Anthropic'
+function providerName(p: AiProvider) {
+  return PROVIDER_NAMES[p]
 }
 
 /**

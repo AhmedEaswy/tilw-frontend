@@ -95,6 +95,7 @@ export function createHttpAdmin(api: HttpClient): AdminPort {
 
     settings: () => api.get<AdminSettings>('/api/admin/settings'),
     setSignupMode: mode => api.patch<AdminSettings>('/api/admin/settings', { signupMode: mode }),
+    setFormatProvider: formatProvider => api.patch<AdminSettings>('/api/admin/settings', { formatProvider }),
     setAiKey: (provider, input) => api.put<AiKeyState>(`/api/admin/settings/ai-keys/${seg(provider)}`, input),
     removeAiKey: provider => api.del<AiKeyState>(`/api/admin/settings/ai-keys/${seg(provider)}`),
     setFlag: (key, input) => api.put<FeatureFlag>(`/api/admin/feature-flags/${seg(key)}`, input),

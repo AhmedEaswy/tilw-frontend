@@ -1,9 +1,10 @@
 import { defineStore } from 'pinia'
-import type { Script, ScriptPatch, ScriptSummary } from '~/services/types'
+import type { Script, ScriptPage, ScriptPatch, ScriptSummary } from '~/services/types'
 import { isPortError } from '~/services/types'
 
 export type ScriptFilter = 'all' | 'pinned' | 'archived'
-export type ScriptSort = 'recent' | 'title'
+/** Library order: last edited, title, or number of recordings. */
+export type ScriptSort = 'recent' | 'title' | 'takes'
 
 /** Scripts per page of the library (load more). */
 export const SCRIPTS_PAGE_SIZE = 20
@@ -20,6 +21,11 @@ export const useScriptsStore = defineStore('scripts', () => {
   const error = ref<unknown>(null)
   const filter = ref<ScriptFilter>('all')
   const sort = ref<ScriptSort>('recent')
+  /** The sort's usual direction (newest, A to Z, most recordings) turned around. */
+  const reversed = ref(false)
+  const ascending = computed(() => (sort.value === 'title') !== reversed.value)
+  /** Every matching script in recordings order, which this app pages itself (see `takesPage`). */
+  let ranked: ScriptSummary[] = []
   const query = ref('')
   /** The loaded pages, in the service's order. */
   const listIds = ref<string[]>([])
@@ -45,15 +51,49 @@ export const useScriptsStore = defineStore('scripts', () => {
 
   async function fetchPage(first: boolean) {
     const seq = first ? ++listSeq : listSeq
-    const page = await api().page({
-      limit: SCRIPTS_PAGE_SIZE, filter: filter.value, sort: sort.value, q: query.value, cursor: first ? null : nextCursor.value,
-    })
+    const cursor = first ? null : nextCursor.value
+    const by = sort.value
+    const page = by === 'takes'
+      ? await takesPage(seq, cursor)
+      : await api().page({
+          limit: SCRIPTS_PAGE_SIZE, filter: filter.value, sort: by, q: query.value, cursor,
+          ...(reversed.value ? { dir: ascending.value ? 'asc' as const : 'desc' as const } : {}),
+        })
     if (seq !== listSeq) return // a newer filter, sort or search took over
     remember(page.data)
     const ids = page.data.map(s => s.id)
     listIds.value = first ? ids : [...listIds.value, ...ids.filter(id => !listIds.value.includes(id))]
     nextCursor.value = page.nextCursor
     libraryCount.value = page.libraryCount
+  }
+
+  /**
+   * A page in recordings order. The service can't sort by it (recordings kept only on this device never reach it), so
+   * the first page reads every script and orders them by the count the rows show; later pages follow that order.
+   */
+  async function takesPage(seq: number, cursor: string | null): Promise<ScriptPage> {
+    let total = libraryCount.value ?? 0
+    if (!cursor) {
+      const takes = useTakesStore()
+      await Promise.all([
+        takes.loaded ? null : takes.load().catch(() => {}),
+        takes.remoteLoaded ? null : takes.loadRemote().catch(() => {}),
+      ])
+      const q = query.value.trim()
+      const [every, matches] = await Promise.all([api().list(), q ? api().search(q).then(ids => new Set(ids)) : null])
+      const sign = ascending.value ? 1 : -1
+      const count = (s: ScriptSummary) => takes.countByScript.get(s.id) ?? 0
+      const order = every
+        .filter(s => (filter.value === 'archived' ? !!s.archivedAt : !s.archivedAt && (filter.value !== 'pinned' || s.pinned)))
+        .filter(s => !matches || matches.has(s.id))
+        // Equal counts keep the newest edit first, whichever way the counts run.
+        .sort((a, b) => sign * (count(a) - count(b)) || b.updatedAt.localeCompare(a.updatedAt))
+      total = every.length
+      if (seq === listSeq) ranked = order
+    }
+    const start = Number(cursor ?? 0)
+    const end = start + SCRIPTS_PAGE_SIZE
+    return { data: ranked.slice(start, end), nextCursor: end < ranked.length ? String(end) : null, libraryCount: total }
   }
 
   /** The "آخر نص فتحته" card's script: the most recently opened active one (it may not be on the first page). */
@@ -102,7 +142,13 @@ export const useScriptsStore = defineStore('scripts', () => {
     }
   }
   watch(filter, () => void reloadList())
-  watch(sort, () => void reloadList(false))
+  watch([sort, reversed], () => void reloadList(false))
+
+  /** A newly picked sort starts in its usual direction. */
+  function setSort(value: ScriptSort) {
+    reversed.value = false
+    sort.value = value
+  }
 
   async function loadMore() {
     if (!nextCursor.value || loadingMore.value) return
@@ -210,7 +256,7 @@ export const useScriptsStore = defineStore('scripts', () => {
   }
 
   return {
-    items, status, error, filter, sort, query, visible, lastOpened, hasAny, hasMore, loadingMore, reloading, libraryCount,
+    items, status, error, filter, sort, reversed, ascending, setSort, query, visible, lastOpened, hasAny, hasMore, loadingMore, reloading, libraryCount,
     load, loadMore, setQuery, create, duplicate, rename, setPinned, setArchived, upsert, reset,
   }
 })

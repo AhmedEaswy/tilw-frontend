@@ -19,11 +19,9 @@ const props = defineProps<{
   /** Feature 005 (A1 `293:150`): the cost line under "Format for reading", or the waiting/working state. */
   formatHint?: string
   formatState?: 'idle' | 'waiting' | 'working'
-  /** Feature 005 (US3): the browser can record, so Dictate is offered. */
-  canDictate?: boolean
 }>()
 const query = defineModel<string>('query', { required: true })
-const emit = defineEmits<{ marks: []; undo: []; redo: []; download: []; next: []; prev: []; history: []; format: []; dictate: [] }>()
+const emit = defineEmits<{ marks: []; undo: []; redo: []; download: []; next: []; prev: []; history: []; format: [] }>()
 
 const { t, locale } = useI18n()
 const searchOpen = ref(false)
@@ -71,26 +69,11 @@ defineExpose({ openSearch: () => !searchOpen.value && toggleSearch() })
           {{ formatState === 'working' ? t('ai.tools.formatting') : formatState === 'waiting' ? t('ai.tools.waiting') : formatHint }}
         </p>
       </li>
-      <li v-if="canDictate">
-        <button type="button" aria-describedby="dictate-hint" :disabled="readOnly" data-testid="tools-dictate" @click="emit('dictate')">
-          <UiGlyph name="mic" :size="18" />{{ t('ai.tools.dictate') }}
-        </button>
-        <p id="dictate-hint" class="hint">{{ t('ai.tools.dictateHint') }}</p>
-      </li>
-      <!-- G-A5: the browser has no speech recognition: shown, not usable, and the tooltip says why and what to do. -->
-      <li v-else>
-        <UiTooltip v-slot="{ describedby }" :text="t('ai.dictate.unsupported')">
-          <button type="button" class="off" aria-disabled="true" :aria-describedby="`${describedby} dictate-hint`" data-testid="tools-dictate">
-            <UiGlyph name="mic" :size="18" />{{ t('ai.tools.dictate') }}
-          </button>
-        </UiTooltip>
-        <p id="dictate-hint" class="hint">{{ t('ai.dictate.unsupportedHint') }}</p>
-      </li>
       <li class="sep" aria-hidden="true" />
       <li>
         <button type="button" :aria-expanded="searchOpen" @click="toggleSearch"><UiGlyph name="search" :size="18" />{{ t('editor.search') }}</button>
         <div v-if="searchOpen" class="find">
-          <input ref="input" v-model="query" type="search" dir="auto" :aria-label="t('editor.search')" :placeholder="t('editor.searchPlaceholder')" @keydown="onSearchKey">
+          <input ref="input" v-model="query" type="search" :dir="query ? 'auto' : undefined" :aria-label="t('editor.search')" :placeholder="t('editor.searchPlaceholder')" @keydown="onSearchKey">
           <span class="n" aria-live="polite">{{ query.trim() ? (matchCount ? `${activeMatch + 1}/${matchCount}` : t('editor.noMatches')) : '' }}</span>
           <button type="button" class="mini" :disabled="!matchCount" :aria-label="t('editor.prevMatch')" @click="emit('prev')"><UiGlyph name="up" :size="16" /></button>
           <button type="button" class="mini" :disabled="!matchCount" :aria-label="t('editor.nextMatch')" @click="emit('next')"><UiGlyph name="down" :size="16" /></button>
@@ -118,26 +101,9 @@ defineExpose({ openSearch: () => !searchOpen.value && toggleSearch() })
 .dim {
   opacity: 0.5;
 }
-li > button:disabled,
-button.off {
+li > button:disabled {
   opacity: 0.5;
   cursor: default;
-}
-button.off {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-block-size: 43px;
-  inline-size: 100%;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--tilw-text-muted);
-  font: 400 17px/1.36 var(--tilw-font-ar);
-  text-align: start;
-}
-button.off :deep(.ui-glyph) {
-  color: var(--tilw-text-ink);
 }
 .tools {
   display: grid;

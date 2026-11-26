@@ -156,7 +156,7 @@ async function onSignOut() {
         <UiGlyph name="back" :size="18" />{{ t('nav.backToSite') }}
       </NuxtLink>
       <button type="button" class="item out" role="menuitem" tabindex="-1" :disabled="busy" @click="onSignOut">
-        <UiGlyph name="arrow-back" :size="18" />{{ t('auth.signOut') }}
+        <UiGlyph name="sign-out" :size="18" />{{ t('auth.signOut') }}
       </button>
     </div>
   </div>

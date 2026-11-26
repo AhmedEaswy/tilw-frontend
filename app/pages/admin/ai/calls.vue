@@ -29,7 +29,7 @@ const range = rangeModel(filters, 'from', 'to')
 const today = toIsoDate(new Date())
 const provider = filterModel(filters, 'provider')
 const capability = filterModel(filters, 'capability')
-const PROVIDERS = ['anthropic', 'openai', 'deepgram'] as const
+const PROVIDERS = ['anthropic', 'openai', 'minimax', 'deepseek', 'deepgram'] as const
 const providerOptions = computed(() => withAll(t('admin.list.all'), PROVIDERS.map(p => ({ value: p, label: PROVIDER_NAMES[p] }))))
 const capabilityOptions = computed(() => withAll(t('admin.list.all'), CAPS.map(c => ({ value: c, label: t(`admin.capability.${c}`) }))))
 onMounted(() => void list.reload())

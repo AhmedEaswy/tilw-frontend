@@ -13,7 +13,7 @@ import type {
   AddCreditsInput, AdminDashboard, AdminPeriodQuery, AdminOverride, AdminPlan, AdminPlanLimit, AdminSettings, AdminSubscription, AdminSubscriptionRow,
   AdminUpgradeRequest, AdminUserDetail, AdminUserFilters, AdminUserRow, AdminAiCall, AiCallFilters, AiKeyState, AiUsage, AuditAction,
   AuditEntry, AuditFilters, ChangePlanInput, CreditEntry, FeatureFlag, GrantSubscriptionInput, LedgerEntry, LedgerFilters,
-  LimitDefinition, OverrideInput, Page, PaymentsPage, Period, PlanInput, PublicSettings, SignupMode, SubscriptionFilters,
+  FormatProvider, LimitDefinition, OverrideInput, Page, PaymentsPage, Period, PlanInput, PublicSettings, SignupMode, SubscriptionFilters,
   SubscriptionPatch, UsageGroupBy, AdminLimitValue, Locale,
   AdminAnalytics, AdminConnections, AdminLink, AdminList, AdminPermissionsInput, AdminPreferences, AdminRow, AdminScript, AdminTake,
   PracticeInput, PracticeSession,
@@ -86,7 +86,8 @@ export interface PlanPort {
   /** Public: active plans with prices and limits. */
   listPlans(): Promise<Plan[]>
   myPlan(): Promise<MyPlan>
-  requestUpgrade(input: { plan: string; period: UpgradePeriod }): Promise<{ request: UpgradeRequest; whatsappUrl: string | null }>
+  /** `phone` is the person's WhatsApp number with its country code; the admin writes to it. */
+  requestUpgrade(input: { plan: string; period: UpgradePeriod; phone: string }): Promise<{ request: UpgradeRequest }>
   cancelRequest(): Promise<void>
 }
 
@@ -193,6 +194,8 @@ export interface AdminPort {
   // ---------- settings ----------
   settings(): Promise<AdminSettings>
   setSignupMode(mode: SignupMode): Promise<AdminSettings>
+  /** MiniMax and DeepSeek need their platform key first (validation). */
+  setFormatProvider(provider: FormatProvider): Promise<AdminSettings>
   /** The key is sent once and never comes back; only last4 does. */
   setAiKey(provider: AiKeyState['provider'], input: { key: string; project?: string }): Promise<AiKeyState>
   removeAiKey(provider: AiKeyState['provider']): Promise<AiKeyState>
@@ -312,8 +315,25 @@ export interface AiPort {
   fail(id: string, reason?: string): Promise<Transcription>
 }
 
+export interface LiveSpeechOptions {
+  language: SpeechLanguage
+  /** Final text so far and the live part still being recognised. */
+  onText: (finalText: string, liveText: string) => void
+  /** The provider closed the stream before `finish()` or `abort()`. */
+  onDrop?: () => void
+}
+
+export interface LiveSpeech {
+  send(chunk: Blob): void
+  /** Ends the stream, waits for the last words and resolves with the provider's request id ('' when it gave none). */
+  finish(seconds: number): Promise<string>
+  abort(): void
+}
+
 /** Feature 005: browser → speech provider (backend device-flows §1). The only code that talks to the provider. */
 export interface SpeechPort {
+  /** Dictation: audio goes out while the person talks and words come back as they are recognised. */
+  live(upload: SpeechUpload, opts: LiveSpeechOptions): LiveSpeech
   send(upload: SpeechUpload, audio: Blob, opts: { seconds: number; purpose: SpeechPurpose; language: SpeechLanguage; signal?: AbortSignal }): Promise<SpeechResult>
 }
 

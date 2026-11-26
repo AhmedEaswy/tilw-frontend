@@ -10,12 +10,12 @@ import { SEED_PASSWORD } from '~/services/mock/seed'
 import type { MockApp, MockAppState } from '~/services/mock/app'
 import type { LinkEndReason } from '~/services/types'
 
-definePageMeta({ layout: false })
+// With servicesMode 'http' there is no mock backend: this dev page does not exist. Checked before the
+// page mounts, because after a throw in setup Vue still renders the template, with no bindings.
+definePageMeta({ layout: false, validate: () => !!useNuxtApp().$mock })
 useHead({ title: 'Mock backend · tilw', meta: [{ name: 'robots', content: 'noindex' }], htmlAttrs: { dir: 'ltr', lang: 'en' } })
 
 const mock = useNuxtApp().$mock as MockBackend
-// With servicesMode 'http' there is no mock backend: this dev page does not exist.
-if (!mock) throw createError({ statusCode: 404, statusMessage: 'Not found', fatal: true })
 const auth = useAuthStore()
 const { show } = useToast()
 
@@ -344,6 +344,7 @@ async function endOpenLink() {
           </select>
         </label>
         <label class="ck"><input v-model="aiKnobs.keyRefused" type="checkbox"> Own key refused</label>
+        <label class="ck"><input v-model="aiKnobs.cloudSpeech" type="checkbox"> Speech to text (Deepgram key + plans)</label>
       </div>
       <div class="row">
         <UiButton size="sm" tone="secondary" @click="aiGrant">Grant 50 credits</UiButton>
@@ -387,7 +388,7 @@ async function endOpenLink() {
 
     <section>
       <h2>Upgrade request</h2>
-      <p v-if="pending">Pending <code>{{ pending.reference }}</code> · {{ pending.period }} · ${{ pending.priceCents / 100 }}</p>
+      <p v-if="pending">Pending <code>{{ pending.reference }}</code> · {{ pending.period }} · ${{ pending.priceCents / 100 }} · {{ pending.phone }}</p>
       <p v-else class="muted">No pending request.</p>
       <div class="row">
         <UiButton size="sm" @click="settle('fulfil')">Fulfil (Pro starts now)</UiButton>

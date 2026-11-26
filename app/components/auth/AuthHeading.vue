@@ -31,6 +31,7 @@ defineProps<{ title: string; lede?: string; icon?: GlyphName }>()
   border-radius: 16px;
   background: var(--tilw-surface-selected);
   color: var(--tilw-action-primary);
+  position: relative;
 }
 h1 {
   font: 700 44px/60px var(--tilw-font-ar);

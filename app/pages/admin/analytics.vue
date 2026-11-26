@@ -45,7 +45,7 @@ const byKind = computed(() => [
 const byVia = computed(() => (['web', 'app', 'phone'] as const).map(v => ({ key: v, label: t(`admin.analytics.via.${v}`), value: data.value?.practice.byVia[v] ?? 0 })))
 const byHost = computed(() => (['web', 'app'] as const).map(v => ({ key: v, label: t(`admin.analytics.host.${v}`), value: data.value?.phoneLinks.byHostKind[v] ?? 0 })))
 const drives = computed(() => Object.entries(data.value?.drives.byProvider ?? {}).map(([p, n]) => ({ key: p, label: providerName(p), value: n, provider: providerMark(p) })))
-const keys = computed(() => (['anthropic', 'openai'] as const).map(p => ({ key: p, label: providerName(p), value: data.value?.ownKeys.byProvider[p] ?? 0, provider: providerMark(p) })))
+const keys = computed(() => (['anthropic', 'openai', 'minimax', 'deepseek'] as const).map(p => ({ key: p, label: providerName(p), value: data.value?.ownKeys.byProvider[p] ?? 0, provider: providerMark(p) })))
 const aiTotals = computed(() => (data.value?.aiUsage ?? []).reduce((n, r) => ({ calls: n.calls + r.calls, failed: n.failed + r.failed, credits: n.credits + r.credits }), { calls: 0, failed: 0, credits: 0 }))
 </script>
 

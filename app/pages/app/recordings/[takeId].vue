@@ -92,6 +92,8 @@ async function download() {
 }
 
 // ---------- feature 005: captions (US5) ----------
+// Offered only with speech to text on the plan.
+const plan = usePlanStore()
 const captionsOpen = ref(false)
 const captionTitle = computed(() => (take.value ? [take.value.scriptTitle, t('recordings.take', { n: num(take.value.number) })].join(' · ') : ''))
 
@@ -237,7 +239,7 @@ const endedNote = computed(() => {
               <UiButton v-if="canBackUp" block tone="secondary" icon="up" @click="uploads.enqueue(take.id)">{{ t('uploads.copyLong') }}</UiButton>
               <UiButton v-if="take.scriptId !== 'none'" block tone="secondary" :to="`/app/scripts/${take.scriptId}/record`">{{ t('recordings.recordAnother') }}</UiButton>
               <!-- Feature 005 (US5, A5): captions built in this browser from the provider's word timings. -->
-              <UiButton block tone="secondary" icon="file" data-testid="take-captions" @click="captionsOpen = true">{{ t('ai.captions.action') }}</UiButton>
+              <UiButton v-if="plan.cloudSpeech" block tone="secondary" icon="file" data-testid="take-captions" @click="captionsOpen = true">{{ t('ai.captions.action') }}</UiButton>
             </template>
             <!-- 6:48 / 6:76 after the download starts -->
             <template v-else>

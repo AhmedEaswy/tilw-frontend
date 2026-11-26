@@ -28,12 +28,22 @@ test('search filters by body text', async ({ page, isMobile }) => {
   await expect(page.getByRole('link', { name: /وراء الكواليس/ })).toHaveCount(0)
 })
 
-test('sort by title, pin, and archive / restore', async ({ page }) => {
+test('sort and reverse, pin, and archive / restore', async ({ page }) => {
   await signIn(page)
-  await page.getByRole('button', { name: 'الأحدث أولاً' }).click()
-  await page.getByText('حسب العنوان').click()
-  await page.getByRole('button', { name: 'تم', exact: true }).click() // not "خيارات رسالة إلى المستمع"
-  await expect(page.getByRole('button', { name: 'حسب العنوان' })).toBeVisible()
+  const rows = page.locator('.rows .title')
+  const sortBy = page.getByRole('combobox', { name: 'ترتيب النصوص' })
+  await sortBy.click()
+  await page.getByRole('option', { name: 'العنوان' }).click()
+  await expect(sortBy).toContainText('العنوان')
+  await expect(page.getByTestId('sort-dir')).toHaveAttribute('data-dir', 'asc')
+  const titles = ['افتتاحية الحلقة', 'رسالة إلى المستمع', 'وراء الكواليس']
+  await expect(rows).toHaveText(titles)
+  await page.getByRole('button', { name: 'عكس الترتيب' }).click()
+  await expect(rows).toHaveText([...titles].reverse())
+  await sortBy.click()
+  await page.getByRole('option', { name: 'التسجيلات' }).click()
+  await expect(page.getByTestId('sort-dir')).toHaveAttribute('data-dir', 'desc')
+  await expect(rows).toHaveCount(3)
 
   await page.getByRole('button', { name: 'خيارات وراء الكواليس' }).click()
   await page.getByRole('menuitem', { name: 'تثبيت' }).click()
@@ -50,17 +60,17 @@ test('sort by title, pin, and archive / restore', async ({ page }) => {
   await expect(page.getByText('لا نصوص في الأرشيف.')).toBeVisible()
 })
 
-test('new script opens the editor; import rejects non-text files', async ({ page, isMobile }) => {
+test('new script opens the editor; import rejects non-text files', async ({ page }) => {
   await signIn(page)
   await page.getByRole('button', { name: 'نص جديد' }).first().click()
+  await page.getByRole('menuitem', { name: 'إنشاء نص' }).click()
   await page.getByLabel('عنوان النص').fill('نص تجريبي')
   await page.getByRole('button', { name: 'فتح المحرر' }).click()
   await expect(page).toHaveURL(/\/app\/scripts\/s_/)
 
-  // Phone (6:20) has no import in the library header; it is offered on the empty library only.
-  if (isMobile) return
   await page.goto('/app/scripts')
-  await page.getByRole('button', { name: 'استيراد ملف' }).click()
+  await page.getByRole('button', { name: 'نص جديد' }).first().click()
+  await page.getByRole('menuitem', { name: 'استيراد ملف' }).click()
   const chooser = page.waitForEvent('filechooser')
   await page.getByRole('button', { name: 'اختيار ملف TXT' }).click()
   await (await chooser).setFiles({ name: 'photo.png', mimeType: 'image/png', buffer: Buffer.from('x') })

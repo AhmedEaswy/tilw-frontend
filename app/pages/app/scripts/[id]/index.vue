@@ -3,6 +3,7 @@
  * Script editor (6:19 desktop, 6:21 phone, 6:86 en) with conflict flow (6:72 → 6:73). T050–T055.
  */
 import { recognitionSupported } from '~/services/ai/recognition'
+import { placeSpoken } from '~/utils/dictation'
 import type { DeliveryMark } from '~/services/types'
 import { creditsForWords } from '~/services/ai/audio'
 
@@ -38,6 +39,8 @@ onBeforeUnmount(() => {
 
 const canvas = ref<{ select: (s: number, e: number) => void; focus: () => void }>()
 const selection = ref({ start: 0, end: 0 })
+/** False until the person has put the cursor somewhere: dictation then goes at the end. */
+const placed = ref(false)
 const hasSelection = computed(() => editor.body.slice(selection.value.start, selection.value.end).trim().length > 0)
 const tools = ref<{ openSearch: () => void }>()
 
@@ -146,24 +149,71 @@ onMounted(() => {
 watch(() => [editor.status, id.value] as const, ([st, sid]) => {
   if (st === 'ready') void ai.loadSuggestion(sid).catch(() => {})
 }, { immediate: true })
-// ----- feature 005: dictation (A3), inserted at the cursor as one undo step -----
-const dictateOpen = ref(false)
-const canDictate = ref(false)
-// G-A5: dictation uses the browser's own speech recognition; without it the button stays, disabled, with a tooltip.
-onMounted(() => (canDictate.value = recognitionSupported()))
-function insertSpoken(text: string) {
-  const clean = text.trim()
-  if (!clean || editor.readOnly) return
-  const { start, end } = selection.value
-  const before = editor.body.slice(0, start)
-  const after = editor.body.slice(end)
-  const pre = before && !/\s$/.test(before) ? ' ' : ''
-  const post = after && !/^\s/.test(after) ? ' ' : ''
-  editor.setContent({ body: before + pre + clean + post + after })
-  const caret = before.length + pre.length + clean.length
-  nextTick(() => canvas.value?.select(caret, caret))
-  show(t('ai.speech.inserted'), 'success')
+// ----- feature 005: dictation (gaps G-A7): gray pending words in the editor until Enter -----
+// With speech to text on the plan the provider writes the words (credits); otherwise, or when the browser can't record,
+// its own speech recognition does (G-A5).
+const canRecognise = ref(false)
+const canRecord = ref(false)
+onMounted(() => {
+  canRecognise.value = recognitionSupported()
+  canRecord.value = typeof MediaRecorder !== 'undefined' && !!navigator.mediaDevices?.getUserMedia
+})
+const cloudDictate = computed(() => plan.cloudSpeech && canRecord.value)
+const canDictate = computed(() => cloudDictate.value || canRecognise.value)
+const dictation = useScriptDictation({ cloud: () => cloudDictate.value, direction: () => direction.value, readOnly: () => editor.readOnly })
+
+/** Where the words will go, fixed when talking starts. */
+const anchor = ref({ start: 0, end: 0 })
+const pending = computed(() => {
+  if (!dictation.active.value) return null
+  const at = placeSpoken(editor.body, anchor.value, dictation.text.value)
+  return { start: at.start, end: dictation.text.value ? at.end : at.start, text: at.insert }
+})
+function toggleDictation() {
+  if (!dictation.active.value) {
+    const end = editor.body.length
+    anchor.value = placed.value ? { ...selection.value } : { start: end, end }
+  }
+  dictation.toggle()
+  // Enter and Esc work from the text.
+  nextTick(() => canvas.value?.focus())
 }
+const confirming = ref(false)
+async function confirmDictation() {
+  if (confirming.value) return
+  confirming.value = true
+  const scriptId = id.value
+  try {
+    const words = await dictation.take()
+    if (!words.trim() || editor.readOnly || id.value !== scriptId) return
+    const at = placeSpoken(editor.body, anchor.value, words)
+    editor.setContent({ body: at.body })
+    nextTick(() => canvas.value?.select(at.caret, at.caret))
+  } finally {
+    confirming.value = false
+  }
+}
+function discardDictation() {
+  dictation.discard()
+  nextTick(() => canvas.value?.focus())
+}
+/** Enter confirms and Esc discards, from the text or the microphone (other controls keep their own keys). */
+function onDictationKey(e: KeyboardEvent) {
+  if (!dictation.active.value || e.isComposing || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return
+  const el = e.target as HTMLElement
+  if (el !== document.body && !el.closest?.('[data-dictation-enter]')) return
+  if (e.key === 'Enter') void confirmDictation()
+  else if (e.key === 'Escape') discardDictation()
+  else return
+  e.preventDefault()
+  e.stopPropagation()
+}
+onMounted(() => window.addEventListener('keydown', onDictationKey, true))
+onBeforeUnmount(() => window.removeEventListener('keydown', onDictationKey, true))
+watch(id, () => {
+  dictation.discard()
+  placed.value = false
+})
 const formatState = computed(() => (ai.formatting[id.value] ? 'working' : ai.suggestions[id.value] ? 'waiting' : 'idle'))
 const formatHint = computed(() => {
   if (ai.key?.usable) return t('ai.tools.formatOwnKey')
@@ -252,13 +302,31 @@ const formatHint = computed(() => {
           :words="editor.words"
           :paragraphs="editor.paragraphs"
           :read-only="editor.readOnly"
+          :pending="pending"
           @update:title="v => editor.setContent({ title: v })"
           @update:body="v => editor.setContent({ body: v })"
-          @selection="r => (selection = r)"
+          @selection="r => ((selection = r), (placed = true))"
           @keys="onKeys"
           @add-mark="addMark"
           @remove-mark="editor.removeMark"
-        />
+        >
+          <template #tools>
+            <DictationControl
+              v-model:lang="dictation.lang.value"
+              :supported="canDictate"
+              :read-only="editor.readOnly"
+              :listening="dictation.listening.value"
+              :finishing="dictation.finishing.value"
+              :level="dictation.level.value"
+              :has-text="!!dictation.text.value"
+              :cloud="cloudDictate"
+              :lang-options="dictation.langOptions.value"
+              @toggle="toggleDictation"
+              @confirm="confirmDictation"
+              @discard="discardDictation"
+            />
+          </template>
+        </EditorCanvas>
         <WritingTools
           ref="tools"
           v-model:query="query"
@@ -273,9 +341,7 @@ const formatHint = computed(() => {
           :read-only="editor.readOnly"
           :format-hint="formatHint"
           :format-state="formatState"
-          :can-dictate="canDictate"
           @format="formatOpen = true"
-          @dictate="dictateOpen = true"
           @history="historyOpen = true"
           @marks="openMarks"
           @undo="editor.undo()"
@@ -293,7 +359,6 @@ const formatHint = computed(() => {
       </div>
 
       <HistoryDrawer v-if="historyOpen && editor.script" :script-id="id" @close="historyOpen = false" />
-      <DictateDialog v-if="dictateOpen" v-model:open="dictateOpen" :direction="direction" @insert="insertSpoken" />
       <FormatDrawer v-if="formatOpen && editor.script" :script-id="id" :direction="direction" @close="formatOpen = false" />
 
       <MarksDialog

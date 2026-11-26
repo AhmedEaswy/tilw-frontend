@@ -26,6 +26,19 @@ describe('AI in the mock', () => {
   beforeEach(async () => {
     m = createMockServices(memoryKV(), { origin: 'http://test', sleep: noSleep, blobs: memoryBlobStore() })
     userId = (await m.services.auth.signIn({ email: 'layan@example.com', password: SEED_PASSWORD })).id
+    m.knobs.ai.setKnobs({ cloudSpeech: true })
+  })
+
+  it('offers speech to text only with a platform key and the plan option', async () => {
+    const input = { seconds: 60, bytes: 1000, mimeType: 'audio/webm' }
+    const speech = async () => (await m.services.plans.myPlan()).limits.find(l => l.key === 'ai.cloud_speech')
+    expect((await speech())?.value).toBe(true)
+    m.knobs.ai.setKnobs({ cloudSpeech: false })
+    expect(await speech()).toBeUndefined()
+    expect((await m.services.plans.listPlans()).flatMap(p => p.limits.map(l => l.key))).not.toContain('ai.cloud_speech')
+    const refused = await m.services.ai.startTranscription(input).catch(x => x)
+    expect(refused.limit.key).toBe('ai.cloud_speech')
+    expect((await m.services.ai.credits()).balance).toBe(20)
   })
 
   it('estimates, formats with the same words, and applies as a versioned save with an ai version', async () => {
@@ -87,6 +100,10 @@ describe('AI in the mock', () => {
     expect(await code(m.services.ai.saveKey({ provider: 'anthropic', key: 'short' }))).toBe('validation')
     const k = await m.services.ai.saveKey({ provider: 'anthropic', key: 'sk-ant-1234567890-abcdefghij-1a2b' })
     expect(k).toMatchObject({ provider: 'anthropic', last4: '1a2b', checkOk: true, usable: true })
+    const mm = await m.services.ai.saveKey({ provider: 'minimax', key: 'sk-mm-1234567890-abcdefghij-3c4d' })
+    expect(mm).toMatchObject({ provider: 'minimax', last4: '3c4d' })
+    const ds = await m.services.ai.saveKey({ provider: 'deepseek', key: 'sk-ds-1234567890-abcdefghij-5e6f' })
+    expect(ds).toMatchObject({ provider: 'deepseek', last4: '5e6f' })
     expect(JSON.stringify(await m.services.ai.keys())).not.toContain('abcdefghij')
     expect((await m.services.ai.formatEstimate('s_opening')).paidWith).toBe('own_key')
     const sg = await m.services.ai.format('s_opening')

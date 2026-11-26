@@ -168,9 +168,9 @@ describe.skipIf(!url || !password)('HTTP adapter against the real backend', () =
 
   it('creates an upgrade request with a reference, returns it again, and cancels it', async () => {
     const before = (await s.plans.myPlan()).pendingRequest
-    const a = await s.plans.requestUpgrade({ plan: 'pro', period: 'monthly' })
+    const a = await s.plans.requestUpgrade({ plan: 'pro', period: 'monthly', phone: '+201001234567' })
     expect(a.request.reference).toMatch(/^TLW-[A-Z0-9]{4}$/)
-    const b = await s.plans.requestUpgrade({ plan: 'pro', period: 'yearly' })
+    const b = await s.plans.requestUpgrade({ plan: 'pro', period: 'yearly', phone: '+201001234567' })
     expect(b.request.reference).toBe(a.request.reference)
     expect(b.request.period).toBe('yearly')
     if (!before) {

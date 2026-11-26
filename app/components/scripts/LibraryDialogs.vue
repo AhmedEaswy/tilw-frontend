@@ -1,14 +1,13 @@
 <script setup lang="ts">
 /**
  * All library dialogs in one place, driven by `mode`:
- *  new (6:23) · import (6:24) · sort (6:25) · rename (6:109) · download (6:110)
+ *  new (6:23) · import (6:24) · rename (6:109) · download (6:110)
  * A script's options (6:108) are a dropdown menu on its row (ScriptRow); rename and download open from there.
  * The parent sets `mode` (and `target` for per-script dialogs); this component does the work.
  */
 import type { ScriptSummary } from '~/services/types'
-import type { ScriptSort } from '~/stores/scripts'
 
-export type LibraryDialog = 'new' | 'import' | 'sort' | 'rename' | 'download' | null
+export type LibraryDialog = 'new' | 'import' | 'rename' | 'download' | null
 
 const mode = defineModel<LibraryDialog>('mode', { required: true })
 const props = defineProps<{ target: ScriptSummary | null }>()
@@ -37,7 +36,6 @@ const busy = ref(false)
 const fieldError = ref<string>()
 const formError = ref<string>()
 const title = ref('')
-const sortChoice = ref<ScriptSort>('recent')
 const fileInput = ref<HTMLInputElement>()
 
 watch(mode, (m) => {
@@ -46,14 +44,12 @@ watch(mode, (m) => {
   busy.value = false
   if (m === 'new') title.value = ''
   if (m === 'rename') title.value = props.target?.title ?? ''
-  if (m === 'sort') sortChoice.value = store.sort
 })
 
 const dialogTitle = computed(() => {
   switch (mode.value) {
     case 'new': return t('library.new')
     case 'import': return t('library.importTitle')
-    case 'sort': return t('library.sortTitle')
     case 'rename': return t('library.rename')
     case 'download': return t('library.downloadTitle')
     default: return ''
@@ -104,11 +100,6 @@ async function onFile(e: Event) {
   }
 }
 
-function applySort() {
-  store.sort = sortChoice.value
-  mode.value = null
-}
-
 async function renameScript() {
   if (!props.target || busy.value || !validTitle()) return
   busy.value = true
@@ -155,15 +146,6 @@ async function downloadScript() {
       <input ref="fileInput" type="file" accept=".txt,text/plain" hidden @change="onFile">
     </template>
 
-    <!-- 6:25 ترتيب النصوص -->
-    <div v-else-if="mode === 'sort'" class="options" role="radiogroup" :aria-label="t('library.sortTitle')">
-      <label v-for="o in (['recent', 'title'] as const)" :key="o" class="opt" :class="{ on: sortChoice === o }">
-        <input v-model="sortChoice" type="radio" name="sort" :value="o">
-        <span class="radio" aria-hidden="true" />
-        {{ t(`library.sort.${o}`) }}
-      </label>
-    </div>
-
     <!-- 6:109 تغيير العنوان -->
     <form v-else-if="mode === 'rename'" id="lib-rename" class="form" novalidate @submit.prevent="renameScript">
       <UiField v-model="title" :label="t('library.titleLabel')" :maxlength="120" :error="fieldError" autofocus />
@@ -185,10 +167,6 @@ async function downloadScript() {
       </template>
       <template v-else-if="mode === 'import'">
         <UiButton :loading="busy" @click="fileInput?.click()">{{ t('library.chooseTxt') }}</UiButton>
-        <UiButton tone="secondary" @click="mode = null">{{ t('library.back') }}</UiButton>
-      </template>
-      <template v-else-if="mode === 'sort'">
-        <UiButton @click="applySort">{{ t('library.done') }}</UiButton>
         <UiButton tone="secondary" @click="mode = null">{{ t('library.back') }}</UiButton>
       </template>
       <template v-else-if="mode === 'rename'">
@@ -219,52 +197,7 @@ async function downloadScript() {
 .hint {
   font-size: 15px;
 }
-.options {
-  display: grid;
-  gap: 16px;
-}
-.opt {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-block-size: 62px;
-  padding-inline: 20px;
-  border: 1px solid var(--tilw-border-subtle);
-  border-radius: 8px;
-  background: var(--tilw-surface-white);
-  color: var(--tilw-text-ink);
-  font: 500 19px/29px var(--tilw-font-ar);
-  cursor: pointer;
-}
-.opt.on {
-  border-color: var(--tilw-action-primary);
-  background: var(--tilw-surface-selected);
-}
-.opt input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-.opt:has(input:focus-visible) {
-  outline: 2px solid var(--tilw-focus-ring);
-  outline-offset: 2px;
-}
-.radio {
-  display: grid;
-  place-items: center;
-  inline-size: 20px;
-  block-size: 20px;
-  border: 1.5px solid var(--tilw-text-muted);
-  border-radius: 50%;
-}
-.opt.on .radio::after {
-  content: '';
-  inline-size: 10px;
-  block-size: 10px;
-  border-radius: 50%;
-  background: var(--tilw-action-primary);
-}.file {
+.file {
   display: flex;
   align-items: center;
   gap: 12px;

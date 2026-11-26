@@ -45,6 +45,29 @@ function failReason(e: unknown): string {
   return (e as { name?: string })?.name === 'AbortError' ? 'cancelled' : 'error'
 }
 
+/** Reports the provider's request id, retrying; null when it didn't go through (the service settles it later). */
+export async function settleTranscription(o: {
+  ai: AiPort
+  id: string
+  requestId: string
+  delays?: number[]
+  sleep?: (ms: number) => Promise<void>
+}): Promise<Transcription | null> {
+  const delays = o.delays ?? COMPLETE_RETRY_MS
+  const sleep = o.sleep ?? ((ms: number) => new Promise<void>(r => setTimeout(r, ms)))
+  if (!o.requestId) return null
+  for (let i = 0; ; i++) {
+    try {
+      return await o.ai.complete(o.id, o.requestId)
+    } catch (e) {
+      // Already settled (the expiry job got there first): its record is the answer.
+      if (isPortError(e, 'conflict')) return (e.current as Transcription | undefined) ?? null
+      if (!retryable(e) || i >= delays.length) return null
+      await sleep(delays[i]!)
+    }
+  }
+}
+
 export async function runTranscription(o: {
   ai: AiPort
   speech: SpeechPort
@@ -79,23 +102,7 @@ export async function runTranscription(o: {
     throw new UploadFailed(e, permission)
   }
   o.onStep?.('settling')
-  let transcription: Transcription | null = null
-  if (result.requestId) {
-    for (let i = 0; ; i++) {
-      try {
-        transcription = await o.ai.complete(permission.id, result.requestId)
-        break
-      } catch (e) {
-        // Already settled (the expiry job got there first): its record is the answer.
-        if (isPortError(e, 'conflict')) {
-          transcription = (e.current as Transcription | undefined) ?? null
-          break
-        }
-        if (!retryable(e) || i >= delays.length) break
-        await sleep(delays[i]!)
-      }
-    }
-  }
+  const transcription = await settleTranscription({ ai: o.ai, id: permission.id, requestId: result.requestId, delays, sleep })
   o.onStep?.('done')
   return { permission, transcription, result }
 }

@@ -3,7 +3,7 @@
  * A menu button with a dropdown anchored to it (WAI-ARIA menu button): the trigger toggles a `role="menu"` list of
  * `menuitem`s. Opening focuses the first item; ↑/↓ move (wrapping), Home/End jump, Esc closes and returns focus to
  * the trigger, Tab or a click outside closes. It opens below and to the inline end of the trigger, and upward when
- * there isn't room below.
+ * there isn't room below. A `trigger` slot replaces the icon with visible content (which then names the button).
  */
 import type { GlyphName } from './UiGlyph.vue'
 
@@ -17,7 +17,7 @@ export interface UiMenuItem {
 
 const props = withDefaults(defineProps<{
   items: UiMenuItem[]
-  /** Accessible name of the trigger (it shows only an icon). */
+  /** Accessible name of an icon-only trigger (unused with the `trigger` slot). */
   label: string
   icon?: GlyphName
   /** Class for the trigger button, so the host styles it. */
@@ -91,14 +91,14 @@ useEventListener('resize', () => hide(false))
       ref="trigger"
       type="button"
       :class="triggerClass"
-      :aria-label="label"
+      :aria-label="$slots.trigger ? undefined : label"
       aria-haspopup="menu"
       :aria-expanded="open"
       :aria-controls="open ? `${id}-menu` : undefined"
       @click="toggle"
       @keydown="onTriggerKey"
     >
-      <UiGlyph :name="icon" :size="20" />
+      <slot name="trigger"><UiGlyph :name="icon" :size="20" /></slot>
     </button>
     <ul
       v-if="open"

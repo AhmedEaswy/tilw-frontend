@@ -9,6 +9,9 @@
  * choose, Alt+↑ / Tab choose and close, Esc closes without choosing (and doesn't close a surrounding dialog).
  *
  * Label it with <label :for="id">, `aria-labelledby` or `label` (aria-label).
+ *
+ * Icons: `option.icon` (a UiGlyph) shows in the list and, once chosen, inside the field. For other art use the
+ * `option` slot for the list and the `lead` slot for the field.
  */
 import { computed, nextTick, ref, useId, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -38,7 +41,10 @@ const props = withDefaults(
   { size: 'md', placeholder: undefined, error: false, id: undefined, label: undefined, ariaLabelledby: undefined, ariaDescribedby: undefined, name: undefined },
 )
 const emit = defineEmits<{ change: [value: V | null]; open: []; close: [] }>()
-defineSlots<{ option?: (p: { option: UiOption<V>; selected: boolean; active: boolean }) => unknown }>()
+defineSlots<{
+  option?: (p: { option: UiOption<V>; selected: boolean; active: boolean }) => unknown
+  lead?: (p: { option: UiOption<V> }) => unknown
+}>()
 
 const { t } = useI18n()
 const uid = useId()
@@ -171,7 +177,11 @@ defineExpose({ focus: () => trigger.value?.focus(), open: () => openList(), clos
 <template>
   <div ref="root" class="ui-select" :class="[`size-${size}`, { invalid, disabled, 'is-open': open }]">
     <div ref="box" class="box">
-      <UiGlyph v-if="selected?.icon" :name="selected.icon" :size="size === 'sm' ? 16 : 20" class="lead" />
+      <span v-if="selected && ($slots.lead || selected.icon)" class="lead" @mousedown.prevent @click="toggle">
+        <slot name="lead" :option="selected">
+          <UiGlyph v-if="selected.icon" :name="selected.icon" :size="size === 'sm' ? 16 : 20" />
+        </slot>
+      </span>
       <button
         :id="triggerId"
         ref="trigger"
@@ -316,6 +326,8 @@ defineExpose({ focus: () => trigger.value?.focus(), open: () => openList(), clos
   cursor: not-allowed;
 }
 .lead {
+  display: inline-flex;
+  flex: none;
   margin-inline-start: var(--ui-pad);
   margin-inline-end: calc(-1 * var(--ui-pad) + 8px);
   color: var(--tilw-text-muted);

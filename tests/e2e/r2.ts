@@ -57,6 +57,13 @@ export const grantPro = (page: Page) =>
   mockState(page, `const now = Date.now() + (JSON.parse(localStorage.getItem('tilw:mock:knobs') || '{}').clockOffsetMs || 0);
     s.subscriptions.push({ id: 'sub_e2e', userId: 'u_layan', plan: 'pro', period: 'yearly', startsAt: now - 1000, endsAt: now + 365 * ${DAY} })`)
 
+/** A Deepgram key is added and Speech to text is on for the plans (`ai.cloud_speech`). Call from a signed-in page. */
+export async function cloudSpeech(page: Page) {
+  await aiKnobs(page, { cloudSpeech: true })
+  await page.reload()
+  await hydrated(page)
+}
+
 /**
  * Feature 005: change the AI mock's knobs (formatting, speech, own key refused) and, when given, set the balance
  * through /__mock (it writes a correction entry). Knobs are read on every call, so they apply at once.

@@ -81,6 +81,8 @@ export type ScriptListSort = 'recent' | 'title' | 'opened'
 export interface ScriptListQuery {
   filter?: ScriptListFilter
   sort?: ScriptListSort
+  /** Defaults to asc for title, desc for the times. */
+  dir?: 'asc' | 'desc'
   /** Title and text search (case-, diacritic- and letter-variant-insensitive). */
   q?: string
   /** From the previous page's `nextCursor`. */
@@ -159,6 +161,8 @@ export interface UpgradeRequest {
   period: UpgradePeriod
   priceCents: number
   state: 'pending' | 'fulfilled' | 'rejected' | 'cancelled' | 'expired'
+  /** The WhatsApp number the admin writes to (`+` and digits). Null only on requests made before it was asked for. */
+  phone: string | null
   createdAt: string
   expiresAt: string
 }
@@ -471,7 +475,7 @@ export const LINK_RULES = {
 // specs/005-ai-writing-tools/data-model.md. Audio and transcribed text never reach the Tilw API.
 // ---------------------------------------------------------------------------------------------------------------
 
-export type AiProvider = 'anthropic' | 'openai'
+export type AiProvider = 'anthropic' | 'openai' | 'minimax' | 'deepseek'
 export type PaidWith = 'credits' | 'own_key'
 export type SpeechLanguage = 'ar' | 'en' | 'auto'
 export type SpeechPurpose = 'text' | 'captions'
@@ -665,6 +669,7 @@ export interface PendingRequestRef {
   period: UpgradePeriod
   priceCents: number
   state: UpgradeRequest['state']
+  phone: string | null
   createdAt: string
   expiresAt: string
 }
@@ -950,8 +955,11 @@ export interface SubscriptionFilters {
   userId?: string
 }
 
+/** Who formats scripts paid with Tilw credits. */
+export type FormatProvider = 'anthropic' | 'minimax' | 'deepseek'
+
 export interface AiKeyState {
-  provider: 'anthropic' | 'deepgram'
+  provider: 'anthropic' | 'minimax' | 'deepseek' | 'deepgram'
   set: boolean
   source: 'stored' | 'env' | 'none'
   last4: string | null
@@ -968,6 +976,7 @@ export interface FeatureFlag {
 
 export interface AdminSettings {
   signupMode: SignupMode
+  formatProvider: FormatProvider
   aiKeys: AiKeyState[]
   flags: FeatureFlag[]
 }

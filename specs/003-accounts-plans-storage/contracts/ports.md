@@ -16,7 +16,7 @@ Extends `../../001-studio-frontend/contracts/ports.md`. Release-1 methods keep t
 |---|---|---|---|
 | `listPlans()` | `Plan[]` | — (public) | `GET /api/plans` |
 | `myPlan()` | `MyPlan` | — | `GET /api/user/plan` |
-| `requestUpgrade({ plan, period })` | `{ request: UpgradeRequest, whatsappUrl: string │ null }` | `validation` | `POST /api/user/subscription-requests` |
+| `requestUpgrade({ plan, period, phone })` | `{ request: UpgradeRequest }` | `validation` | `POST /api/user/subscription-requests` |
 | `cancelRequest()` | `void` | `not_found` | `DELETE /api/user/subscription-requests/current` |
 
 Mock: reference `TLW-` + 4 chars; `requestUpgrade` twice returns the same reference; `/__mock` can fulfil, reject or expire it and move the clock.

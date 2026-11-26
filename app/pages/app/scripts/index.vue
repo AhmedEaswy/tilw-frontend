@@ -6,7 +6,8 @@
 import type { ScriptSummary } from '~/services/types'
 import type { LibraryDialog } from '~/components/scripts/LibraryDialogs.vue'
 import type { ScriptAction } from '~/components/scripts/ScriptRow.vue'
-import type { ScriptFilter } from '~/stores/scripts'
+import type { ScriptFilter, ScriptSort } from '~/stores/scripts'
+import type { UiMenuItem } from '~/components/ui/UiMenu.vue'
 
 definePageMeta({ layout: 'app' })
 const { t } = useI18n()
@@ -22,13 +23,8 @@ onMounted(() => {
   if (!takes.loaded) void takes.load().catch(() => {})
   void takes.loadRemote().catch(() => {})
 })
-const takesBy = computed(() => {
-  const m = new Map<string, number>()
-  for (const x of takes.all) if (x.scriptId) m.set(x.scriptId, (m.get(x.scriptId) ?? 0) + 1)
-  return m
-})
 
-// Release 2 (R2-2): "14 من 20 نصاً نشطاً" next to Import when the plan caps active scripts.
+// Release 2 (R2-2): "14 من 20 نصاً نشطاً" next to New script when the plan caps active scripts.
 const activeCap = computed(() => {
   const max = plan.limit('scripts.max_active')
   if (typeof max !== 'number') return null
@@ -40,6 +36,17 @@ const activeCap = computed(() => {
 const dialog = ref<LibraryDialog>(null)
 // Feature 005 (US3, A4): a new script from an audio file.
 const audioOpen = ref(false)
+// The header's "New script" menu: the three ways to start one.
+const newItems = computed<UiMenuItem[]>(() => [
+  { key: 'create', label: t('library.create'), icon: 'edit' },
+  { key: 'import', label: t('library.importFile'), icon: 'file' },
+  // Only with speech to text on the plan.
+  ...(plan.cloudSpeech ? [{ key: 'audio', label: t('ai.speech.newFromAudio'), icon: 'mic' } as const] : []),
+])
+function onNew(key: string) {
+  if (key === 'audio') audioOpen.value = true
+  else dialog.value = key === 'import' ? 'import' : 'new'
+}
 const target = ref<ScriptSummary | null>(null)
 // A row's options menu: rename and download open their dialog; the others run at once.
 const { show } = useToast()
@@ -82,6 +89,15 @@ const filters = computed<{ value: ScriptFilter; label: string }[]>(() => [
   { value: 'archived', label: t('library.filter.archived') },
 ])
 
+const sortOptions = computed<{ value: ScriptSort; label: string }[]>(() =>
+  (['title', 'takes', 'recent'] as const).map(value => ({ value, label: t(`library.sort.${value}`) })))
+const sortModel = computed<ScriptSort | null>({
+  get: () => store.sort,
+  set: (v) => {
+    if (v) store.setSort(v)
+  },
+})
+
 const search = ref(store.query)
 const searchOpen = ref(!!store.query)
 const searchInput = ref<HTMLInputElement>()
@@ -122,9 +138,9 @@ const emptyText = computed(() => {
       <h1>{{ t('nav.scripts') }}</h1>
       <div class="head-acts">
         <span v-if="activeCap && store.status === 'ready'" class="cap" :class="{ full: activeCap.n >= activeCap.max }">{{ t('limits.activeCount', { n: activeCap.n, max: activeCap.max }) }}</span>
-        <button type="button" class="import" @click="dialog = 'import'">{{ t('library.importFile') }}</button>
-        <button type="button" class="import" data-testid="new-from-audio" @click="audioOpen = true">{{ t('ai.speech.newFromAudio') }}</button>
-        <UiButton @click="dialog = 'new'">{{ t('library.new') }}</UiButton>
+        <UiMenu trigger-class="new-btn" :items="newItems" :label="t('library.new')" data-testid="new-menu" @select="onNew">
+          <template #trigger>{{ t('library.new') }}<UiGlyph name="chevron-down" :size="16" /></template>
+        </UiMenu>
       </div>
     </header>
 
@@ -159,7 +175,7 @@ const emptyText = computed(() => {
       <div class="first-acts">
         <UiButton @click="dialog = 'new'">{{ t('library.new') }}</UiButton>
         <UiButton tone="secondary" @click="dialog = 'import'">{{ t('library.importFile') }}</UiButton>
-        <UiButton tone="secondary" @click="audioOpen = true">{{ t('ai.speech.newFromAudio') }}</UiButton>
+        <UiButton v-if="plan.cloudSpeech" tone="secondary" @click="audioOpen = true">{{ t('ai.speech.newFromAudio') }}</UiButton>
       </div>
     </section>
 
@@ -177,12 +193,27 @@ const emptyText = computed(() => {
         <label class="search" :class="{ open: searchOpen }">
           <UiGlyph name="search" :size="18" />
           <span class="visually-hidden">{{ t('library.search') }}</span>
-          <input ref="searchInput" v-model="search" type="search" :placeholder="t('library.search')" dir="auto">
+          <!-- Empty, dir="auto" resolves to LTR and drags the placeholder with it; so it only applies to typed text. -->
+          <input ref="searchInput" v-model="search" type="search" :placeholder="t('library.search')" :dir="search ? 'auto' : undefined">
         </label>
 
         <div class="tools">
           <UiPills v-model="store.filter" :options="filters" :label="t('library.filterLabel')" />
-          <button type="button" class="sort" @click="dialog = 'sort'">{{ t(`library.sort.${store.sort}`) }}</button>
+          <div class="sort">
+            <UiSelect v-model="sortModel" class="sort-by" :options="sortOptions" size="sm" :label="t('library.sortTitle')" data-testid="sort-by" />
+            <button
+              type="button"
+              class="sort-dir"
+              :aria-label="t('library.sortReverse')"
+              :title="t('library.sortReverse')"
+              :aria-pressed="store.reversed"
+              :data-dir="store.ascending ? 'asc' : 'desc'"
+              data-testid="sort-dir"
+              @click="store.reversed = !store.reversed"
+            >
+              <UiGlyph :name="store.ascending ? 'sort-asc' : 'sort-desc'" :size="18" />
+            </button>
+          </div>
         </div>
 
         <!-- A new filter or search with nothing to show yet: rows' shape until the new page lands. -->
@@ -195,7 +226,7 @@ const emptyText = computed(() => {
             :key="s.id"
             :script="s"
             :current="s.id === store.lastOpened?.id && store.filter !== 'archived'"
-            :takes="takesBy.get(s.id) ?? 0"
+            :takes="takes.countByScript.get(s.id) ?? 0"
             @action="a => onAction(s, a)"
           />
         </ul>
@@ -246,15 +277,29 @@ h1 {
 .pro-end {
   margin-block-start: 20px;
 }
-.import {
+/* The menu trigger looks like a primary UiButton. */
+.head-acts :deep(.new-btn) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-block-size: var(--tilw-control-h);
+  min-inline-size: 120px;
+  padding-inline: var(--tilw-space-24);
   border: 0;
-  background: none;
-  color: var(--tilw-action-primary);
-  font: 500 16px/1.36 var(--tilw-font-ar);
-  padding: 10px 4px;
+  border-radius: var(--tilw-radius-control);
+  background: var(--tilw-action-solid);
+  color: var(--tilw-text-on-solid);
+  font: var(--tilw-type-control);
+  white-space: nowrap;
+  cursor: pointer;
 }
-.import:hover {
-  text-decoration: underline;
+.head-acts :deep(.new-btn:hover) {
+  background: color-mix(in srgb, var(--tilw-action-solid) 88%, #000);
+}
+.head-acts :deep(.new-btn:focus-visible) {
+  outline: 2px solid var(--tilw-focus-ring);
+  outline-offset: 2px;
 }
 .body {
   display: grid;
@@ -327,11 +372,32 @@ h1 {
   gap: 10px;
 }
 .sort {
-  border: 0;
-  background: none;
-  padding: 8px 4px;
-  color: var(--tilw-action-primary);
-  font: 500 16px/1.36 var(--tilw-font-ar);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sort-by {
+  inline-size: 150px;
+}
+.sort-dir {
+  display: grid;
+  place-items: center;
+  inline-size: 36px;
+  block-size: 36px;
+  padding: 0;
+  border: 1px solid var(--tilw-control-edge);
+  border-radius: var(--tilw-radius-field);
+  background: var(--tilw-control-fill);
+  color: var(--tilw-text-ink);
+  cursor: pointer;
+}
+.sort-dir:hover {
+  border-color: var(--tilw-control-edge-hover);
+  background: var(--tilw-control-fill-hover);
+}
+.sort-dir:focus-visible {
+  outline: 2px solid var(--tilw-focus-ring);
+  outline-offset: 2px;
 }
 .rows {
   display: grid;
@@ -402,9 +468,6 @@ h1 {
   }
   h1 {
     font-size: 35px;
-  }
-  .import {
-    display: none;
   }
   .body {
     padding-block-start: 4px;

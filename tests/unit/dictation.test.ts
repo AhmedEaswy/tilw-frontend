@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { computed, ref } from 'vue'
 import { createRecognizer, dictationLang, joinSpeech, recognitionProblem, recognitionSupported, type RecognitionLike } from '~/services/ai/recognition'
 import { createMockRecognition, MOCK_PHRASES } from '~/services/mock/recognition'
+import { createSpeech, liveUrl } from '~/services/ai/speech'
+import { placeSpoken } from '~/utils/dictation'
 
 /** A controllable fake of the browser's SpeechRecognition. */
 class Fake implements RecognitionLike {
@@ -236,5 +238,76 @@ describe('mock recognizer', () => {
     await vi.advanceTimersByTimeAsync(10)
     expect(onEnd).toHaveBeenCalledWith(null)
     vi.useRealTimers()
+  })
+})
+
+describe('placing dictated words', () => {
+  it('goes at the cursor with a space where one is needed', () => {
+    expect(placeSpoken('one three', { start: 3, end: 3 }, ' two ')).toMatchObject({ body: 'one two three', caret: 7 })
+    expect(placeSpoken('', { start: 0, end: 0 }, 'two').body).toBe('two')
+  })
+  it('replaces the selection, but only once there are words', () => {
+    expect(placeSpoken('a bad day', { start: 2, end: 5 }, 'good').body).toBe('a good day')
+    expect(placeSpoken('a bad day', { start: 2, end: 5 }, '').body).toBe('a bad day')
+  })
+  it('keeps the place inside a body that got shorter', () => {
+    expect(placeSpoken('ab', { start: 9, end: 12 }, 'cd').body).toBe('ab cd')
+  })
+})
+
+describe('live dictation with the provider', () => {
+  const upload = {
+    provider: 'deepgram' as const,
+    method: 'POST' as const,
+    url: 'https://api.deepgram.com/v1/listen?model=nova-3&language=ar&paragraphs=true&mip_opt_out=true&tag=t1',
+    headers: { Authorization: 'Bearer abc' },
+    expiresAt: new Date(Date.now() + 60_000).toISOString(),
+  }
+
+  it('keeps the tag, language and opt-out and asks for live results', () => {
+    const u = new URL(liveUrl(upload.url))
+    expect(u.protocol).toBe('wss:')
+    expect(Object.fromEntries(u.searchParams)).toEqual({ model: 'nova-3', language: 'ar', mip_opt_out: 'true', tag: 't1', interim_results: 'true' })
+  })
+
+  it('sends audio once open, reports words and returns the request id', async () => {
+    let ws!: Socket
+    class Socket {
+      readyState = 0
+      sent: unknown[] = []
+      onopen: (() => void) | null = null
+      onmessage: ((e: { data: string }) => void) | null = null
+      onclose: (() => void) | null = null
+      constructor(public url: string, public protocols: string[]) {
+        ws = this
+      }
+      send(x: unknown) {
+        this.sent.push(x)
+      }
+      close() {
+        this.readyState = 3
+        this.onclose?.()
+      }
+    }
+    const seen: [string, string][] = []
+    const drop = vi.fn()
+    const live = createSpeech({ socket: Socket as unknown as typeof WebSocket }).live(upload, { language: 'ar', onText: (f, l) => seen.push([f, l]), onDrop: drop })
+    expect(ws.protocols).toEqual(['bearer', 'abc'])
+    const chunk = new Blob(['x'])
+    live.send(chunk)
+    expect(ws.sent).toEqual([])
+    ws.readyState = 1
+    ws.onopen!()
+    expect(ws.sent).toEqual([chunk])
+    const say = (transcript: string, is_final: boolean) => ws.onmessage!({ data: JSON.stringify({ type: 'Results', is_final, metadata: { request_id: 'r1' }, channel: { alternatives: [{ transcript }] } }) })
+    say('one', false)
+    say('one two', true)
+    say('three', false)
+    const done = live.finish(3)
+    expect(ws.sent.at(-1)).toBe('{"type":"CloseStream"}')
+    ws.close()
+    expect(await done).toBe('r1')
+    expect(seen.at(-1)).toEqual(['one two three', ''])
+    expect(drop).not.toHaveBeenCalled()
   })
 })

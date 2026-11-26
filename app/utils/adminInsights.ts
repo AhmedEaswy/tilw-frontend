@@ -4,10 +4,10 @@
  */
 import type { ProviderId } from '~/components/brand/ProviderMark.vue'
 
-const MARKS: Record<string, ProviderId> = { anthropic: 'anthropic', openai: 'openai', deepgram: 'deepgram', google_drive: 'google-drive' }
+const MARKS: Record<string, ProviderId> = { anthropic: 'anthropic', openai: 'openai', minimax: 'minimax', deepseek: 'deepseek', deepgram: 'deepgram', google_drive: 'google-drive' }
 /** `google_drive` → `google-drive`; unknown providers have no mark. */
 export const providerMark = (p: string | null | undefined): ProviderId | undefined => (p ? MARKS[p] : undefined)
-const NAMES: Record<string, string> = { anthropic: 'Anthropic', openai: 'OpenAI', deepgram: 'Deepgram', google_drive: 'Google Drive' }
+const NAMES: Record<string, string> = { anthropic: 'Anthropic', openai: 'OpenAI', minimax: 'MiniMax', deepseek: 'DeepSeek', deepgram: 'Deepgram', google_drive: 'Google Drive' }
 /** Product names as each company writes them; anything else as sent. */
 export const providerName = (p: string) => NAMES[p] ?? p
 

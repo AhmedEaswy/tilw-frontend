@@ -42,6 +42,7 @@ const name = computed(() => props.label ?? (props.named ? props.providers.map(p 
   background: var(--tilw-surface-quiet);
   color: var(--tilw-text-ink);
   box-shadow: 0 0 0 2px var(--provider-ring, var(--tilw-surface-white));
+  position: relative;
 }
 .tile + .tile {
   margin-inline-start: calc(var(--tile) / -2);

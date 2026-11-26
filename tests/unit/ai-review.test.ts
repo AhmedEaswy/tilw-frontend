@@ -13,6 +13,7 @@ describe('mock audio types', () => {
   it('refuses video for text and accepts it for captions', async () => {
     const m = createMockServices(memoryKV(), { origin: 'http://test', sleep: () => Promise.resolve(), blobs: memoryBlobStore() })
     await m.services.auth.signIn({ email: 'layan@example.com', password: SEED_PASSWORD })
+    m.knobs.ai.setKnobs({ cloudSpeech: true })
     const e = await m.services.ai.transcriptionEstimate({ seconds: 10, bytes: 10, mimeType: 'video/webm' }).catch(x => x)
     expect(isPortError(e, 'validation')).toBe(true)
     expect((await m.services.ai.transcriptionEstimate({ seconds: 10, bytes: 10, mimeType: 'video/webm', purpose: 'captions' })).credits).toBe(1)

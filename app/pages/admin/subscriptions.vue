@@ -2,10 +2,12 @@
 /**
  * Admin · subscriptions and upgrade requests (feature 006 US4, Figma D7 `311:1459`, `311:1800`): two tabs (in the
  * address). Subscriptions: filters by state, plan, source and person, move the end, end early with a reason.
- * Requests: pending first, search by reference or email, Mark paid (start, end, note) or Reject.
+ * Requests: pending first, search by reference or email, open a WhatsApp chat with the number the person left,
+ * Mark paid (start, end, note) or Reject.
  */
 import { isPortError, type AdminSubscriptionRow, type AdminUpgradeRequest, type SubscriptionState, type SubscriptionSource } from '~/services/types'
 import { dateOnly, dayToIso, money, utc } from '~/utils/admin'
+import { isolateLtr, whatsappChatUrl } from '~/utils/phone'
 
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 const { t, locale } = useI18n()
@@ -218,7 +220,7 @@ onMounted(() => {
           <table class="adm-tbl">
             <caption>{{ t('admin.reqs.tab') }}</caption>
             <thead><tr>
-              <th scope="col">{{ t('admin.reqs.reference') }}</th><th scope="col">{{ t('admin.users.person') }}</th><th scope="col">{{ t('admin.users.plan') }}</th>
+              <th scope="col">{{ t('admin.reqs.reference') }}</th><th scope="col">{{ t('admin.users.person') }}</th><th scope="col">{{ t('admin.reqs.whatsapp') }}</th><th scope="col">{{ t('admin.users.plan') }}</th>
               <th scope="col" class="n">{{ t('admin.reqs.price') }}</th><th scope="col">{{ t('admin.reqs.sent') }}</th><th scope="col">{{ t('admin.users.status') }}</th>
               <th scope="col" class="act"><span class="adm-muted">{{ t('admin.list.actions') }}</span></th>
             </tr></thead>
@@ -226,6 +228,10 @@ onMounted(() => {
               <tr v-for="r in requests" :key="r.id">
                 <td><b class="adm-ltr">{{ r.reference }}</b></td>
                 <td><NuxtLink :to="`/admin/users/${encodeURIComponent(r.userId)}`" class="adm-person"><b>{{ r.name }}</b><small class="adm-ltr">{{ r.email }}</small></NuxtLink></td>
+                <td class="nowrap">
+                  <a v-if="r.phone" class="adm-link" :href="whatsappChatUrl(r.phone)" target="_blank" rel="noopener noreferrer" :aria-label="t('admin.reqs.openChat', { name: r.name, phone: isolateLtr(r.phone) })"><bdi dir="ltr">{{ r.phone }}</bdi></a>
+                  <span v-else class="adm-muted">—</span>
+                </td>
                 <td>{{ r.plan }} · {{ t(`admin.period.${r.period}`) }}</td>
                 <td class="n">{{ money(r.priceCents) }}</td>
                 <td class="nowrap" :title="utc(r.createdAt)">{{ dateOnly(r.createdAt, locale) }}</td>

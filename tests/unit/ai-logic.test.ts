@@ -82,7 +82,7 @@ describe('the transcription run', () => {
   it('goes permission → sending → settling → done and reports the request id', async () => {
     const a = ai()
     const steps: string[] = []
-    const speech: SpeechPort = { send: vi.fn(async () => fakeSpeech(30)) }
+    const speech: SpeechPort = { live: vi.fn(), send: vi.fn(async () => fakeSpeech(30)) }
     const run = await runTranscription({ ai: a, speech, blob, seconds: 30, language: 'auto', purpose: 'text', onStep: s => steps.push(s) })
     expect(steps).toEqual(['permission', 'sending', 'settling', 'done'])
     expect(a.startTranscription).toHaveBeenCalledWith({ seconds: 30, bytes: 3, mimeType: 'audio/webm', language: 'auto', purpose: 'text' })
@@ -92,7 +92,7 @@ describe('the transcription run', () => {
 
   it('reports an upload failure with fail and never completes', async () => {
     const a = ai()
-    const speech: SpeechPort = { send: vi.fn(async () => { throw new PortError('network') }) }
+    const speech: SpeechPort = { live: vi.fn(), send: vi.fn(async () => { throw new PortError('network') }) }
     const e = await runTranscription({ ai: a, speech, blob, seconds: 30, language: 'auto', purpose: 'text' }).catch(x => x)
     expect(e).toBeInstanceOf(UploadFailed)
     expect(a.fail).toHaveBeenCalledWith('tr1', 'network')
@@ -101,7 +101,7 @@ describe('the transcription run', () => {
 
   it('never uploads after the permission expired', async () => {
     const a = ai(permission('2000-01-01T00:00:00Z'))
-    const speech: SpeechPort = { send: vi.fn() }
+    const speech: SpeechPort = { live: vi.fn(), send: vi.fn() }
     await runTranscription({ ai: a, speech, blob, seconds: 30, language: 'auto', purpose: 'text' }).catch(() => {})
     expect(speech.send).not.toHaveBeenCalled()
     expect(a.fail).toHaveBeenCalledWith('tr1', 'expired')
@@ -160,7 +160,7 @@ describe('review fixes', () => {
     upload: { provider: 'fake' as const, method: 'POST' as const, url: 'https://x.test', headers: {}, expiresAt: '2999-01-01T00:00:00Z' },
   }
   const blob = new Blob(['abc'], { type: 'audio/webm' })
-  const speech: SpeechPort = { send: async () => fakeSpeech(30) }
+  const speech: SpeechPort = { live: vi.fn(), send: async () => fakeSpeech(30) }
   function aiWith(complete: ReturnType<typeof vi.fn>) {
     return { startTranscription: vi.fn(async () => perm), complete, fail: vi.fn(async () => perm) } as unknown as AiPort
   }

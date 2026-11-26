@@ -135,6 +135,7 @@
   "library": {
     "all": "All scripts",
     "new": "New script",
+    "create": "Create script",
     "importFile": "Import file",
     "search": "Search your scripts",
     "filterLabel": "Filter scripts",
@@ -144,10 +145,12 @@
       "archived": "Archived"
     },
     "sort": {
-      "recent": "Newest first",
-      "title": "By title"
+      "recent": "Date",
+      "title": "Title",
+      "takes": "Recordings"
     },
     "sortTitle": "Sort scripts",
+    "sortReverse": "Reverse order",
     "done": "Done",
     "back": "Back",
     "lastOpened": "Last opened",
@@ -616,6 +619,8 @@
       "providersTitle": "Storage isn't included in your plan",
       "providersText": "Your plan doesn't include linking Google Drive right now.",
       "genericTitle": "You've reached a limit of your plan",
+      "cloudSpeechTitle": "Speech to text isn't on your plan",
+      "cloudSpeechText": "Your plan doesn't include turning recordings into text. Dictate still works with your browser's own speech recognition where it has one.",
       "genericText": "Your current plan doesn't allow this. Upgrade to Pro to raise the limit.",
       "proHint": "With Tilw Pro: unlimited active scripts, longer takes and automatic copies to Google Drive.",
       "ok": "OK",
@@ -663,29 +668,33 @@
     "renew": "Renew",
     "title": "Upgrade to Tilw Pro",
     "renewTitle": "Renew Tilw Pro",
-    "continueWhatsapp": "Continue on WhatsApp",
-    "renewWhatsapp": "Renew on WhatsApp",
+    "requestUpgrade": "Request upgrade",
+    "requestRenewal": "Request renewal",
     "currentPlan": "Your current plan",
-    "sent": "WhatsApp is open with your message ready. Your request number is {ref}.",
-    "blocked": "Your browser didn't open WhatsApp. Open the link yourself and include the request number in your message.",
-    "noNumber": "Send this request number to the Tilw team, and we'll turn on Pro once the payment is confirmed.",
-    "openLink": "Open the WhatsApp link",
-    "toPlan": "Go to your plan",
+    "sent": "Request sent. We'll message you on WhatsApp at {phone}. Your request number is {ref}.",
     "reference": "Request number",
     "copy": "Copy",
     "copied": "Request number copied.",
     "copyFailed": "Couldn't copy. Copy the number by hand.",
     "pendingTitle": "Upgrade request pending",
-    "pendingLede": "You sent your request on WhatsApp. We turn on Pro once the payment is confirmed, and you'll see a notice here.",
+    "pendingLede": "We'll message you on WhatsApp to arrange the payment, then turn on Pro once it's confirmed. You'll see a notice here.",
     "periodLabel": "Period",
     "price": "Price",
     "sentOn": "Sent on",
-    "reopen": "Open WhatsApp again",
     "cancel": "Cancel request",
     "cancelTitle": "Cancel the upgrade request?",
     "cancelLede": "Request {ref} will stop. You can send a new one any time.",
     "cancelConfirm": "Cancel request",
-    "cancelled": "Upgrade request cancelled."
+    "cancelled": "Upgrade request cancelled.",
+    "pendingNoPhone": "Add your WhatsApp number so we can message you about the payment.",
+    "phoneTitle": "Your WhatsApp number",
+    "phoneLede": "We'll message you on WhatsApp to arrange the payment.",
+    "phoneLabel": "WhatsApp number",
+    "phoneHint": "Start with your country code, for example +20.",
+    "phoneInvalid": "Enter your number with its country code, for example +20 100 123 4567.",
+    "send": "Send request",
+    "changePhone": "Change number",
+    "addPhone": "Add your number"
   },
   "plansPoster": {
     "freeKick": "For everyone",
@@ -1046,7 +1055,7 @@
       "waiting": "A suggestion is waiting",
       "formatting": "Formatting…",
       "dictate": "Dictate",
-      "dictateHint": "Speak; the text goes where the cursor is"
+      "dictateRecordHint": "Dictate (uses credits: 1 per minute)"
     },
     "format": {
       "title": "Format for reading",
@@ -1156,9 +1165,9 @@
       }
     },
     "speech": {
-      "dictateTitle": "Dictate",
+      "micDenied": "Allow the microphone in your browser's address bar, then try again. Writing works as usual.",
+      "autoStopped": "Recording stopped at the limit.",
       "stop": "Stop",
-      "starting": "Starting the microphone…",
       "micDeniedTitle": "Microphone not allowed",
       "micMissing": "No microphone was found on this device.",
       "length": "Length",
@@ -1172,7 +1181,6 @@
         "sending": "Sending the audio to the speech provider",
         "settling": "Writing the text"
       },
-      "inserted": "The text was inserted at the cursor.",
       "notEnough": "Your balance doesn't cover this length.",
       "importTitle": "New script from audio",
       "newFromAudio": "New from audio",
@@ -1258,7 +1266,7 @@
     },
     "key": {
       "title": "Your own key for formatting",
-      "lede": "Use your Anthropic or OpenAI key and formatting won't use credits. Tilw checks it with the provider and stores it encrypted; it is never shown in full again.",
+      "lede": "Use your Anthropic, OpenAI, MiniMax or DeepSeek key and formatting won't use credits. Tilw checks it with the provider and stores it encrypted; it is never shown in full again.",
       "provider": "Provider",
       "field": "Key",
       "save": "Check and save",
@@ -1289,20 +1297,20 @@
         "ar-JO": "Arabic (Levant)",
         "en-US": "English"
       },
-      "listening": "Listening…",
-      "speakNow": "Start speaking; the words appear here.",
-      "nothing": "Nothing was heard. Try again.",
       "insert": "Insert",
       "discard": "Discard",
-      "again": "Dictate again",
       "privacy": "Your browser's own speech service turns speech into text (Google in Chrome, Apple in Safari). Tilw receives no audio and charges no credits.",
       "denied": "Allow the microphone (and speech recognition) for this site in your browser, then try again. Writing works as usual.",
       "offlineTitle": "Speech recognition lost the connection",
-      "offline": "Your browser needs the internet to recognise speech. The text so far is kept below; check the connection and dictate again.",
+      "offline": "Your browser needs the internet to recognise speech. The words so far are kept; check the connection and talk again.",
       "unavailableTitle": "Dictation isn't available here",
       "unavailable": "Dictation isn't available in this browser. Use your keyboard's microphone, or open Tilw in Chrome or Safari.",
       "unsupported": "Dictation isn't available in this browser. Use your keyboard's microphone, or open Tilw in Chrome or Safari.",
-      "unsupportedHint": "Not available in this browser"
+      "listeningHint": "Listening… Enter adds the words, Esc discards them",
+      "listeningCloud": "Listening… 1 credit per minute. Enter adds, Esc discards",
+      "pendingHint": "Enter adds the words, Esc discards them",
+      "droppedTitle": "Dictation stopped",
+      "dropped": "The connection to the speech service closed. The words so far are kept."
     }
   },
   "signup": {

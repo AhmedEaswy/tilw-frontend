@@ -1,10 +1,10 @@
 <script setup lang="ts">
 /**
  * Admin · settings (feature 006 US6, Figma D10 `313:2122`): the sign-up mode (with a confirmation that says what
- * changes), the platform AI keys (typed once, never shown again: only set/source/last four/when), and feature flags.
+ * changes), who formats on Tilw credits, the platform AI keys (typed once, never shown again: only set/source/last four/when), and feature flags.
  * A key is kept only in the field until it is sent; the field is cleared after saving (SC-004).
  */
-import { FLAG_KEY, isPortError, type AdminSettings, type AiKeyState, type SignupMode } from '~/services/types'
+import { FLAG_KEY, isPortError, type AdminSettings, type AiKeyState, type FormatProvider, type SignupMode } from '~/services/types'
 import { dateTime, utc } from '~/utils/admin'
 import { PROVIDER_NAMES } from '~/components/brand/ProviderMark.vue'
 
@@ -50,6 +50,40 @@ async function setMode() {
     show(errorText(e), 'error')
   } finally {
     modeBusy.value = false
+  }
+}
+
+// ---------- who formats on Tilw credits ----------
+const nextFormat = ref<FormatProvider | null>(null)
+const formatOpen = computed({ get: () => !!nextFormat.value, set: v => !v && (nextFormat.value = null) })
+const formatBusy = ref(false)
+const formatLabelId = useId()
+const FORMAT_PROVIDERS: FormatProvider[] = ['anthropic', 'minimax', 'deepseek']
+/** The select shows the choice waiting for confirmation, then what the server has. */
+const formatChoice = computed({
+  get: () => nextFormat.value ?? data.value?.formatProvider ?? 'anthropic',
+  set: (p: FormatProvider | null) => (nextFormat.value = !p || p === data.value?.formatProvider ? null : p),
+})
+/** Anthropic is the default; the others can only be chosen once their key is set. */
+const formatOptions = computed(() => FORMAT_PROVIDERS.map(p => ({
+  value: p,
+  label: PROVIDER_NAMES[p],
+  disabled: p !== 'anthropic' && p !== data.value?.formatProvider && !data.value?.aiKeys.find(k => k.provider === p)?.set,
+})))
+const formatName = (p: FormatProvider | null | undefined) => ({ provider: p ? PROVIDER_NAMES[p] : '' })
+async function setFormat() {
+  const p = nextFormat.value
+  if (!p || formatBusy.value) return
+  formatBusy.value = true
+  try {
+    data.value = await useServices().admin.setFormatProvider(p)
+    show(t('admin.settings.format.done', formatName(p)), 'success')
+    nextFormat.value = null
+  } catch (e) {
+    show(isPortError(e, 'validation') ? t('admin.settings.format.needsKey') : errorText(e), 'error')
+    nextFormat.value = null
+  } finally {
+    formatBusy.value = false
   }
 }
 
@@ -101,7 +135,8 @@ async function removeKey() {
     show(t('admin.settings.keys.removed', { provider: p }), 'success')
     removing.value = null
   } catch (e) {
-    show(errorText(e), 'error')
+    show(errorText(e, { conflict: t('admin.settings.format.inUse', formatName(data.value?.formatProvider)) }), 'error')
+    removing.value = null
   } finally {
     removeBusy.value = false
   }
@@ -202,6 +237,18 @@ async function removeFlag() {
           <p class="adm-gsub">{{ t('admin.settings.keys.explain') }}</p>
         </div>
         <div class="adm-panel">
+          <div class="adm-line" data-testid="format-provider">
+            <span class="adm-lab"><b :id="formatLabelId">{{ t('admin.settings.format.label') }}</b><small>{{ t('admin.settings.format.explain') }}</small></span>
+            <span class="adm-ctl">
+              <UiSelect v-model="formatChoice" class="format" :options="formatOptions" :aria-labelledby="formatLabelId" :disabled="formatBusy" size="sm">
+                <template #lead="{ option }"><ProviderMark :provider="option.value" :size="16" /></template>
+                <template #option="{ option }">
+                  <ProviderMark :provider="option.value" :size="18" />
+                  <span class="format-name" lang="en">{{ option.label }}</span>
+                </template>
+              </UiSelect>
+            </span>
+          </div>
           <div v-for="k in data.aiKeys" :key="k.provider" class="adm-line key" :data-testid="`key-${k.provider}`">
             <span class="prov">
               <ProviderMark :provider="k.provider" :size="22" />
@@ -274,6 +321,14 @@ async function removeFlag() {
       @confirm="setMode"
     />
     <AdminConfirmDialog
+      v-model:open="formatOpen"
+      :title="t('admin.settings.format.confirm.title', formatName(nextFormat))"
+      :text="t('admin.settings.format.confirm.text', formatName(nextFormat))"
+      :confirm-label="t('admin.settings.format.confirm.action', formatName(nextFormat))"
+      :busy="formatBusy"
+      @confirm="setFormat"
+    />
+    <AdminConfirmDialog
       v-model:open="removeOpen"
       :title="t('admin.settings.keys.removeTitle', { provider: removing ?? '' })"
       :text="t('admin.settings.keys.removeText')"
@@ -309,6 +364,12 @@ async function removeFlag() {
 .last4 {
   color: var(--tilw-text-ink);
   font-family: var(--tilw-font-mono);
+}
+.format {
+  inline-size: 200px;
+}
+.format-name {
+  flex: 1;
 }
 .proj .adm-input {
   inline-size: 200px;

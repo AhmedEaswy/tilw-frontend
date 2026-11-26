@@ -6,8 +6,9 @@
  * `upload.provider === 'fake'` (backend AI_FAKE, and the in-browser mock): nothing is uploaded; the answer comes from
  * `fakeSpeech()` (research R2).
  */
-import type { SpeechPort } from '../ports'
-import { PortError, type SpeechLanguage, type SpeechPurpose, type SpeechResult, type SpeechWord } from '../types'
+import type { LiveSpeech, LiveSpeechOptions, SpeechPort } from '../ports'
+import { PortError, type SpeechLanguage, type SpeechPurpose, type SpeechResult, type SpeechUpload, type SpeechWord } from '../types'
+import { joinSpeech } from './recognition'
 import { parseDeepgram } from './deepgram'
 
 export type FakeSpeechMode = 'ok' | 'failed' | 'empty' | 'overrun'
@@ -42,10 +43,121 @@ export function fakeSpeech(seconds: number, opts: { language?: SpeechLanguage; p
   return { requestId: `fake-${real}`, transcript, language: opts.language === 'en' ? 'en' : 'ar', duration: real, words, utteranceBreaks }
 }
 
-export function createSpeech(opts: { fetch?: typeof fetch; now?: () => number } = {}): SpeechPort {
+/**
+ * The permission's listen URL as a live (WebSocket) one, for dictation. The model, language, privacy opt-out and tag
+ * stay as given; the options Deepgram only has for finished files are dropped, and live (interim) results are asked for.
+ */
+export function liveUrl(url: string): string {
+  const u = new URL(url)
+  u.protocol = 'wss:'
+  for (const k of ['paragraphs', 'detect_language', 'utterances']) u.searchParams.delete(k)
+  u.searchParams.set('interim_results', 'true')
+  return u.toString()
+}
+
+/** How long `finish()` waits for the provider's last words before giving up on them. */
+const FINISH_MS = 4000
+
+/** Stand-in live dictation: two more words for every piece of audio sent. */
+export function fakeLive(o: LiveSpeechOptions): LiveSpeech {
+  const words = fakeSpeech(30, { language: o.language }).transcript.split(/\s+/)
+  let n = 0
+  let done = false
+  return {
+    send() {
+      if (done || n >= words.length) return
+      const live = words.slice(n, n + 2).join(' ')
+      const final = words.slice(0, n).join(' ')
+      n += 2
+      o.onText(final, live)
+    },
+    async finish(seconds) {
+      done = true
+      o.onText(words.slice(0, n).join(' '), '')
+      return `fake-${seconds}`
+    },
+    abort() {
+      done = true
+    },
+  }
+}
+
+function deepgramLive(upload: SpeechUpload, o: LiveSpeechOptions, Socket: typeof WebSocket): LiveSpeech {
+  const token = (upload.headers.Authorization ?? '').replace(/^Bearer\s+/i, '')
+  const ws = new Socket(liveUrl(upload.url), ['bearer', token])
+  const waiting: Blob[] = []
+  let final = ''
+  let live = ''
+  let requestId = ''
+  let closing = false
+  let closed = false
+  let resolveClosed: () => void = () => {}
+  const whenClosed = new Promise<void>(r => (resolveClosed = r))
+
+  ws.onopen = () => {
+    waiting.splice(0).forEach(c => ws.send(c))
+    if (closing) ws.send(JSON.stringify({ type: 'CloseStream' }))
+  }
+  ws.onmessage = (e) => {
+    let m: { type?: string; request_id?: string; is_final?: boolean; metadata?: { request_id?: string }; channel?: { alternatives?: { transcript?: string }[] } }
+    try {
+      m = JSON.parse(String(e.data))
+    } catch {
+      return
+    }
+    requestId = m.metadata?.request_id || m.request_id || requestId
+    if (m.type !== 'Results') return
+    const said = m.channel?.alternatives?.[0]?.transcript ?? ''
+    if (m.is_final) {
+      final = joinSpeech(final, said)
+      live = ''
+    } else live = said
+    o.onText(final, live)
+  }
+  ws.onclose = () => {
+    closed = true
+    resolveClosed()
+    if (!closing) o.onDrop?.()
+  }
+
+  return {
+    send(chunk) {
+      if (closing || closed) return
+      if (ws.readyState === 1) ws.send(chunk)
+      else if (ws.readyState === 0) waiting.push(chunk)
+    },
+    async finish() {
+      if (!closed) {
+        closing = true
+        // Still connecting: `onopen` sends what was recorded, then closes the stream.
+        if (ws.readyState === 1) ws.send(JSON.stringify({ type: 'CloseStream' }))
+        await Promise.race([whenClosed, new Promise<void>(r => setTimeout(r, FINISH_MS))])
+        if (!closed) ws.close()
+      }
+      // Words the provider never marked final still count as said.
+      if (live) {
+        final = joinSpeech(final, live)
+        live = ''
+        o.onText(final, '')
+      }
+      return requestId
+    },
+    abort() {
+      closing = true
+      ws.close()
+    },
+  }
+}
+
+export function createSpeech(opts: { fetch?: typeof fetch; now?: () => number; socket?: typeof WebSocket } = {}): SpeechPort {
   const f: typeof fetch = opts.fetch ?? ((...args) => fetch(...args))
   const now = opts.now ?? Date.now
   return {
+    live(upload, o) {
+      if (upload.provider === 'fake') return fakeLive(o)
+      if (Date.parse(upload.expiresAt) <= now()) throw new PortError('ai_unavailable', undefined, undefined, undefined, { reason: 'expired' })
+      return deepgramLive(upload, o, opts.socket ?? WebSocket)
+    },
     async send(upload, audio, o) {
       if (upload.provider === 'fake') return fakeSpeech(o.seconds, { language: o.language, purpose: o.purpose })
       if (Date.parse(upload.expiresAt) <= now()) throw new PortError('ai_unavailable', undefined, undefined, undefined, { reason: 'expired' })

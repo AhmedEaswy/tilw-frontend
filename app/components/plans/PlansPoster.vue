@@ -6,7 +6,7 @@
  * When the catalogue has no Pro (the admin disabled it) only the Free half shows.
  *
  * landing: Free → "ابدأ مجاناً" (waitlist), Pro → "احصل على Tilw Pro" (emits `cta`). The AI demo stays.
- * upgrade: Free → "خطتك الحالية" (disabled) when on Free, Pro → "متابعة على واتساب" / "تجديد عبر واتساب".
+ * upgrade: Free → "خطتك الحالية" (disabled) when on Free, Pro → "طلب الترقية" / "طلب التجديد" (emits `cta`).
  */
 import type { Plan, UpgradePeriod } from '~/services/types'
 import './plans-poster.css'
@@ -68,7 +68,7 @@ const price = computed(() => {
 const onPro = computed(() => props.mode === 'upgrade' && props.current !== 'free')
 const proCta = computed(() => {
   if (props.mode === 'landing') return t('plansPoster.getPro')
-  return onPro.value ? t('upgrade.renewWhatsapp') : t('upgrade.continueWhatsapp')
+  return onPro.value ? t('upgrade.requestRenewal') : t('upgrade.requestUpgrade')
 })
 </script>
 

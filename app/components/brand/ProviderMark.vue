@@ -1,11 +1,13 @@
 <script lang="ts">
 /** Providers the app names in the interface (AI keys, speech, storage). */
-export type ProviderId = 'openai' | 'anthropic' | 'deepgram' | 'google-drive'
+export type ProviderId = 'openai' | 'anthropic' | 'minimax' | 'deepseek' | 'deepgram' | 'google-drive'
 
 /** Product names as each company writes them (not translated). */
 export const PROVIDER_NAMES: Record<ProviderId, string> = {
   openai: 'OpenAI',
   anthropic: 'Anthropic',
+  minimax: 'MiniMax',
+  deepseek: 'DeepSeek',
   deepgram: 'Deepgram',
   'google-drive': 'Google Drive',
 }
@@ -15,7 +17,8 @@ export const PROVIDER_NAMES: Record<ProviderId, string> = {
 /**
  * A provider's official mark, used only to name the integration. OpenAI (knot), Anthropic ("A\" mark) and Deepgram
  * are single-colour marks from `public/brands/*.svg` (paths from Simple Icons, CC0) drawn as a CSS mask, so they take
- * `currentColor` and read in light and dark. Google Drive keeps its own colours (`DriveMark`); `mono` draws it in
+ * `currentColor` and read in light and dark. `minimax.svg` and
+ * `deepseek.svg` are placeholders, not those companies' official marks. Google Drive keeps its own colours (`DriveMark`); `mono` draws it in
  * `currentColor` too. Decorative unless `label` is given (then `role="img"`).
  */
 const props = withDefaults(defineProps<{ provider: ProviderId; size?: number; label?: string; mono?: boolean }>(), { size: 20 })

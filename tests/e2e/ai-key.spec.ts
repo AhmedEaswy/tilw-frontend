@@ -39,6 +39,40 @@ test('saves a key masked, never keeps it, and formats on it without credits', as
   await expect(page.getByTestId('credit-entries').getByRole('listitem').first()).toContainText('بمفتاحك الخاص · تنسيق نص')
 })
 
+test('a MiniMax key is saved and named as MiniMax where it formats', async ({ page }) => {
+  await signIn(page)
+  await page.goto('/app/settings/ai')
+  const card = page.getByTestId('own-key')
+  await card.getByRole('combobox').click()
+  await page.getByRole('option', { name: 'MiniMax' }).click()
+  await card.getByLabel('المفتاح').fill('sk-mm-e2e-secret-value-7c8d')
+  await card.getByTestId('own-key-save').click()
+  await expect(card.getByTestId('own-key-masked')).toHaveText('MiniMax · ••••7c8d')
+
+  await page.goto('/app/scripts/s_opening')
+  await page.getByTestId('tools-format').click()
+  await expect(page.getByText('MiniMax', { exact: false }).first()).toBeVisible()
+})
+
+test('the provider list shows each mark, and the chosen one sits inside the field', async ({ page }) => {
+  await signIn(page)
+  await page.goto('/app/settings/ai')
+  const card = page.getByTestId('own-key')
+  const select = card.getByRole('combobox')
+  await expect(card.locator('.lead [data-provider="anthropic"]')).toBeVisible()
+  await select.focus()
+  await page.keyboard.press('ArrowDown')
+  for (const name of ['Anthropic', 'OpenAI', 'MiniMax', 'DeepSeek']) {
+    await expect(page.getByRole('option', { name }).locator('[data-provider]')).toBeVisible()
+  }
+  const { violations } = await new AxeBuilder({ page }).include('[data-testid="own-key"]').withTags(['wcag2a', 'wcag2aa', 'wcag22aa']).analyze()
+  expect(violations.map(v => v.id)).toEqual([])
+  await page.keyboard.press('End')
+  await page.keyboard.press('Enter')
+  await expect(select).toContainText('DeepSeek')
+  await expect(card.locator('.lead [data-provider="deepseek"]')).toBeVisible()
+})
+
 test('a refused key asks before using credits, and a refused key is not saved', async ({ page }) => {
   await signIn(page)
   await saveKey(page)

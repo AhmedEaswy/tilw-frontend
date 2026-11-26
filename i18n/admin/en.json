@@ -450,7 +450,7 @@
     },
     "reqs": {
       "tab": "Upgrade requests",
-      "sub": "Requests arrive over WhatsApp; confirm the payment to start the plan.",
+      "sub": "Message each person on WhatsApp, then confirm the payment to start the plan.",
       "search": "Search reference or email",
       "latest": "Latest 200",
       "reference": "Reference",
@@ -469,7 +469,9 @@
       "rejected": "{ref} rejected.",
       "notPending": "This request is no longer waiting.",
       "rejectTitle": "Reject {ref}?",
-      "rejectText": "The person sees that the request was rejected."
+      "rejectText": "The person sees that the request was rejected.",
+      "whatsapp": "WhatsApp",
+      "openChat": "Open a WhatsApp chat with {name}, {phone}"
     },
     "pay": {
       "sub": "Confirmed upgrade requests, newest first.",
@@ -589,6 +591,7 @@
         "settings_signup_mode": "Changed the sign-up mode",
         "settings_ai_key_set": "Stored a platform key",
         "settings_ai_key_remove": "Removed a platform key",
+        "settings_format_provider": "Changed who formats on credits",
         "flag_set": "Set a feature flag",
         "flag_remove": "Removed a feature flag"
       }
@@ -618,11 +621,25 @@
           "invite_only": "Sign-up is invite-only."
         }
       },
+      "format": {
+        "label": "Formatting on Tilw credits",
+        "explain": "Scripts paid with Tilw credits are sent to this provider. People using their own key are not affected. A provider can be chosen once its key is added below.",
+        "needsKey": "Add a key for that provider first.",
+        "inUse": "{provider} is formatting on credits. Choose another provider before removing its key.",
+        "confirm": {
+          "title": "Format on credits with {provider}?",
+          "text": "Scripts that people format with Tilw credits will be sent to {provider}.",
+          "action": "Use {provider}"
+        },
+        "done": "{provider} now formats on credits."
+      },
       "keys": {
         "title": "Platform AI keys",
         "explain": "Stored encrypted and never shown again; only the last four characters are. Removing a stored key falls back to the environment key.",
         "use": {
           "anthropic": "Formatting on Tilw credits",
+          "minimax": "Formatting on Tilw credits, when chosen",
+          "deepseek": "Formatting on Tilw credits, when chosen",
           "deepgram": "Transcription and captions"
         },
         "source": {

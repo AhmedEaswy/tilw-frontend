@@ -1,7 +1,7 @@
 <script setup lang="ts">
 /**
  * "Pro ends on DATE" (R2-5 `252:381`): shown on Plan & usage and the library when Pro ends within 7 days, with Renew
- * (the same WhatsApp flow). Dismissing it hides it for 24 hours (browser storage, a per-viewer convenience).
+ * (the same request flow). Dismissing it hides it for 24 hours (browser storage, a per-viewer convenience).
  */
 const DISMISS_KEY = 'tilw:pro-ending-dismissed'
 const DAY = 86_400_000

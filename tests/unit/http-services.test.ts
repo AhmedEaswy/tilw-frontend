@@ -273,12 +273,12 @@ describe('plans over HTTP', () => {
 
   it('requests and cancels an upgrade', async () => {
     const request = { id: 'r1', reference: 'TLW-7K3Q', plan: 'pro', period: 'yearly', priceCents: 7700, state: 'pending', createdAt: 'x', expiresAt: 'y' }
-    const { services, calls } = setup([{ status: 201, json: { request, whatsappUrl: 'https://wa.me/1?text=x' } }, { status: 204 }])
-    expect((await services.plans.requestUpgrade({ plan: 'pro', period: 'yearly' })).request.reference).toBe('TLW-7K3Q')
+    const { services, calls } = setup([{ status: 201, json: { request } }, { status: 204 }])
+    expect((await services.plans.requestUpgrade({ plan: 'pro', period: 'yearly', phone: '+201001234567' })).request.reference).toBe('TLW-7K3Q')
     await services.plans.cancelRequest()
     const writes = calls.filter(c => !c.url.endsWith('/sanctum/csrf-cookie'))
     expect(writes.map(c => `${c.method} ${c.url}`)).toEqual(['POST http://api.test/api/user/subscription-requests', 'DELETE http://api.test/api/user/subscription-requests/current'])
-    expect(writes[0]!.body).toEqual({ plan: 'pro', period: 'yearly' })
+    expect(writes[0]!.body).toEqual({ plan: 'pro', period: 'yearly', phone: '+201001234567' })
   })
 })
 

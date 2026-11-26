@@ -8,7 +8,7 @@ const model = defineModel<string>({ default: '' })
 const props = withDefaults(
   defineProps<{
     label: string
-    type?: 'text' | 'email' | 'password' | 'search'
+    type?: 'text' | 'email' | 'password' | 'search' | 'tel'
     name?: string
     placeholder?: string
     autocomplete?: string
@@ -58,7 +58,7 @@ defineExpose({ focus: () => input.value?.focus() })
         :disabled="disabled"
         :readonly="readonly"
         :maxlength="maxlength"
-        :dir="isLtr ? 'ltr' : 'auto'"
+        :dir="isLtr ? 'ltr' : model ? 'auto' : undefined"
         :aria-invalid="error ? 'true' : undefined"
         :aria-describedby="error ? `${id}-err` : hint ? `${id}-hint` : undefined"
       >
@@ -126,7 +126,8 @@ input {
   color: var(--tilw-text-ink);
   outline: none;
 }
-input[dir='auto'] {
+/* Empty, a text field has no dir (dir="auto" would pull its placeholder to LTR), so match on "not LTR". */
+input:not([dir='ltr']) {
   font-family: var(--tilw-font-ar);
 }
 input::placeholder {

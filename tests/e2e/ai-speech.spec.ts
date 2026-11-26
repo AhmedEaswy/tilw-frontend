@@ -1,8 +1,9 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
-import { signIn } from './r2'
+import { cloudSpeech, signIn } from './r2'
 
-// Feature 005 US3 (T020): dictation on the device (G-A5, quickstart 3) and a new script from an audio file (quickstart 4).
+// Feature 005 US3 (T020): dictation on the device (G-A5, quickstart 3), and with speech to text on the plan, recorded
+// dictation and a new script from an audio file (quickstart 4).
 // Dictation hears the mock's scripted recognizer; New from audio records with Chromium's fake microphone.
 
 test.use({
@@ -36,54 +37,68 @@ async function recognition(page: Page, mode: 'ok' | 'unsupported' | 'denied' | '
   await page.addInitScript(m => localStorage.setItem('tilw:mock:recognition', m), mode)
 }
 
-test('dictates on the device: words appear live, Insert puts them at the cursor, no credits used', async ({ page }) => {
+test('dictates on the device: words wait gray in the editor, Enter adds them, no credits used', async ({ page }) => {
   await recognition(page, 'ok')
   await signIn(page)
   await page.goto('/app/scripts/s_letter')
   const body = page.getByLabel('نص الحلقة')
+  const before = await body.inputValue()
   await body.click()
   await body.press('Control+End')
-  await page.getByTestId('tools-dictate').click()
-  const dialog = page.getByTestId('dictate-dialog')
-  await expect(dialog.getByTestId('dictate-listening')).toContainText('يستمع')
-  await expect(dialog.getByText('لا يصل أي صوت إلى Tilw ولا يُخصم أي رصيد')).toBeVisible()
+  await page.getByTestId('dictate-mic').click()
+  await expect(page.getByTestId('dictate-status')).toContainText('يستمع')
+  await expect(page.getByTestId('dictate-level')).toBeVisible()
   // Live, then final; the browser ends the session once and the app listens on.
-  await expect(dialog.getByTestId('dictate-text')).toHaveText('فاكتبه لنا. ربما يكون سؤالك هو الحكاية التالية. كل حكاية تبدأ بسؤال صغير.')
-  await page.waitForTimeout(600)
-  await expect(dialog.getByTestId('dictate-listening')).toBeVisible()
-  const { violations } = await new AxeBuilder({ page }).include('[data-testid="dictate-dialog"]').withTags(['wcag2a', 'wcag2aa', 'wcag22aa']).analyze()
+  await expect(page.locator('.pending')).toHaveText(' فاكتبه لنا. ربما يكون سؤالك هو الحكاية التالية. كل حكاية تبدأ بسؤال صغير.')
+  await expect(body).toHaveAttribute('readonly', '')
+  const { violations } = await new AxeBuilder({ page }).include('[data-testid="dictation"]').withTags(['wcag2a', 'wcag2aa', 'wcag22aa']).analyze()
   expect(violations.map(v => v.id)).toEqual([])
-  await dialog.getByTestId('dictate-stop').click()
-  await dialog.getByTestId('dictate-insert').click()
-  await expect(page.getByText('أُدرج النص عند المؤشر.')).toBeVisible()
-  await expect(body).toHaveValue(/فاكتبه لنا\. ربما يكون سؤالك هو الحكاية التالية\. كل حكاية تبدأ بسؤال صغير\.$/)
+  await body.press('Enter')
+  await expect(page.locator('.pending')).toHaveCount(0)
+  await expect(body).toHaveValue(`${before} فاكتبه لنا. ربما يكون سؤالك هو الحكاية التالية. كل حكاية تبدأ بسؤال صغير.`)
+  await expect(body).not.toHaveAttribute('readonly', '')
 
   await page.goto('/app/settings/ai')
   await expect(page.getByTestId('credits-balance')).toHaveText('20 رصيد')
   await expect(page.getByTestId('credit-entries')).not.toContainText('تحويل كلام')
 })
 
-test('the chosen dialect is remembered; English scripts listen in English', async ({ page }) => {
+test('Esc throws the waiting words away; stopping keeps them', async ({ page }) => {
   await recognition(page, 'ok')
   await signIn(page)
   await page.goto('/app/scripts/s_letter')
-  await page.getByTestId('tools-dictate').click()
-  const dialog = page.getByTestId('dictate-dialog')
-  await expect(dialog.getByTestId('dictate-lang')).toContainText('العربية (مصر)')
-  await dialog.getByTestId('dictate-lang').click()
+  const body = page.getByLabel('نص الحلقة')
+  const before = await body.inputValue()
+  await page.getByTestId('dictate-mic').click()
+  await expect(page.locator('.pending')).toContainText('كل حكاية')
+  await page.getByTestId('dictate-mic').click()
+  await expect(page.getByTestId('dictate-level')).toHaveCount(0)
+  await expect(page.locator('.pending')).toContainText('كل حكاية')
+  await body.press('Escape')
+  await expect(page.locator('.pending')).toHaveCount(0)
+  await expect(body).toHaveValue(before)
+})
+
+test('the chosen dialect is remembered', async ({ page }) => {
+  await recognition(page, 'ok')
+  await signIn(page)
+  await page.goto('/app/scripts/s_letter')
+  await page.getByTestId('dictate-mic').click()
+  const lang = page.getByTestId('dictation').getByRole('combobox')
+  await expect(lang).toContainText('العربية (مصر)')
+  await lang.click()
   await page.getByRole('option', { name: 'العربية (السعودية)' }).click()
   expect(await page.evaluate(() => localStorage.getItem('tilw:dictate:lang'))).toBe('ar-SA')
 })
 
-test('microphone refused: says how to allow it and inserts nothing', async ({ page }) => {
+test('microphone refused: says how to allow it and adds nothing', async ({ page }) => {
   await recognition(page, 'denied')
   await signIn(page)
   await page.goto('/app/scripts/s_letter')
   const before = await page.getByLabel('نص الحلقة').inputValue()
-  await page.getByTestId('tools-dictate').click()
-  const dialog = page.getByTestId('dictate-dialog')
-  await expect(dialog.getByRole('alert')).toContainText('اسمح بالميكروفون')
-  await expect(dialog.getByTestId('dictate-insert')).toHaveCount(0)
+  await page.getByTestId('dictate-mic').click()
+  await expect(page.getByText('اسمح بالميكروفون')).toBeVisible()
+  await expect(page.getByTestId('dictate-insert')).toHaveCount(0)
   await expect(page.getByLabel('نص الحلقة')).toHaveValue(before)
 })
 
@@ -91,15 +106,15 @@ test('API there but failing at once (Brave, Opera): not available here', async (
   await recognition(page, 'network')
   await signIn(page)
   await page.goto('/app/scripts/s_letter')
-  await page.getByTestId('tools-dictate').click()
-  await expect(page.getByTestId('dictate-dialog').getByRole('alert')).toContainText('الإملاء غير متاح في هذا المتصفح')
+  await page.getByTestId('dictate-mic').click()
+  await expect(page.getByText('الإملاء غير متاح في هذا المتصفح')).toBeVisible()
 })
 
-test('no speech recognition: Dictate shows disabled and its tooltip says why', async ({ page, isMobile }) => {
+test('no speech recognition: the microphone shows disabled and its tooltip says why', async ({ page, isMobile }) => {
   await recognition(page, 'unsupported')
   await signIn(page)
   await page.goto('/app/scripts/s_letter')
-  const button = page.getByTestId('tools-dictate')
+  const button = page.getByTestId('dictate-mic')
   await expect(button).toHaveAttribute('aria-disabled', 'true')
   const tip = page.getByRole('tooltip')
   const text = 'الإملاء غير متاح في هذا المتصفح. استخدم ميكروفون لوحة المفاتيح، أو افتح Tilw في Chrome أو Safari.'
@@ -113,22 +128,22 @@ test('no speech recognition: Dictate shows disabled and its tooltip says why', a
   }
   await expect(tip).toBeVisible()
   await expect(tip).toHaveText(text)
-  await expect(page.getByTestId('dictate-dialog')).toHaveCount(0)
-  const { violations } = await new AxeBuilder({ page }).include('aside').withTags(['wcag2a', 'wcag2aa', 'wcag22aa']).analyze()
+  const { violations } = await new AxeBuilder({ page }).include('[data-testid="dictation"]').withTags(['wcag2a', 'wcag2aa', 'wcag22aa']).analyze()
   expect(violations.map(v => v.id)).toEqual([])
   await page.keyboard.press('Escape')
   await expect(tip).toBeHidden()
-  if (!isMobile) {
-    await button.focus()
-    await expect(tip).toBeVisible()
-    await expect(button).toHaveAccessibleDescription(new RegExp(text.slice(0, 20)))
-  }
 })
 
-test('makes a new script from an audio file, and refuses a file that is not audio', async ({ page, isMobile }) => {
-  test.skip(isMobile, 'The phone library has no header actions (6:20); the empty library card offers them.')
+/** Library header: the New script menu, then the audio option. */
+async function newFromAudio(page: Page) {
+  await page.getByRole('button', { name: 'نص جديد' }).first().click()
+  await page.getByRole('menuitem', { name: 'نص من ملف صوتي' }).click()
+}
+
+test('makes a new script from an audio file, and refuses a file that is not audio', async ({ page }) => {
   await signIn(page)
-  await page.getByTestId('new-from-audio').click()
+  await cloudSpeech(page)
+  await newFromAudio(page)
   const dialog = page.getByTestId('audio-import')
   await dialog.getByTestId('audio-file').setInputFiles({ name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('hello') })
   await expect(dialog.getByTestId('audio-refused')).toContainText('هذا ليس ملفاً صوتياً')
@@ -145,10 +160,10 @@ test('makes a new script from an audio file, and refuses a file that is not audi
   await expect(page.getByLabel('نص الحلقة')).toHaveValue(/كل حكاية تبدأ بسؤال صغير\./)
 })
 
-test('new from audio: a file from Google Drive (Picker) goes through the same checks; without Drive it asks to link it', async ({ page, isMobile }) => {
-  test.skip(isMobile, 'The phone library has no header actions (6:20); the empty library card offers them.')
+test('new from audio: a file from Google Drive (Picker) goes through the same checks; without Drive it asks to link it', async ({ page }) => {
   await signIn(page)
-  await page.getByTestId('new-from-audio').click()
+  await cloudSpeech(page)
+  await newFromAudio(page)
   let dialog = page.getByTestId('audio-import')
   await expect(dialog.getByTestId('audio-drop')).toContainText('أو أفلِت ملفاً صوتياً هنا')
   // Drive not linked yet: no Drive button, a link to Storage instead.
@@ -161,10 +176,39 @@ test('new from audio: a file from Google Drive (Picker) goes through the same ch
   await expect(page.getByText('رُبط Google Drive بحساب layan@gmail.com.')).toBeVisible()
 
   await page.goto('/app/scripts')
-  await page.getByTestId('new-from-audio').click()
+  await newFromAudio(page)
   dialog = page.getByTestId('audio-import')
   await dialog.getByTestId('audio-from-drive').click()
   // The mock Picker returns a 3-second recording; it is checked and priced like a local file.
   await expect(dialog.getByTestId('transcribe-cost')).toHaveText('1 رصيد')
   await expect(dialog.getByText('Drive interview.wav')).toBeVisible()
+})
+
+test('without speech to text: Dictate stays on the device and there is no New from audio', async ({ page }) => {
+  await recognition(page, 'ok')
+  await signIn(page)
+  await page.getByRole('button', { name: 'نص جديد' }).first().click()
+  await expect(page.getByRole('menuitem', { name: 'استيراد ملف' })).toBeVisible()
+  await expect(page.getByRole('menuitem', { name: 'نص من ملف صوتي' })).toHaveCount(0)
+  await page.goto('/app/scripts/s_letter')
+  await page.getByTestId('dictate-mic').click()
+  await expect(page.locator('.pending')).toContainText('فاكتبه لنا.')
+})
+
+test('with speech to text: the provider writes live, Enter adds the words, credits are used', async ({ page }) => {
+  await recognition(page, 'unsupported')
+  await signIn(page)
+  await cloudSpeech(page)
+  await page.goto('/app/scripts/s_letter')
+  const body = page.getByLabel('نص الحلقة')
+  await body.click()
+  await body.press('Control+End')
+  await page.getByTestId('dictate-mic').click()
+  await expect(page.getByTestId('dictate-status')).toContainText('رصيد واحد لكل دقيقة')
+  await expect(page.locator('.pending')).toContainText('كل حكاية')
+  await body.press('Enter')
+  await expect(page.locator('.pending')).toHaveCount(0)
+  await expect(body).toHaveValue(/كل حكاية/)
+  await page.goto('/app/settings/ai')
+  await expect(page.getByTestId('credits-balance')).toHaveText('19 رصيد')
 })

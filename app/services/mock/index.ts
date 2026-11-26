@@ -26,6 +26,7 @@ import { countWords, firstLine, foldForSearch, isEmail, normalizeEmail, PASSWORD
 import { MockDb, type KV, type MockToken } from './db'
 import { createFakeDrive, DRIVE_OTHER_BYTES, DRIVE_TOTAL_BYTES, idbBlobStore, memoryBlobStore, usedBytes, type BlobStore } from './drive'
 import { allLimits, limitValue, periodEnd, publicPlan, requestReference, type LimitContext, type RawLimit } from './plans'
+import { normalizePhone } from '../../utils/phone'
 import { LEGACY_SCRIPTS, mockPhone } from './seed'
 import { createMockLinks } from './link'
 import { createMockAi } from './ai'
@@ -39,7 +40,6 @@ const DELETION_GRACE = 14 * 86_400_000
 /** At most one `edit` snapshot per this much editing (backend tilw.version_min_gap_minutes). */
 export const VERSION_GAP_MS = 10 * 60_000
 /** The sales number the mock puts in wa.me links. */
-export const MOCK_SALES_NUMBER = '201000000000'
 
 const clone = <T>(v: T): T => (v === undefined ? v : JSON.parse(JSON.stringify(v)))
 const uid = (p: string) => `${p}_${Math.random().toString(36).slice(2, 10)}`
@@ -136,10 +136,16 @@ export function createMockServices(kv: KV, opts: MockOptions = {}) {
     if (key === 'scripts.max_words') return list.reduce((n, s) => Math.max(n, countWords(s.body)), 0)
     return null
   }
+  // Set once the admin mock exists (its seeding already reads limits).
+  let hasDeepgramKey = () => false
+  // Speech to text exists only with a platform key (the admin mock's, or the /__mock knob).
+  const speechKnob = () => !!aiMock.controls.knobs().cloudSpeech
+  const definitions = () => speechKnob() || hasDeepgramKey() ? db.s.limitDefinitions : db.s.limitDefinitions.filter(x => x.key !== 'ai.cloud_speech')
+  const catalogue = () => speechKnob() ? db.s.plans.map(p => ({ ...p, limits: { ...p.limits, 'ai.cloud_speech': true } })) : db.s.plans
   function ctx(userId: string): LimitContext {
     return {
-      definitions: db.s.limitDefinitions,
-      plans: db.s.plans,
+      definitions: definitions(),
+      plans: catalogue(),
       planKey: planKey(userId),
       overrides: db.s.overrides[userId] ?? {},
       usage: key => usage(userId, key),
@@ -193,13 +199,7 @@ export function createMockServices(kv: KV, opts: MockOptions = {}) {
   }
   const publicRequest = (r: UpgradeRequest & { userId?: string }): UpgradeRequest => {
     const { userId: _u, ...rest } = r
-    return rest
-  }
-  function whatsappUrl(r: UpgradeRequest) {
-    const price = `$${(r.priceCents / 100).toFixed(r.priceCents % 100 ? 2 : 0)}`
-    const period = r.period === 'yearly' ? 'yearly / سنوي' : 'monthly / شهري'
-    const text = `Tilw Pro · ${period} · ${price} · ${r.reference}`
-    return `https://wa.me/${MOCK_SALES_NUMBER}?text=${encodeURIComponent(text)}`
+    return { ...rest, phone: rest.phone ?? null }
   }
 
   // ---------- history ----------
@@ -313,7 +313,9 @@ export function createMockServices(kv: KV, opts: MockOptions = {}) {
     mail,
     token,
     ai: aiMock.controls,
+    speechKnob,
   })
+  hasDeepgramKey = adminMock.hooks.hasDeepgramKey
 
   const services: Services = {
     admin: adminMock.admin,
@@ -463,7 +465,7 @@ export function createMockServices(kv: KV, opts: MockOptions = {}) {
         return userScripts(u.id).map(s => withReadOnly(summarize(s), ro))
       }),
       // The backend's paged list (ScriptController::page): offset cursors are enough for the in-browser mock.
-      page: ({ limit, filter = 'all', sort = 'recent', q, cursor }) => call((): ScriptPage => {
+      page: ({ limit, filter = 'all', sort = 'recent', dir, q, cursor }) => call((): ScriptPage => {
         if (!Number.isInteger(limit) || limit < 1 || limit > 100) throw new PortError('validation', { limit: 'invalid' })
         const u = currentUser()
         const ro = readOnlyIds(u.id)
@@ -475,11 +477,14 @@ export function createMockServices(kv: KV, opts: MockOptions = {}) {
           .filter(s => (filter === 'opened' || sort === 'opened' ? !!s.lastOpenedAt : true))
           .filter(s => !fq || foldForSearch(`${s.title}
 ${s.body}`).includes(fq))
-          .sort((a, b) => sort === 'title'
-            ? a.title.localeCompare(b.title) || a.id.localeCompare(b.id)
-            : sort === 'opened'
-              ? (b.lastOpenedAt ?? '').localeCompare(a.lastOpenedAt ?? '') || b.id.localeCompare(a.id)
-              : b.updatedAt.localeCompare(a.updatedAt) || b.id.localeCompare(a.id))
+          .sort((a, b) => {
+            const asc = sort === 'title'
+              ? a.title.localeCompare(b.title) || a.id.localeCompare(b.id)
+              : sort === 'opened'
+                ? (a.lastOpenedAt ?? '').localeCompare(b.lastOpenedAt ?? '') || a.id.localeCompare(b.id)
+                : a.updatedAt.localeCompare(b.updatedAt) || a.id.localeCompare(b.id)
+            return (dir ?? (sort === 'title' ? 'asc' : 'desc')) === 'asc' ? asc : -asc
+          })
         const start = cursor ? Number(cursor) || 0 : 0
         const slice = list.slice(start, start + limit)
         return {
@@ -698,20 +703,20 @@ ${s.body}`).includes(fq))
     plans: {
       listPlans: () => call(() => {
         if (db.knobs.plansDown) throw new PortError('network')
-        return db.s.plans.filter(p => p.active !== false).map(p => publicPlan(p, db.s.limitDefinitions, locale()))
+        return catalogue().filter(p => p.active !== false).map(p => publicPlan(p, definitions(), locale()))
       }),
       myPlan: () => call((): MyPlan => {
         const u = currentUser()
         const sub = subscription(u.id)
         const key = sub?.plan ?? 'free'
-        const plan = db.s.plans.find(p => p.key === key) ?? db.s.plans[0]!
+        const plan = catalogue().find(p => p.key === key) ?? catalogue()[0]!
         const seen = db.s.seenPlan[u.id]
         const change = seen !== undefined && seen !== key ? (key === 'free' ? 'pro_ended' : 'pro_started') : null
         if (seen !== key) db.write(s => (s.seenPlan[u.id] = key))
         const queued = sub ? db.s.subscriptions.find(x => x.userId === u.id && x.startsAt >= sub.endsAt) : undefined
         const pending = pendingRequest(u.id)
         return {
-          plan: publicPlan(plan, db.s.limitDefinitions, locale()),
+          plan: publicPlan(plan, definitions(), locale()),
           period: sub?.period ?? null,
           startsAt: sub ? iso(sub.startsAt) : null,
           endsAt: sub ? iso(sub.endsAt) : null,
@@ -721,26 +726,27 @@ ${s.body}`).includes(fq))
           notice: change,
         }
       }),
-      requestUpgrade: ({ plan, period }) => call(() => {
+      requestUpgrade: ({ plan, period, phone: typed }) => call(() => {
         const u = currentUser()
         const p = db.s.plans.find(x => x.key === plan)
         if (!p || p.key === 'free') throw new PortError('validation', { plan: 'invalid' })
         if (period !== 'monthly' && period !== 'yearly') throw new PortError('validation', { period: 'invalid' })
+        const phone = normalizePhone(typed ?? '')
+        if (!phone) throw new PortError('validation', { phone: 'invalid' })
         const priceCents = period === 'yearly' ? p.priceYearlyCents : p.priceMonthlyCents
         const existing = pendingRequest(u.id)
         const request = db.write((s) => {
           if (existing) {
             const r = s.requests.find(x => x.id === existing.id)!
-            Object.assign(r, { plan, period, priceCents })
+            Object.assign(r, { plan, period, priceCents, phone })
             return r
           }
           const t = now()
-          const r = { id: uid('req'), userId: u.id, reference: requestReference(), plan, period, priceCents, state: 'pending' as const, createdAt: iso(t), expiresAt: iso(t + REQUEST_TTL) }
+          const r = { id: uid('req'), userId: u.id, reference: requestReference(), plan, period, priceCents, phone, state: 'pending' as const, createdAt: iso(t), expiresAt: iso(t + REQUEST_TTL) }
           s.requests.push(r)
           return r
         })
-        const pub = publicRequest(request)
-        return { request: pub, whatsappUrl: whatsappUrl(pub) }
+        return { request: publicRequest(request) }
       }),
       cancelRequest: () => call(() => {
         const r = pendingRequest(currentUser().id)

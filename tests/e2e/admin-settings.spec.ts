@@ -95,6 +95,33 @@ test.describe('desktop settings', () => {
     await expect(page.getByRole('listitem').filter({ hasText: 'ai.captions' })).toHaveCount(0)
   })
 
+  test('credit formatting moves to a provider only once its key is stored, after a confirmation', async ({ page }) => {
+    await asAdmin(page, '/admin/settings')
+    const select = page.getByTestId('format-provider').getByRole('combobox')
+    await expect(select).toContainText('Anthropic')
+    await select.click()
+    await expect(page.getByRole('option', { name: 'DeepSeek' })).toHaveAttribute('aria-disabled', 'true')
+    await page.keyboard.press('Escape')
+
+    const row = page.getByTestId('key-deepseek')
+    await row.getByRole('button', { name: 'إضافة مفتاح' }).click()
+    await row.getByLabel('مفتاح جديد').fill('sk-ds-e2e-secret-4321')
+    await row.getByRole('button', { name: 'حفظ' }).click()
+    await expect(row.getByText('…4321')).toBeVisible()
+
+    await select.click()
+    await page.getByRole('option', { name: 'DeepSeek' }).click()
+    await expect(page.getByRole('dialog')).toContainText('DeepSeek')
+    await page.getByRole('dialog').getByRole('button', { name: 'استخدام DeepSeek' }).click()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    await expect(select).toContainText('DeepSeek')
+
+    await row.getByRole('button', { name: 'حذف المفتاح المحفوظ' }).click()
+    await page.getByRole('dialog').getByRole('button', { name: 'حذف المفتاح المحفوظ' }).click()
+    await expect(page.getByText('اختر مزوّدًا آخر قبل حذف مفتاحه.')).toBeVisible()
+    await expect(row.getByText('…4321')).toBeVisible()
+  })
+
   test('the account menu switches appearance and language, and links to the website', async ({ page }) => {
     await asAdmin(page, '/admin/payments')
     const button = page.getByRole('button', { name: 'قائمة الحساب' })

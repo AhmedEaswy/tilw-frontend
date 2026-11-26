@@ -5,7 +5,7 @@ Shapes as backend 004 sends them (`openapi.yaml` 4.0.0). All in `app/services/ty
 ## Types
 
 ```ts
-type AiProvider = 'anthropic' | 'openai'
+type AiProvider = 'anthropic' | 'openai' | 'minimax' | 'deepseek'
 type PaidWith = 'credits' | 'own_key'
 type SpeechLanguage = 'ar' | 'en' | 'auto'
 type SpeechPurpose = 'text' | 'captions'

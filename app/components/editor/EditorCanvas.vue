@@ -6,6 +6,9 @@
  * highlights behind it: the paragraph being edited ("Opening line" in Figma), search matches, and
  * delivery marks (emphasis background, pause chip, note underline — interim visuals for G7).
  * Both layers share font, padding and wrapping, and the backdrop sets the height, so they stay aligned.
+ *
+ * While dictated words wait to be confirmed (`pending`), the textarea holds them read-only and turns its text
+ * transparent, and the backdrop draws the visible text with the waiting words in gray.
  */
 import type { DeliveryMark } from '~/services/types'
 
@@ -20,6 +23,8 @@ const props = defineProps<{
   paragraphs: number
   /** Release 2 (R2-3): text, title and marks can't be changed. */
   readOnly?: boolean
+  /** Dictated words not yet confirmed: they would replace `start`–`end` of the body. */
+  pending?: { start: number; end: number; text: string } | null
 }>()
 const emit = defineEmits<{
   'update:title': [v: string]
@@ -104,6 +109,12 @@ const current = computed(() => {
 interface Seg { text: string; cls: string[]; pause?: string; note?: string }
 
 /** Split the body at every highlight boundary and tag each piece with its classes. */
+/** What the textarea holds: the body, with any waiting words in place. */
+const shown = computed(() => {
+  const p = props.pending
+  return p ? props.body.slice(0, p.start) + p.text + props.body.slice(p.end) : props.body
+})
+
 const segments = computed<Seg[]>(() => {
   const text = props.body
   const layers: { start: number; end: number; cls: string }[] = []
@@ -117,14 +128,17 @@ const segments = computed<Seg[]>(() => {
   const cuts = new Set<number>([0, text.length])
   layers.forEach(l => (cuts.add(l.start), cuts.add(l.end)))
   pauses.forEach(p => cuts.add(p.start))
+  const wait = props.pending
+  if (wait) (cuts.add(wait.start), cuts.add(wait.end))
   const points = [...cuts].filter(x => x >= 0 && x <= text.length).sort((a, b) => a - b)
 
   const out: Seg[] = []
   for (let i = 0; i < points.length; i++) {
     const a = points[i]!
     for (const p of pauses) if (p.start === a) out.push({ text: '', cls: ['pz'], pause: t('editor.marks.pauseChip', { s: p.pauseSec ?? 1 }) })
+    if (wait && a === wait.start && wait.text) out.push({ text: wait.text, cls: ['pending'] })
     const b = points[i + 1]
-    if (b === undefined || b === a) continue
+    if (b === undefined || b === a || (wait && a >= wait.start && b <= wait.end)) continue
     const cls = layers.filter(l => l.start <= a && l.end >= b).map(l => l.cls)
     const note = props.marks.find(m => m.type === 'note' && m.start <= a && m.end >= b)?.note
     out.push({ text: text.slice(a, b), cls, note })
@@ -152,7 +166,9 @@ function onAreaKey(e: KeyboardEvent) {
   }
   emit('keys', e)
 }
-defineExpose({ select, focus: () => area.value?.focus() })
+// Keep the newest waiting words in view while talking.
+watch(() => props.pending?.text, v => v && nextTick(() => backdrop.value?.querySelector('.pending')?.scrollIntoView({ block: 'nearest' })))
+defineExpose({ select, focus: () => area.value?.focus({ preventScroll: true }) })
 </script>
 
 <template>
@@ -166,9 +182,9 @@ defineExpose({ select, focus: () => area.value?.focus() })
       dir="auto"
       @input="emit('update:title', ($event.target as HTMLInputElement).value)"
     >
-    <div ref="sheet" class="sheet">
+    <div ref="sheet" class="sheet" :class="{ dictating: pending }">
       <MarksToolbar
-        v-if="barShown && barAt && !readOnly"
+        v-if="barShown && barAt && !readOnly && !pending"
         ref="bar"
         :selection="range"
         :marks="marks"
@@ -182,11 +198,12 @@ defineExpose({ select, focus: () => area.value?.focus() })
       <div ref="backdrop" class="backdrop" aria-hidden="true"><template v-for="(s, i) in segments" :key="i"><span v-if="s.pause" class="pz" :data-label="s.pause" /><span v-else :class="s.cls" :title="s.note">{{ s.text }}</span></template>{{ '\n ' }}</div>
       <textarea
         ref="area"
-        :value="body"
+        :value="shown"
+        data-dictation-enter
         :aria-label="t('editor.bodyLabel')"
         :placeholder="t('editor.bodyPlaceholder')"
         :spellcheck="!readOnly"
-        :readonly="readOnly"
+        :readonly="readOnly || !!pending"
         :aria-readonly="readOnly || undefined"
         @input="emit('update:body', ($event.target as HTMLTextAreaElement).value); track()"
         @keyup="track"
@@ -198,7 +215,8 @@ defineExpose({ select, focus: () => area.value?.focus() })
       />
     </div>
     <footer class="count">
-      {{ nf.format(words) }} {{ unitFor(words, 'word', locale) }}&nbsp;&nbsp;·&nbsp;&nbsp;{{ nf.format(paragraphs) }} {{ unitFor(paragraphs, 'paragraph', locale) }}
+      <span>{{ nf.format(words) }} {{ unitFor(words, 'word', locale) }}&nbsp;&nbsp;·&nbsp;&nbsp;{{ nf.format(paragraphs) }} {{ unitFor(paragraphs, 'paragraph', locale) }}</span>
+      <slot name="tools" />
     </footer>
   </article>
 </template>
@@ -313,8 +331,29 @@ textarea::placeholder {
 [dir='ltr'] .pz::after {
   translate: -50% 0;
 }
+/* Waiting dictation: the backdrop draws the text so part of it can be gray. */
+.dictating .backdrop {
+  color: var(--tilw-text-ink);
+}
+.dictating textarea {
+  color: transparent;
+}
+.pending {
+  color: var(--tilw-text-muted);
+  scroll-margin-block: 90px;
+}
+/* The microphone stays in reach on a long script. */
 .count {
-  padding: 8px 8px 0;
+  position: sticky;
+  inset-block-end: 0;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  background: var(--tilw-surface-white);
+  padding: 8px;
   border-block-start: 1px solid var(--tilw-border-subtle);
   font: 500 13px/21px var(--tilw-font-ar);
   color: var(--tilw-text-muted);
@@ -337,6 +376,10 @@ textarea::placeholder {
   }
   .backdrop {
     min-block-size: 200px;
+  }
+  /* Above the phone's fixed action bar. */
+  .count {
+    inset-block-end: calc(86px + env(safe-area-inset-bottom, 0px));
   }
 }
 </style>

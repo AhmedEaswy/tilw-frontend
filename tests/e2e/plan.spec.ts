@@ -24,6 +24,7 @@ test('a new script at the limit opens the limit dialog with Archive and Upgrade'
   await page.goto('/app/scripts')
   await expect(page.getByText('3 من 3 نصاً نشطاً')).toBeVisible()
   await page.getByRole('button', { name: 'نص جديد' }).first().click()
+  await page.getByRole('menuitem', { name: 'إنشاء نص' }).click()
   await page.getByLabel('عنوان النص').fill('نص رابع')
   await page.getByRole('button', { name: 'فتح المحرر' }).click()
   const dialog = page.getByRole('dialog', { name: 'وصلت إلى حد النصوص النشطة' })

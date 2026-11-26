@@ -26,6 +26,12 @@ export const useTakesStore = defineStore('takes', () => {
   const remoteLoaded = ref(false)
   /** Device takes plus Drive-only takes, newest first. */
   const all = computed(() => mergeTakes(list.value, remote.value))
+  /** Recordings per script id, as the library shows (and sorts by) them. */
+  const countByScript = computed(() => {
+    const m = new Map<string, number>()
+    for (const x of all.value) if (x.scriptId) m.set(x.scriptId, (m.get(x.scriptId) ?? 0) + 1)
+    return m
+  })
   const estimate = ref<{ quota?: number; usage?: number } | null>(null)
 
   const free = computed(() => freeBytes(estimate.value))
@@ -179,7 +185,7 @@ export const useTakesStore = defineStore('takes', () => {
   }
 
   return {
-    list, loaded, estimate, free, lowStorage, groups, remote, remoteLoaded, all,
+    list, loaded, estimate, free, lowStorage, groups, remote, remoteLoaded, all, countByScript,
     load, refreshEstimate, save, remove, removeTake, unsync, setStarred, setPoster, forScript, nextNumber,
     loadRemote, find, blobFor, markUnreachable, refreshOne, reset,
   }

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { signIn } from './r2'
+import { cloudSpeech, signIn } from './r2'
 
 // Feature 005 US5 (T025): SRT and VTT captions from a take, built in the browser (quickstart 6). Chromium's fake
 // devices record the take; the mock answers with fake word timings.
@@ -12,6 +12,7 @@ test.use({
 
 test('makes SRT and VTT captions for a take', async ({ page }) => {
   await signIn(page)
+  await cloudSpeech(page)
   await page.goto('/app/scripts/s_opening/record')
   await page.getByRole('button', { name: 'تفعيل الكاميرا والميكروفون' }).click()
   await page.getByRole('button', { name: 'ابدأ التسجيل' }).click()
@@ -19,7 +20,7 @@ test('makes SRT and VTT captions for a take', async ({ page }) => {
   await page.waitForTimeout(2500)
   await page.getByRole('button', { name: 'إيقاف وحفظ' }).click()
   await expect(page).toHaveURL(/\/app\/recordings$/)
-  await page.getByRole('link', { name: /مراجعة/ }).first().click()
+  await page.locator('a[href^="/app/recordings/t_"]').first().click()
 
   await page.getByTestId('take-captions').click()
   const dialog = page.getByTestId('captions-dialog')

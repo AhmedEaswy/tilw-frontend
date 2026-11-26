@@ -36,18 +36,12 @@ const allowed = computed(() => plan.limit('byok.allowed') !== false)
 const key = computed(() => ai.key)
 const showForm = computed(() => !keyWaiting.value && allowed.value && (!key.value || editing.value))
 const providerName = (p: AiProvider) => PROVIDER_NAMES[p]
-const providers: AiProvider[] = ['anthropic', 'openai']
-// Provider choice: a radio group with the marks (same keys as UiSegmented: ←/→ follow reading direction).
-function onProviderKey(e: KeyboardEvent) {
-  const rtl = getComputedStyle(e.currentTarget as Element).direction === 'rtl'
-  const step = e.key === (rtl ? 'ArrowLeft' : 'ArrowRight') ? 1 : e.key === (rtl ? 'ArrowRight' : 'ArrowLeft') ? -1 : 0
-  if (!step) return
-  e.preventDefault()
-  const i = providers.indexOf(provider.value)
-  provider.value = providers[(i + step + providers.length) % providers.length]!
-  nextTick(() => (e.currentTarget as HTMLElement | null)?.querySelector<HTMLElement>('[aria-checked="true"]')?.focus())
-}
-const placeholder = computed(() => (provider.value === 'openai' ? 'sk-…' : 'sk-ant-…'))
+const providers: AiProvider[] = ['anthropic', 'openai', 'minimax', 'deepseek']
+// The picker's model is nullable only for clearable lists; this one always holds a provider.
+const choice = computed({ get: () => provider.value, set: (p: AiProvider | null) => p && (provider.value = p) })
+const providerOptions = providers.map(p => ({ value: p, label: providerName(p) }))
+const providerId = useId()
+const placeholder = computed(() => (provider.value === 'anthropic' ? 'sk-ant-…' : 'sk-…'))
 
 async function save() {
   fieldError.value = ''
@@ -114,7 +108,7 @@ function startReplace() {
     <SkeletonRegion v-if="keyWaiting" class="key-wait" data-testid="own-key-skeleton">
       <UiSkeleton h="14px" w="90%" r="4px" />
       <UiSkeleton h="14px" w="60%" r="4px" />
-      <span class="prov-skel"><UiSkeleton h="40px" r="10px" /><UiSkeleton h="40px" r="10px" /></span>
+      <UiSkeleton h="48px" r="10px" />
       <UiSkeleton h="48px" r="10px" />
       <UiSkeleton h="48px" r="12px" />
     </SkeletonRegion>
@@ -148,19 +142,15 @@ function startReplace() {
     <!-- empty or replacing -->
     <form v-if="showForm" class="form" autocomplete="off" @submit.prevent="save">
       <p v-if="!key" class="muted">{{ t('ai.key.lede') }}</p>
-      <div class="prov" role="radiogroup" :aria-label="t('ai.key.provider')" @keydown="onProviderKey">
-        <button
-          v-for="p in providers"
-          :key="p"
-          type="button"
-          role="radio"
-          :aria-checked="provider === p"
-          :tabindex="provider === p ? 0 : -1"
-          @click="provider = p"
-        >
-          <ProviderMark :provider="p" :size="18" />
-          <span lang="en">{{ providerName(p) }}</span>
-        </button>
+      <div class="prov">
+        <label :for="providerId">{{ t('ai.key.provider') }}</label>
+        <UiSelect :id="providerId" v-model="choice" :options="providerOptions">
+          <template #lead="{ option }"><ProviderMark :provider="option.value" :size="20" /></template>
+          <template #option="{ option }">
+            <ProviderMark :provider="option.value" :size="18" />
+            <span lang="en" class="prov-name">{{ option.label }}</span>
+          </template>
+        </UiSelect>
       </div>
       <UiField
         v-model="secret"
@@ -193,11 +183,6 @@ function startReplace() {
 .key-wait {
   display: grid;
   gap: 12px;
-}
-.prov-skel {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
 }
 .key {
   display: grid;
@@ -239,36 +224,15 @@ h2 {
   gap: 8px;
 }
 .prov {
-  display: flex;
-  padding: 3px;
-  min-block-size: var(--tilw-hit);
-  border-radius: var(--tilw-radius-field);
-  background: var(--tilw-surface-quiet);
+  display: grid;
+  gap: var(--tilw-space-8);
 }
-.prov button {
-  display: inline-flex;
-  flex: 1;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-inline-size: 0;
-  padding-inline: var(--tilw-space-12);
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--tilw-text-muted);
-  font: 500 16px/1.34 var(--tilw-font-lat);
-  cursor: pointer;
-  transition: background-color 0.15s, color 0.15s;
-}
-.prov button[aria-checked='true'] {
-  background: var(--tilw-surface-white);
+.prov label {
   color: var(--tilw-text-ink);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  font: 500 15px/1.53 var(--tilw-font-ar);
 }
-.prov button:focus-visible {
-  outline: 2px solid var(--tilw-focus-ring);
-  outline-offset: 1px;
+.prov-name {
+  flex: 1;
 }
 .state {
   font: 500 14px/1.4 var(--tilw-font-ar);
