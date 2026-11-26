@@ -8,6 +8,17 @@ export function splitParagraphs(body: string): string[] {
     .filter(Boolean)
 }
 
+/** A copy's title: `wrap` adds the suffix, and the original is cut so the result fits the service's limit. */
+export function copyTitle(title: string, wrap: (title: string) => string, max = 120): string {
+  const room = max - wrap('').length
+  let cut = ''
+  for (const ch of title) {
+    if (cut.length + ch.length > room) break
+    cut += ch
+  }
+  return wrap(cut.trimEnd()).slice(0, max)
+}
+
 export function countWords(text: string): number {
   const m = text.trim().match(/[\p{L}\p{N}][\p{L}\p{N}\p{M}'’-]*/gu)
   return m ? m.length : 0

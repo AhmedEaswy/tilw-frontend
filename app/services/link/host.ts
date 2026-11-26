@@ -22,6 +22,8 @@ export interface LinkPlayer {
   scriptId: string
   apply(cmd: LinkCommand): { result: 'applied' } | { result: 'refused'; reason: RefusalReason }
   snapshot(): Omit<StudioState, 'seq'>
+  /** US4: reading comes back from the app: continue from the paragraph it reached. */
+  takeOver?(paragraph: number): void
 }
 
 /** One tab hosts a link at a time (research R8). */
@@ -225,13 +227,20 @@ export function createLinkHost(deps: HostDeps) {
       case 'command': return void handleCommand(e.data)
       case 'remote.requested': return set({ pendingRemote: e.data.remote, code: null })
       case 'link.updated': return set({ link: state.link ? { ...state.link, previews: e.data.previews } : null })
-      case 'roles.requested': return set({ roleRequest: e.data })
+      case 'roles.requested':
+        set({ roleRequest: e.data })
+        return void declineIfRecording()
       case 'roles.declined': return set({ roleRequest: null })
-      case 'roles.changed':
+      case 'roles.changed': {
+        const read = state.appState
         set({ roleRequest: null, appState: null, sent: {}, lastResult: null, link: state.link ? { ...state.link, player: e.data.player } : null })
-        // Reading here again: the app needs our state now.
-        if (e.data.player === 'host') void sendState(true)
+        // Reading here again: continue where the app got to, and tell it our state.
+        if (e.data.player === 'host') {
+          if (read && player && player.scriptId === state.link?.scriptId) player.takeOver?.(read.paragraph)
+          void sendState(true)
+        }
         return
+      }
       case 'state':
         if (state.link?.player !== 'remote') return
         if (state.appState && e.data.seq <= state.appState.seq) return
@@ -250,6 +259,16 @@ export function createLinkHost(deps: HostDeps) {
       case 'link.ended': return endLocal(e.data.reason)
       default:
     }
+  }
+
+  /** FR-017: the device that reads has the last word, and only it knows a take is running. */
+  function declineIfRecording() {
+    const link = state.link
+    if (!link || !state.roleRequest || link.player !== 'host') return
+    const take = player?.snapshot().recording?.state
+    if (take !== 'countdown' && take !== 'recording' && take !== 'saving') return
+    set({ roleRequest: null })
+    void deps.relay.answerRoles(SESSION, link.id, false, 'recording').catch(() => {})
   }
 
   async function handleCommand(cmd: LinkCommand) {
@@ -293,6 +312,7 @@ export function createLinkHost(deps: HostDeps) {
 
   /** Something the phone shows changed: send soon, at most one state every `coalesceMs`, newest wins. */
   function changed() {
+    declineIfRecording() // a request that was waiting when the take began
     if (state.phase !== 'open' || !state.partnerPresent || timer) return
     const wait = Math.max(0, coalesceMs - (Date.now() - lastSent))
     timer = setTimeout(() => { timer = null; void sendState() }, wait)

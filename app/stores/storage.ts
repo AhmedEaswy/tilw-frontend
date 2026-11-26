@@ -48,6 +48,8 @@ export const useStorageStore = defineStore('storage', () => {
       status.value = before
       throw e
     }
+    // Takes already on this device go too, without waiting for the next app start.
+    if (mode === 'auto') void Promise.resolve(useUploadsStore().backfill()).catch(() => {})
   }
 
   function reset() {

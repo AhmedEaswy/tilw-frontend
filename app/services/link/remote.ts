@@ -99,6 +99,9 @@ export interface RemoteDeps {
   deviceName?: string
 }
 
+/** A request nobody answered lapses after 2 minutes (backend realtime.md); a little more before we check. */
+const PENDING_CHECK_MS = 3 * 60_000
+
 export function createLinkRemote(deps: RemoteDeps) {
   const now = deps.now ?? (() => Date.now())
   const uuid = deps.uuid ?? (() => crypto.randomUUID())
@@ -234,11 +237,20 @@ export function createLinkRemote(deps: RemoteDeps) {
 
   async function ping() {
     if (!pairing) return
+    // Waiting for approval: the service answers a pending phone's ping with 401, and the studio's answer arrives on
+    // the channel. Only once the request must have lapsed do we ask, in case that answer was missed.
+    const waiting = pairing.pending
+    if (waiting && now() - pairing.lastSeenAt < PENDING_CHECK_MS) return
     try {
       await deps.relay.ping(auth(), pairing.linkId)
+      if (waiting && pairing) {
+        pairing.pending = false
+        set({ phase: 'connected' })
+        await joinPresence()
+      }
       touch()
     } catch (e) {
-      if (isPortError(e, 'unauthenticated')) finish('unknown')
+      if (isPortError(e, 'unauthenticated')) finish(waiting ? 'lapsed' : 'unknown')
     }
   }
 
@@ -280,11 +292,14 @@ export function createLinkRemote(deps: RemoteDeps) {
       if (stored && now() - stored.lastSeenAt < reconnectMs) {
         pairing = stored
         set({ phase: stored.pending ? 'waitingAccept' : 'connected', ended: null })
-        try {
-          await deps.relay.ping(auth(), stored.linkId)
-        } catch (e) {
-          if (isPortError(e, 'unauthenticated')) return finish('unknown')
-          // A pending phone can't ping yet; anything else (network) is retried by the socket.
+        // A pending phone can't ping yet.
+        if (!stored.pending) {
+          try {
+            await deps.relay.ping(auth(), stored.linkId)
+          } catch (e) {
+            if (isPortError(e, 'unauthenticated')) return finish('unknown')
+            // Anything else (network) is retried by the socket.
+          }
         }
         await connectOrRetry()
         return
@@ -306,7 +321,7 @@ export function createLinkRemote(deps: RemoteDeps) {
         await connectOrRetry()
         if ((state.phase as RemotePhase) === 'ended') return // connectOrRetry may have ended it
       }
-      if (!pairing.pending) await ping()
+      await ping()
     },
 
     pairWithCode: (code: string) => pair({ code: code.replace(/\D/g, '') }),

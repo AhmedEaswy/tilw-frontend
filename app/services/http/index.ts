@@ -160,7 +160,7 @@ export function createHttpServices(opts: HttpClientOptions & { realtime?: Realti
       ping: (auth, id) => api.post<void>(`/api/links/${seg(id)}/ping`, undefined, { headers: linkHeaders(auth) }),
       leave: (auth, id) => api.post<void>(`/api/links/${seg(id)}/leave`, undefined, { headers: linkHeaders(auth) }),
       requestRoles: (auth, id, player) => api.post<void>(`/api/links/${seg(id)}/roles`, { player }, { headers: linkHeaders(auth) }),
-      answerRoles: (auth, id, accept) => api.post<void>(`/api/links/${seg(id)}/roles/${accept ? 'accept' : 'decline'}`, undefined, { headers: linkHeaders(auth) }),
+      answerRoles: (auth, id, accept, reason) => api.post<void>(`/api/links/${seg(id)}/roles/${accept ? 'accept' : 'decline'}`, reason ? { reason } : undefined, { headers: linkHeaders(auth) }),
     },
 
     realtime: createHttpRealtime({ client: api, settings: opts.realtime ?? null }),

@@ -38,7 +38,8 @@ async function end(l: PhoneLink) {
 
 function phone(l: PhoneLink) {
   const r = l.remote
-  if (!r) return t('link.history.noPhone')
+  // An ended link no longer carries its phone, so it isn't "waiting" for one.
+  if (!r) return t(l.state === 'ended' ? 'link.history.endedPhone' : 'link.history.noPhone')
   return `${r.name} · ${t(`link.kind.${r.kind}`)}`
 }
 function detail(l: PhoneLink) {

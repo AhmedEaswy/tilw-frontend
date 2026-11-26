@@ -28,7 +28,7 @@ Additions to the service ports (`app/services/ports.ts`) on top of [001's ports.
 | `ping(auth, linkId)` | `POST /api/links/{id}/ping` | `void` | `unauthenticated` |
 | `leave(auth, linkId)` | `POST /api/links/{id}/leave` (remote only) | `void` | |
 | `requestRoles(auth, linkId, player)` | `POST /api/links/{id}/roles` | `void` | `conflict` (browser remote, or a take running) |
-| `answerRoles(auth, linkId, accept)` | `POST …/roles/accept` or `…/roles/decline` | `void` | `not_found` (no request, or it lapsed) |
+| `answerRoles(auth, linkId, accept, reason?)` | `POST …/roles/accept` or `…/roles/decline` | `void` | `not_found` (no request, or it lapsed) |
 
 `auth.kind === 'remote'` adds `Authorization: Bearer <credential>` to the request. The XSRF handling of the shared client still applies (research R4). `unauthenticated` from a remote call means the pairing is no longer valid: the remote store forgets it.
 

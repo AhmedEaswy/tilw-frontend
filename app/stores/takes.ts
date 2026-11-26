@@ -130,6 +130,14 @@ export const useTakesStore = defineStore('takes', () => {
     }
     const meta = await useTakesRepo().update(id, { starred })
     list.value = list.value.map(t => (t.id === id ? meta : t))
+    // A backed-up take also has a record on the service, which other devices read.
+    if (!t?.remote?.id) return
+    try {
+      const r = await useServices().remoteTakes.update(t.remote.id, { starred })
+      remote.value = remote.value.map(x => (x.id === r.id ? r : x))
+    } catch (e) {
+      if (!isPortError(e, 'not_found')) throw e // not_found: the record is already gone
+    }
   }
 
   /** The take's file: from this browser, or streamed from Drive for a Drive-only take. */

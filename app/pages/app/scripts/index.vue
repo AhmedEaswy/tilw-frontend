@@ -235,6 +235,7 @@ const emptyText = computed(() => {
         <SkeletonRegion v-if="moreWaiting && !listWaiting" data-testid="library-more-skeleton">
           <SkeletonRows variant="plain" :count="3" height="76px" lead="square" title-h="21px" meta-h="14px" trail="menu" />
         </SkeletonRegion>
+        <UiBanner v-if="store.moreError && !listWaiting" tone="error" data-testid="scripts-more-error">{{ errorText(store.moreError) }}</UiBanner>
         <div v-if="store.visible.length && store.hasMore && !listWaiting" class="more-row">
           <UiButton tone="secondary" :loading="store.loadingMore" data-testid="scripts-load-more" @click="store.loadMore()">{{ t('library.loadMore') }}</UiButton>
         </div>

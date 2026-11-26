@@ -110,7 +110,7 @@ const inConflictView = computed(() => editor.saveState === 'conflict' && !!edito
 async function saveMine() {
   resolving.value = true
   try {
-    const created = await editor.saveMineAsNew(t('editor.conflict.copyTitle', { title: editor.title.trim() || editor.serverCopy!.title }))
+    const created = await editor.saveMineAsNew(copyTitle(editor.title.trim() || editor.serverCopy!.title, title => t('editor.conflict.copyTitle', { title })))
     if (created) show(t('editor.conflict.savedAsNew', { title: created.title }))
   } catch (e) {
     show(errorText(e), 'error')

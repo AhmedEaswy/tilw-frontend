@@ -64,10 +64,12 @@ export const useUploadsStore = defineStore('uploads', () => {
   const enqueue = (takeId: string) => q()?.enqueue(takeId)
   const retry = (takeId: string) => q()?.retry(takeId)
   const cancel = (takeId: string) => q()?.cancel(takeId)
+  /** Auto sync was just switched on: queue every take that has no copy in Drive. */
+  const backfill = () => q()?.backfill()
   const pause = () => q()?.pause()
   const resume = () => q()?.resume()
   /** Drive was unlinked: stop uploading and keep the entries as failed until the person links again. */
   const unlinked = () => q()?.unlinked()
 
-  return { entries, start, stop, enqueue, retry, cancel, pause, resume, unlinked }
+  return { entries, start, stop, enqueue, retry, cancel, backfill, pause, resume, unlinked }
 })

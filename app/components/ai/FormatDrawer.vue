@@ -177,7 +177,7 @@ async function discard() {
   }
 }
 
-const errorTone = computed(() => (['credits', 'negative', 'conflict', 'gone', 'rate_limited', 'read_only', 'save_failed'].includes(error.value?.kind ?? '') ? 'warning' : 'error'))
+const errorTone = computed(() => (['credits', 'negative', 'conflict', 'gone', 'rate_limited', 'read_only', 'words_limit', 'save_failed'].includes(error.value?.kind ?? '') ? 'warning' : 'error'))
 const keyRefusedCost = computed(() => credits(estimate.value?.credits ?? Math.max(1, Math.ceil(words.value / 1000))))
 const expires = computed(() => (suggestion.value ? dateTime(suggestion.value.expiresAt) : ''))
 const title = computed(() => (view.value === 'preview' ? t('ai.format.previewTitle') : t('ai.format.title')))
@@ -270,6 +270,10 @@ const goLabel = computed(() => (estimate.value?.paidWith === 'own_key' ? t('ai.f
             <template v-else-if="error.kind === 'credits' || error.kind === 'negative'">
               <UiButton v-if="!plan.isPro && upgrade.available.value" @click="upgrade.open()">{{ t('ai.common.upgrade') }}</UiButton>
               <UiButton tone="secondary" to="/app/settings/ai">{{ t('ai.common.creditsLink') }}</UiButton>
+            </template>
+            <template v-else-if="error.kind === 'words_limit'">
+              <UiButton v-if="!plan.isPro && upgrade.available.value" @click="upgrade.open()">{{ t('ai.common.upgrade') }}</UiButton>
+              <UiButton tone="secondary" @click="emit('close')">{{ t('ai.common.close') }}</UiButton>
             </template>
             <template v-else-if="error.kind === 'save_failed'">
               <UiButton tone="secondary" @click="back">{{ t('library.back') }}</UiButton>

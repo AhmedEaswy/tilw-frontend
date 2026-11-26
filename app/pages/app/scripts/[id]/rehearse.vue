@@ -108,6 +108,7 @@ const player = useLinkPlayer(() => ({
     blocked: recoveryOpen.value,
   }),
   snapshot: () => readingSnapshot({ title: reader.script?.title, paragraphs: reader.paragraphs, engine, settings: settings.value }),
+  takeOver: paragraph => engine.goTo(paragraph),
 }))
 watch(
   () => [engine.paragraph.value, engine.playing.value, engine.ended.value, settings.value.wpm, settings.value.fontSize, settings.value.mode, reader.script?.title, reader.paragraphs.length],

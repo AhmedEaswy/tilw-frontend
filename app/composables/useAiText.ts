@@ -26,12 +26,14 @@ export function useAiText() {
     return copyFor(kind, params)
   }
 
-  function copyFor(kind: AiErrorKind | 'provider_failed' | 'nothing_heard', params: { balance?: number; cost?: number; wait?: number; minutes?: number } = {}) {
+  function copyFor(kind: AiErrorKind | 'provider_failed' | 'nothing_heard', params: { balance?: number; cost?: number; wait?: number; minutes?: number; max?: number; words?: number } = {}) {
     const p = {
       balance: params.balance ?? ai.balance ?? 0,
       cost: credits(params.cost ?? 1),
       wait: params.wait ?? 0,
       minutes: params.minutes ?? 60,
+      max: params.max ?? 0,
+      words: params.words ?? 0,
       date: renewDate.value,
     }
     const text = (kind === 'unavailable' || kind === 'rate_limited') && params.wait

@@ -393,6 +393,7 @@
     "helpStep2": "Choose “Allow” for the camera and microphone.",
     "helpStep3": "Come back and press “Try again”. You may need to reload the page.",
     "helpNote": "Recordings stay in this browser and are never uploaded.",
+    "helpNoteDrive": "Recordings stay in this browser. Takes you back up to Drive are also copied to your Google Drive.",
     "startsIn": "Recording starts in",
     "recordingNow": "Recording",
     "stopSave": "Stop and save",
@@ -404,7 +405,8 @@
     "saveFailedTitle": "Take not saved",
     "saveFailed": "Couldn't save the take in this browser. Download it now so it isn't lost.",
     "downloadNow": "Download now",
-    "lowStorage": "Browser storage is low, so recording may stop before 10 minutes. Download or delete older takes in Recordings.",
+    "lowStorage": "Browser storage is low, so recording may stop before {time}. Download or delete older takes in Recordings.",
+    "lowStorageNoLimit": "Browser storage is low, so recording may stop early. Download or delete older takes in Recordings.",
     "recordFailed": "Couldn't start recording in this browser.",
     "takeWord": "take",
     "maxMinutes": "{n} {unit} maximum",
@@ -505,7 +507,7 @@
     "open": "Open",
     "download": "Download",
     "exportTitle": "A copy of your scripts",
-    "exportHint": "Download your account data and archived scripts",
+    "exportHint": "Download your account data and all your scripts",
     "legacyTitle": "Scripts from an older version",
     "legacyHint": "Recover old scripts from this browser",
     "deleteTitle": "Delete account",
@@ -513,7 +515,7 @@
     "deleteOpen": "Delete account…",
     "accountData": "Account data",
     "exportHeading": "Download a copy of your scripts",
-    "exportLede": "The file includes your account data and archived scripts. Download recordings from the recordings library.",
+    "exportLede": "The file includes your account data and all your scripts. Download recordings from the recordings library.",
     "confirmPassword": "Confirm your password",
     "downloadCopy": "Download copy",
     "wrongPassword": "That password isn't right. Check it and try again.",
@@ -960,6 +962,7 @@
       "connected": "Connected now",
       "notConnected": "Not connected",
       "noPhone": "Waiting for a phone",
+      "endedPhone": "Phone link",
       "noScript": "Deleted script"
     }
   },
@@ -1108,6 +1111,10 @@
       "byok": {
         "title": "Your plan doesn't include own keys",
         "text": "Your current plan doesn't allow saving or using your own key."
+      },
+      "words_limit": {
+        "title": "Too long to format",
+        "text": "Your plan allows up to {max} words in a script, and this one has {words}. No credits were used."
       },
       "audio_limit": {
         "title": "The audio is longer than your plan allows",

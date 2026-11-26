@@ -10,6 +10,7 @@ export type AiErrorKind =
   | 'negative' // balance below zero after an overrun
   | 'byok' // own keys not on this plan
   | 'audio_limit' // longer than ai.audio_max_minutes
+  | 'words_limit' // the script has more words than scripts.max_words
   | 'read_only' // the script is read-only (scripts.max_active)
   | 'key_refused' // the provider refused the own key
   | 'changed_words' // the formatter tried to change words (refunded)
@@ -24,7 +25,7 @@ export type AiErrorKind =
 
 export interface AiErrorCopy {
   kind: AiErrorKind
-  params: { balance?: number; cost?: number; wait?: number; minutes?: number }
+  params: { balance?: number; cost?: number; wait?: number; minutes?: number; max?: number; words?: number }
 }
 
 export function describeAiError(e: unknown): AiErrorCopy {
@@ -37,6 +38,7 @@ export function describeAiError(e: unknown): AiErrorCopy {
       if (key === 'byok.allowed') return { kind: 'byok', params: {} }
       if (key === 'ai.audio_max_minutes') return { kind: 'audio_limit', params: { minutes: typeof e.limit?.value === 'number' ? e.limit.value : undefined } }
       if (key === 'scripts.max_active') return { kind: 'read_only', params: {} }
+      if (key === 'scripts.max_words') return { kind: 'words_limit', params: { max: typeof e.limit?.value === 'number' ? e.limit.value : undefined, words: e.limit?.usage ?? undefined } }
       const balance = e.info?.balance
       return { kind: typeof balance === 'number' && balance < 0 ? 'negative' : 'credits', params: { balance, cost: e.info?.cost } }
     }

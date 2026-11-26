@@ -405,12 +405,12 @@ export function createMockLinks(d: MockLinkDeps): { links: LinkPort; relay: Link
       p.l.roleRequest = { player, by: p.party, expiresAt: d.now() + LINK_RULES.roleRequestSeconds * 1000 }
       send(p.l, other(p.party), { name: 'roles.requested', data: { player, expiresAt: iso(p.l.roleRequest.expiresAt)! } })
     })),
-    answerRoles: (auth, id, accept) => run(() => tx((s) => {
+    answerRoles: (auth, id, accept, reason) => run(() => tx((s) => {
       const p = party(s, auth, id)
       const req = p.l.roleRequest
       if (!req || req.by === p.party) throw new PortError('not_found')
       p.l.roleRequest = null
-      if (!accept) return send(p.l, req.by, { name: 'roles.declined', data: { reason: 'declined' } })
+      if (!accept) return send(p.l, req.by, { name: 'roles.declined', data: { reason: reason ?? 'declined' } })
       p.l.player = req.player
       const ev: LinkEvent = { name: 'roles.changed', data: { player: req.player } }
       send(p.l, 'host', ev); send(p.l, 'remote', ev)

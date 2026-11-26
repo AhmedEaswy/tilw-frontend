@@ -42,7 +42,7 @@ export const useEditorStore = defineStore('editor', () => {
   const api = () => useServices().scripts
   const snap = (): Snapshot => ({ title: title.value, body: body.value, marks: marks.value.map(m => ({ ...m })) })
   const dirty = computed(() =>
-    !!script.value && (title.value !== script.value.title || body.value !== script.value.body || JSON.stringify(marks.value) !== JSON.stringify(script.value.marks)),
+    !!script.value && (title.value.trim() !== script.value.title || body.value !== script.value.body || JSON.stringify(marks.value) !== JSON.stringify(script.value.marks)),
   )
 
   /** Release 2 (R2-3): the service keeps this script read-only over a lowered limit. */
@@ -88,7 +88,7 @@ export const useEditorStore = defineStore('editor', () => {
 
       // A read-only script can't take edits; any old draft stays on the device for when it unlocks.
       const draft = s.readOnly ? null : readDraft(id)
-      if (draft && (draft.title !== s.title || draft.body !== s.body || JSON.stringify(draft.marks) !== JSON.stringify(s.marks))) {
+      if (draft && (draft.title.trim() !== s.title || draft.body !== s.body || JSON.stringify(draft.marks) !== JSON.stringify(s.marks))) {
         restoredDraft.value = true
         setContent(draft, { history: false })
         if (draft.baseVersion < s.version) {

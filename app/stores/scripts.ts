@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { shallowRef } from 'vue'
 import type { Script, ScriptPage, ScriptPatch, ScriptSummary } from '~/services/types'
 import { isPortError } from '~/services/types'
 
@@ -49,7 +50,11 @@ export const useScriptsStore = defineStore('scripts', () => {
     }
   }
 
+  /** The last "Load more" failed; the page shows it next to the button. */
+  const moreError = shallowRef<unknown>(null)
+
   async function fetchPage(first: boolean) {
+    if (first) moreError.value = null
     const seq = first ? ++listSeq : listSeq
     const cursor = first ? null : nextCursor.value
     const by = sort.value
@@ -153,8 +158,12 @@ export const useScriptsStore = defineStore('scripts', () => {
   async function loadMore() {
     if (!nextCursor.value || loadingMore.value) return
     loadingMore.value = true
+    moreError.value = null
+    const seq = listSeq
     try {
       await fetchPage(false)
+    } catch (e) {
+      if (seq === listSeq) moreError.value = e
     } finally {
       loadingMore.value = false
     }
@@ -256,7 +265,7 @@ export const useScriptsStore = defineStore('scripts', () => {
   }
 
   return {
-    items, status, error, filter, sort, reversed, ascending, setSort, query, visible, lastOpened, hasAny, hasMore, loadingMore, reloading, libraryCount,
+    items, status, error, filter, sort, reversed, ascending, setSort, query, visible, lastOpened, hasAny, hasMore, loadingMore, moreError, reloading, libraryCount,
     load, loadMore, setQuery, create, duplicate, rename, setPinned, setArchived, upsert, reset,
   }
 })

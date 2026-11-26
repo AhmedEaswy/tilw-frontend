@@ -129,7 +129,7 @@ function startReplace() {
         <span class="state" :class="key.checkOk ? 'ok' : 'bad'">{{ key.checkOk ? t('ai.key.works') : t('ai.key.failing') }}</span>
       </div>
       <p class="muted">
-        {{ t('ai.key.checked', { when: relativeTime(key.checkedAt, locale) }) }}<template v-if="key.usable"> · {{ t('ai.key.noCredits') }}</template>
+        {{ t('ai.key.checked', { when: relativeTime(key.checkedAt, locale) }) }}<template v-if="key.usable && key.checkOk"> · {{ t('ai.key.noCredits') }}</template>
       </p>
       <p v-if="key.reason" class="muted warn">{{ t('ai.key.notUsed') }}</p>
       <div class="acts">

@@ -110,6 +110,11 @@ const uploads = useUploadsStore()
 const storage = useStorageStore()
 onMounted(() => !storage.status && storage.load().catch(() => {}))
 const autoSync = computed(() => storage.linked && storage.syncMode === 'auto')
+// With Drive backup on, "never uploaded" would not be true.
+const helpNote = computed(() => t(storage.syncMode === 'off' ? 'studio.helpNote' : 'studio.helpNoteDrive'))
+const lowStorageText = computed(() => Number.isFinite(limitMs.value)
+  ? t('studio.lowStorage', { time: minutesText(limitMinutes.value) })
+  : t('studio.lowStorageNoLimit'))
 watch(phase, p => (p === 'setup' ? uploads.resume() : uploads.pause()))
 onBeforeUnmount(() => uploads.resume())
 
@@ -419,7 +424,7 @@ const firstLine = computed(() => reader.paragraphs[0] ?? '')
         <NuxtLink :to="editorPath" class="link">{{ t('studio.backToScript') }}</NuxtLink>
       </div>
 
-      <UiBanner v-if="takes.lowStorage" tone="info" class="low">{{ t('studio.lowStorage') }}</UiBanner>
+      <UiBanner v-if="takes.lowStorage" tone="info" class="low">{{ lowStorageText }}</UiBanner>
       <UiBanner v-if="reader.status === 'error' || reader.status === 'missing'" tone="error" class="low">
         {{ reader.status === 'missing' ? t('editor.missingTitle') : errorText(reader.loadError) }}
       </UiBanner>
@@ -506,7 +511,7 @@ const firstLine = computed(() => reader.paragraphs[0] ?? '')
         <li>{{ t('studio.helpStep2') }}</li>
         <li>{{ t('studio.helpStep3') }}</li>
       </ol>
-      <p>{{ t('studio.helpNote') }}</p>
+      <p>{{ helpNote }}</p>
       <template #actions>
         <UiButton @click="helpOpen = false; enable()">{{ t('studio.retry') }}</UiButton>
         <UiButton tone="secondary" @click="helpOpen = false">{{ t('library.back') }}</UiButton>

@@ -260,7 +260,7 @@ export interface LinkRelayPort {
   ping(auth: LinkAuth, linkId: string): Promise<void>
   leave(auth: LinkAuth, linkId: string): Promise<void>
   requestRoles(auth: LinkAuth, linkId: string, player: LinkParty): Promise<void>
-  answerRoles(auth: LinkAuth, linkId: string, accept: boolean): Promise<void>
+  answerRoles(auth: LinkAuth, linkId: string, accept: boolean, reason?: 'recording'): Promise<void>
 }
 
 /** Feature 004: the live channel. The socket only receives; everything is sent over the relay port. */
